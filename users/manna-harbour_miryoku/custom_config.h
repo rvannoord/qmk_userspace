@@ -5,9 +5,6 @@
 
 #pragma once
 
-// False home row mods adjustments https://docs.qmk.fm/tap_hold
-#define BILATERAL_COMBINATIONS
-
 // Slave-side OLED animation. Pick ONE (defaults to SPACESHIP if none set).
 //   OLED_SLAVE_ANIMATION_SPACESHIP
 //   OLED_SLAVE_ANIMATION_MONITOR1
@@ -25,14 +22,9 @@
 #define TAPPING_TERM 200
 #define SPLIT_WPM_ENABLE   // Enable WPM across split keyboards (+268).
 
-/* Miryoku */
-#define BILATERAL_COMBINATIONS_LIMIT_CHORD_TO_N_KEYS 4 /* GUI, Alt, Ctrl, Shift */
-#define BILATERAL_COMBINATIONS_DELAY_MODS_THAT_MATCH MOD_MASK_GUI
-#define BILATERAL_COMBINATIONS_DELAY_MATCHED_MODS_BY 120  /* ms */
-#define BILATERAL_COMBINATIONS_ALLOW_CROSSOVER_AFTER 80   /* ms */
-#define BILATERAL_COMBINATIONS_ALLOW_SAMESIDED_AFTER 3000 /* ms */
-#define BILATERAL_COMBINATIONS_TYPING_STREAK_TIMEOUT 160  /* ms */
-#define BILATERAL_COMBINATIONS_TYPING_STREAK_MODMASK (~MOD_MASK_SHIFT)
+/* Home-row mods: stock Chordal Hold + Flow Tap, tuned in the keymap's tap_hold.c. See docs/layout.md */
+#define CHORDAL_HOLD
+#define FLOW_TAP_TERM 160
 
 /* Keycode shims: QMK renamed these after Miryoku's layers were generated. See VENDORED.md */
 #define KC_MS_U MS_UP

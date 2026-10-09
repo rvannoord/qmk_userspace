@@ -3,4 +3,4 @@ CONVERT_TO = liatris
 
 MIRYOKU_MAPPING = EXTENDED_THUMBS
 
-SRC += oled.c
+SRC += oled.c tap_hold.c
