@@ -41,6 +41,8 @@ Both halves take the same `.uf2`: the Kyria rev3 reads left/right from a pin on 
 
 Flash size is not a concern on the RP2040. Keep a known-good `.uf2` outside the repo to fall back on.
 
+After changing `tap_hold.c`, `host_os.c`, `keymap.c` or a tap-hold value, run the scenario tests with `tests/run_scenarios.sh new` (see `tests/README.md`). They encode the current values, so a deliberate change updates the matching test too.
+
 ## Host OS
 
 The keyboard plugs into Windows at work and an Apple Silicon Mac at home. One switch, `host_is_mac()` in `host_os.c`, decides everything OS-specific:
