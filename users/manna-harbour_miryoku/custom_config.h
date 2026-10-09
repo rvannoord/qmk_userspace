@@ -33,3 +33,36 @@
 #define BILATERAL_COMBINATIONS_ALLOW_SAMESIDED_AFTER 3000 /* ms */
 #define BILATERAL_COMBINATIONS_TYPING_STREAK_TIMEOUT 160  /* ms */
 #define BILATERAL_COMBINATIONS_TYPING_STREAK_MODMASK (~MOD_MASK_SHIFT)
+
+/* Keycode shims: QMK renamed these after Miryoku's layers were generated. See VENDORED.md */
+#define KC_MS_U MS_UP
+#define KC_MS_D MS_DOWN
+#define KC_MS_L MS_LEFT
+#define KC_MS_R MS_RGHT
+#define KC_WH_U MS_WHLU
+#define KC_WH_D MS_WHLD
+#define KC_WH_L MS_WHLL
+#define KC_WH_R MS_WHLR
+#define KC_BTN1 MS_BTN1
+#define KC_BTN2 MS_BTN2
+#define KC_BTN3 MS_BTN3
+
+#if defined(RGB_MATRIX_ENABLE)
+#    define RGB_TOG RM_TOGG
+#    define RGB_MOD RM_NEXT
+#    define RGB_HUI RM_HUEU
+#    define RGB_SAI RM_SATU
+#    define RGB_VAI RM_VALU
+#elif defined(RGBLIGHT_ENABLE)
+#    define RGB_TOG UG_TOGG
+#    define RGB_MOD UG_NEXT
+#    define RGB_HUI UG_HUEU
+#    define RGB_SAI UG_SATU
+#    define RGB_VAI UG_VALU
+#else
+#    define RGB_TOG KC_NO
+#    define RGB_MOD KC_NO
+#    define RGB_HUI KC_NO
+#    define RGB_SAI KC_NO
+#    define RGB_VAI KC_NO
+#endif
