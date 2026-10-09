@@ -79,6 +79,7 @@ The symbol layer is the number layer with Shift held. Every key is the shifted v
 | OS-aware navigation | Word jump is Ctrl+Arrow on Windows but Option+Arrow on macOS; line start/end is Home/End vs Cmd+Arrow. OS detection can drive these too | later |
 | Flow Tap after any key | If mods misfire right after Backspace, Enter or digits, widen `is_flow_tap_key()` to match the old typing streak | only if it happens |
 | `PERMISSIVE_HOLD` | QMK's recommended pairing with Chordal Hold. Makes quick deliberate shortcuts register before 200 ms | after the migration settles |
+| OLED redesign in pixel art | Two 128x64 1-bit SSD1306s, one per half. Replace the text status line with small recognisable icons (mods, layer, host OS, locks) and decide what the slave half carries, so the two screens split always-on reference from transient state. Starting point: the 32x16 mod icons in the Mac backup (`~/kyria-firmware-backup/uncommitted-sources/oled_mod_icons.h`), column-major and page-major, inverted when the mod is active; their generator script is gone and needs rewriting. Icons want to be multiples of 8 px tall to stay page-aligned. QMK-only: the Halcyon cannot take an SSD1306, so this does not port | after the migration settles |
 
 ## Tuning log
 
