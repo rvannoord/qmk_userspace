@@ -5,6 +5,7 @@
 
 #include QMK_KEYBOARD_H
 #include "oled_logos.h"
+#include "host_os.h"
 
 #ifdef OLED_ENABLE
 
@@ -116,7 +117,9 @@ bool oled_task_user(void) {
 					0xc0,0xc1,0xc2,0xc3,0xc4,0xc5,0xc6,0xc7,0xc8,0xc9,0xca,0xcb,0xcc,0xcd,0xce,0xcf,0xd0,0xd1,0xd2,0xd3,0xd4,0};
 
 		oled_write_P(qmk_logo, false);
-		oled_write_P(PSTR("Kyria rev3\n\n"), false);
+		// 20 columns, so the line doesn't wrap before the newline
+		oled_write_P(PSTR("Kyria rev3       "), false);
+		oled_write_P(host_is_mac() ? PSTR("Mac\n\n") : PSTR("Win\n\n"), false);
 
 		oled_write_P(PSTR("Layer: "), false);
 		switch (get_highest_layer(layer_state | default_layer_state)) {

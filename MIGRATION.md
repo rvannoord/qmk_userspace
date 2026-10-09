@@ -12,7 +12,8 @@ Handoff from the planning session on 2026-10-09, reviewed the same day against q
 | 3. Copy in | Done. Miryoku userspace, keymap as `rvannoord`, fixes 1–3, `VENDORED.md`, `.gitattributes`, docs, `qmk.json`. The keymap's `rules.mk` doesn't have `MIRYOKU_CLIPBOARD = WIN` yet, so the step 4 build is today's layout; it's added with the host OS work in step 6 |
 | 4. First build | Done. `qmk compile -kb splitkb/kyria/rev3 -km rvannoord` builds clean (no warnings), and `cflags.txt` shows `EXTENDED_THUMBS`, Liatris and all of Miryoku's features. The keymap rename to `rvannoord` worked. Not for flashing: the `BILATERAL_COMBINATIONS*` defines do nothing in stock QMK, so home-row mods are plain QMK until step 5 |
 | 5. Tap-hold | Done. `BILATERAL_COMBINATIONS*` and `DEFERRED_EXEC_ENABLE` removed, `CHORDAL_HOLD` + `FLOW_TAP_TERM 160` in `custom_config.h`, callbacks in the keymap's `tap_hold.c` (spaces, per the repo's `.editorconfig`/`.clang-format`). Confirmed by preprocessing with the build's flags: `CHORDAL_HOLD`, `FLOW_TAP_TERM 160`, `TAPPING_TERM 200`, `QUICK_TAP_TERM 0`, no `PERMISSIVE_HOLD`. `LTO_ENABLE` left in `custom_rules.mk` (redundant, harmless). Behaviour unverified until step 7 |
-| 6. Host OS | Next |
+| 6. Host OS | Done. `MIRYOKU_CLIPBOARD = WIN` and `OS_DETECTION_ENABLE` in the keymap's `rules.mk`, `OS_DETECTION_SINGLE_REPORT` in `custom_config.h`, `host_os.c`/`.h`, `process_record_user` in `keymap.c` (SYS toggle, Mac redo), and `Win`/`Mac` at the right of the "Kyria rev3" line on the master OLED. The compiled `keymaps` array has `U_SYS` (`0x7E40`) at `[0,6]`, the Bootmagic key, on all 10 layers. Behaviour unverified until step 7 (scenario 10) |
+| 7. Scenario tests | Next. Needs the old tree, which is on the work PC only (see below) |
 
 Work-PC-only things the later steps need:
 - `user.overlay_dir` is set to `/mnt/c/src/personal/qmk_userspace` in WSL (`/root/.config/qmk/qmk.ini`).

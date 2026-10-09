@@ -22,6 +22,9 @@
 #define TAPPING_TERM 200
 #define SPLIT_WPM_ENABLE   // Enable WPM across split keyboards (+268).
 
+/* Host OS: Apple Silicon Macs re-trigger detection minutes after plug-in, so report once */
+#define OS_DETECTION_SINGLE_REPORT
+
 /* Home-row mods: stock Chordal Hold + Flow Tap, tuned in the keymap's tap_hold.c. See docs/layout.md */
 #define CHORDAL_HOLD
 #define FLOW_TAP_TERM 160
