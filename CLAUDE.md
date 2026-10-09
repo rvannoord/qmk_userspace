@@ -77,6 +77,7 @@ Thumb arc, five positions per half, numbered from the outside edge toward the mi
 - Symbols depend on the OS keyboard layout (see `docs/layout.md`). Miryoku assumes plain US. US-International turns `' " ` ~ ^` into dead keys, which breaks both the symbol layer and vim.
 - LF line endings everywhere (`.gitattributes`). A `rules.mk` with CRLF breaks make.
 - Commits use my personal identity, `rvannoord <rvannoord@icloud.com>`, and are SSH-signed through 1Password. Check `git config user.email` before committing: the work PC's global identity is my Monitor one and must never end up in this repo.
+- Never attribute anything to Claude: no `Co-Authored-By: Claude` trailer, no "Generated with Claude Code", and no mention of Claude or AI in commit messages, tags, PR or release text, or the content of files that get pushed. Everything here is published as my own work, whatever the default attribution setting says. The only exceptions are `CLAUDE.md`, `.claude/` and, until the migration is done, `MIGRATION.md`.
 - Commit and push only when I ask. Commits are conventional commits with an emoji, same as the existing history (`✨ feat(oled): ...`).
 
 ## Halcyon Kyria Wireless
