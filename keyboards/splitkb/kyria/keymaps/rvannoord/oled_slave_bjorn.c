@@ -30,6 +30,10 @@ static const uint8_t bjorn_tier_down[3] = { 6, 24, 42};   // each strictly below
 #define BJORN_BLINK_SPREAD   80                            // ... to 10 s
 #define BJORN_MICRO_PERIOD   72                            // 3.6 s, a breath
 #define BJORN_MICRO_HOLD      6                            // 300 ms
+// Asleep he breathes slower, and asymmetrically: a short draw in and a long let out.
+// An even alternation reads as a metronome rather than as breathing.
+#define BJORN_DOZE_PERIOD   108                            // 5.4 s in all
+#define BJORN_DOZE_INHALE    36                            // 1.8 s in, 3.6 s out
 
 // --- state ------------------------------------------------------------------
 typedef struct {
@@ -125,7 +129,14 @@ void oled_render_slave(void) {
     bjorn_blit(&bjorn_frames[dozing ? BJORN_F_DOZE : pose_of_tier[tier]]);
     bjorn_blit(&bjorn_frames[BJORN_F_FLOOR_RIGHT]);
 
-    if (dozing) return;                       // asleep: no blink, no breathing
+    if (dozing) {
+        // No blink — his eyes are already shut. The breath is his beard rising, since
+        // he has no chest; it is his own outline pushed down a pixel, not new art.
+        if (bjorn_ticks % BJORN_DOZE_PERIOD < BJORN_DOZE_INHALE) {
+            bjorn_blit(&bjorn_frames[BJORN_F_DOZE_BREATH]);
+        }
+        return;
+    }
 
     if (bjorn_ticks - bjorn_blink_at < BJORN_BLINK_HOLD) {
         bjorn_blit(&bjorn_frames[blink_of_tier[tier]]);

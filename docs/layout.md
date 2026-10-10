@@ -199,6 +199,7 @@ stage 2 commits to smaller details like the crown and the axe.
 | Settle | 8 s | Drop to the resting posture |
 | Doze | 75 s | Eyes shut. Leaves 45 s of doze before the 120 s timeout |
 | Blink | every 6-10 s, held 200 ms | Pseudo-random from a small LCG, not `rand()`. 200 ms because at brightness 128 a shorter closure may not register |
+| Doze breath | 5.4 s: 1.8 s in, 3.6 s out | Asleep he breathes slower, and asymmetrically — an even alternation reads as a metronome. The gesture is his beard rising, since he has no chest: his own outline pushed down one pixel, not new art. No blink; his eyes are already shut |
 | Breath | 3.6 s, held 300 ms | A human breath, roughly. Resting posture only: IDLE2 is IDLE1's partner frame and the other postures have no equivalent, so elsewhere the blink carries the ambient |
 
 **Idle is gated on how long the WPM reading has been still, not on it being zero.** If the
@@ -207,7 +208,7 @@ split link drops mid-word the slave's copy of WPM freezes non-zero for ever, and
 key activity is OR'd in, so a local keypress wakes him without waiting for a sync.
 
 Measured costs, from the generated art: blink **1 block** on every tier, breath 2, tier hop
-8, doze entry 8, floor 1. Art is 2880 bytes as block-aligned patches rather than whole
+8, doze entry 8, doze breath 2, floor 1. Art is 3008 bytes as block-aligned patches rather than whole
 frames, so a frame can be smaller than the column and the budget means something.
 
 ### Files

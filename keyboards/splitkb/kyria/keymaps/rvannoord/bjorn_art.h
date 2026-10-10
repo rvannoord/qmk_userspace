@@ -34,6 +34,7 @@ enum bjorn_frame_id {
     BJORN_F_BLINK_T3,
     BJORN_F_MICRO,
     BJORN_F_DOZE,
+    BJORN_F_DOZE_BREATH,
     BJORN_F_FLOOR_RIGHT,
     BJORN_FRAME_COUNT
 };
