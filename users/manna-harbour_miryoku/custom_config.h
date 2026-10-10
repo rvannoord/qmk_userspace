@@ -6,11 +6,12 @@
 #pragma once
 
 // Slave-side OLED art. Pick ONE (defaults to SPACESHIP if none set).
+//   OLED_SLAVE_ANIMATION_BJORN       the Viking, reacting to typing speed
 //   OLED_SLAVE_ANIMATION_SPACESHIP   the WPM-driven parallax scroll
 //   OLED_SLAVE_ANIMATION_MONITOR1
 //   OLED_SLAVE_ANIMATION_MONITOR2
 //   OLED_SLAVE_ANIMATION_KYRIA
-#define OLED_SLAVE_ANIMATION_SPACESHIP
+#define OLED_SLAVE_ANIMATION_BJORN
 
 // Master panel. Pick ONE (defaults to TEXT if none set).
 //   OLED_MASTER_PANEL_TEXT

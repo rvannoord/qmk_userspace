@@ -30,9 +30,15 @@
 #else
 #    define U_OLED_SLAVE_N_KYRIA 0
 #endif
-#define U_OLED_SLAVE_N                                    \
-    (U_OLED_SLAVE_N_SPACESHIP + U_OLED_SLAVE_N_MONITOR1 + \
-     U_OLED_SLAVE_N_MONITOR2 + U_OLED_SLAVE_N_KYRIA)
+#if defined(OLED_SLAVE_ANIMATION_BJORN)
+#    define U_OLED_SLAVE_N_BJORN 1
+#else
+#    define U_OLED_SLAVE_N_BJORN 0
+#endif
+
+#define U_OLED_SLAVE_N                                                    \
+    (U_OLED_SLAVE_N_SPACESHIP + U_OLED_SLAVE_N_MONITOR1 +                 \
+     U_OLED_SLAVE_N_MONITOR2 + U_OLED_SLAVE_N_KYRIA + U_OLED_SLAVE_N_BJORN)
 
 #if U_OLED_SLAVE_N == 0
 #    define OLED_SLAVE_ANIMATION_SPACESHIP

@@ -181,6 +181,53 @@ The existing slave art stays selectable exactly as it is, through the
 `custom_config.h`. Bjorn is an additional option, not a replacement. A matching selector is added
 for the master panel so today's text layout stays available the same way.
 
+### Stage 1, as built
+
+Shipped in stages because the custom RPC is the risky part and nothing in stage 1 needs
+it: WPM already crosses the link, and everything else here is local timing. Stage 1 is
+Bjorn reacting to typing speed and nothing else. It is also the experiment that decides
+the rest: whether a dithered 78→64 downscale is legible at 50-70 cm, tilted, at
+brightness 128. **The test when flashing: from a normal seated position, without leaning
+in, can the posture tier be named?** If not, the silhouettes need exaggerating before
+stage 2 commits to smaller details like the crown and the axe.
+
+| Constant | Value | Why |
+|----------|-------|-----|
+| WPM tiers, up | 10 / 30 / 50 | Low on purpose while Colemak-DH is still being relearned; the usual boundaries would mean never seeing the upper postures. Raise once speed settles |
+| WPM tiers, down | 6 / 24 / 42 | Each strictly below its up threshold, so the two hysteresis loops can never both fire |
+| Tier dwell | 800 ms | A tier hop repaints the whole column, 8 blocks. Hysteresis alone does not stop a bursty WPM reading twitching the posture |
+| Settle | 8 s | Drop to the resting posture |
+| Doze | 75 s | Eyes shut. Leaves 45 s of doze before the 120 s timeout |
+| Blink | every 6-10 s, held 200 ms | Pseudo-random from a small LCG, not `rand()`. 200 ms because at brightness 128 a shorter closure may not register |
+| Breath | 3.6 s, held 300 ms | A human breath, roughly. Resting posture only: IDLE2 is IDLE1's partner frame and the other postures have no equivalent, so elsewhere the blink carries the ambient |
+
+**Idle is gated on how long the WPM reading has been still, not on it being zero.** If the
+split link drops mid-word the slave's copy of WPM freezes non-zero for ever, and a
+`wpm == 0` test would leave Bjorn sprinting until the board is replugged. The half's own
+key activity is OR'd in, so a local keypress wakes him without waiting for a sync.
+
+Measured costs, from the generated art: blink **1 block** on every tier, breath 2, tier hop
+8, doze entry 8, floor 1. Art is 2880 bytes as block-aligned patches rather than whole
+frames, so a frame can be smaller than the column and the budget means something.
+
+### Files
+
+| File | Holds |
+|------|-------|
+| `oled_panel.h` | the only place that decides which panel and which art compile in, with an `#error` on picking two |
+| `oled.c` | dispatcher: sleep check, master/slave branch, nothing else |
+| `oled_master_text.c` | the text panel. Layer names now come from Miryoku's `MIRYOKU_LAYER_LIST` X-macro instead of a second copy of the layer order, so they are the short forms (`Base`, `Nav`, `Sym`). Override `MIRYOKU_LAYER_LIST` to change them |
+| `oled_slave_bjorn.c` | the mascot: tier hysteresis, idle ladder, ambient clocks, blitter |
+| `oled_slave_spaceship.c` | `render_space()`, moved byte-for-byte |
+| `oled_slave_logo.c` | the three static logos |
+| `bjorn_art.c` / `.h` | generated: base, patch table, frame index |
+| `art/*.h` | one header per animation, pure data, no selection logic, one includer each |
+
+Ambient timing counts render ticks rather than wall-clock milliseconds, so it freezes with
+the panel and resumes where it stopped instead of jumping to a random phase on wake. The
+tier and the idle ladder use the wall clock and are never reset, so both are already
+correct the moment the screen comes back.
+
 ### Attribution
 
 Bjorn's sprites are MIT licensed. The art files carry infinition's copyright notice and
