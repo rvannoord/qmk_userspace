@@ -12,6 +12,13 @@
 //   OLED_SLAVE_ANIMATION_KYRIA
 #define OLED_SLAVE_ANIMATION_SPACESHIP
 
+/* OLED panel. Both halves sleep together (keyboard.json syncs it). See docs/layout.md.
+   120 s so the idle states are actually seen; 128 to pay for it. OLED wear rises
+   superlinearly with drive current, so dropping 255 -> 128 buys back more life than
+   doubling the on-time costs, and it matches the board's RGB cap. */
+#define OLED_TIMEOUT 120000
+#define OLED_BRIGHTNESS 128
+
 #ifdef RGB_MATRIX_ENABLE
 #    define RGB_MATRIX_KEYPRESSES
 #    define ENABLE_RGB_MATRIX_TYPING_HEATMAP
