@@ -28,17 +28,18 @@ static const uint8_t bjorn_tier_down[3] = { 6, 24, 42};   // each strictly below
 #define BJORN_BLINK_HOLD      4                            // 200 ms
 #define BJORN_BLINK_MIN     120                            // 6 s
 #define BJORN_BLINK_SPREAD   80                            // ... to 10 s
-// Awake he swells over a 3-step ramp rather than snapping between two sizes:
-// rest, half, full, half, rest. Four small steps read as breathing where one big
-// one reads as the picture changing size.
+// Awake, the breath is four states over 3.6 s. The easing is in the dwell, not in
+// the shape: with one pixel of travel there is no curve to draw, so the rhythm has
+// to carry it. Quiet breathing is roughly 1:2.4 in to out, with a short pause at
+// the top and a long one at the bottom. The body leads and the head follows, both
+// on the way in and on the way out, because the chest drives and the head is driven.
 #define BJORN_BREATH_PERIOD  72                            // 3.6 s
-#define BJORN_BREATH_RISE     6                            // 300 ms at half, going up
-#define BJORN_BREATH_HOLD    18                            // held full until here
-#define BJORN_BREATH_FALL    24                            // back through half, then rest
-// Asleep he breathes slower, and asymmetrically: a short draw in and a long let out.
-// An even alternation reads as a metronome rather than as breathing.
-#define BJORN_DOZE_PERIOD   108                            // 5.4 s in all
-#define BJORN_DOZE_INHALE    36                            // 1.8 s in, 3.6 s out
+#define BJORN_BREATH_SWELL   36                            // body fills, head still down
+#define BJORN_BREATH_FULL    41                            // head arrives, held
+#define BJORN_BREATH_SETTLE  57                            // body empties, head still up
+#define BJORN_BREATH_REST    65                            // head comes down
+#define BJORN_DOZE_PERIOD   120                            // 6 s in all
+#define BJORN_DOZE_INHALE    30                            // 1.5 s in, 4.5 s out
 
 // --- state ------------------------------------------------------------------
 typedef struct {
@@ -51,6 +52,8 @@ static uint32_t bjorn_tier_changed;
 static uint8_t  bjorn_last_wpm;
 static uint32_t bjorn_wpm_changed;
 static uint16_t bjorn_ticks;
+static uint16_t bjorn_breath_origin;      // latched when he settles, so the first
+                                          // thing he does is a full rest, then an inhale
 static uint16_t bjorn_blink_at = BJORN_BLINK_MIN;
 static uint32_t bjorn_rng = 1;
 
@@ -135,41 +138,38 @@ void oled_render_slave(void) {
     bjorn_blit(&bjorn_frames[BJORN_F_FLOOR_RIGHT]);
 
     if (dozing) {
-        // No blink — his eyes are already shut. The breath is his beard rising, since
-        // he has no chest; it is his own outline pushed down a pixel, not new art.
+        // No blink — his eyes are already shut. Same lift as awake, half the depth.
         if (bjorn_ticks % BJORN_DOZE_PERIOD < BJORN_DOZE_INHALE) {
             bjorn_blit(&bjorn_frames[BJORN_F_DOZE_BREATH]);
         }
         return;
     }
 
-    // Work out the swell first: a blink is one whole page-4 block, so it has to carry
-    // the body edges of whichever swell is showing or it would flatten them.
-    uint8_t swell = 0;                        // 0 rest, 1 half, 2 full
+    // Work out the breath first: a blink is a whole page block, so it has to carry the
+    // body of whichever breath state is showing or it flattens the motion.
+    uint8_t breath = 0;                       // 0 rest, 1 swell, 2 full, 3 settle
     if (settled) {
-        const uint16_t phase = bjorn_ticks % BJORN_BREATH_PERIOD;
-        if (phase < BJORN_BREATH_RISE || (phase >= BJORN_BREATH_HOLD && phase < BJORN_BREATH_FALL)) {
-            swell = 1;
-        } else if (phase < BJORN_BREATH_HOLD) {
-            swell = 2;
-        }
+        const uint16_t phase = (uint16_t)(bjorn_ticks - bjorn_breath_origin) % BJORN_BREATH_PERIOD;
+        if (phase >= BJORN_BREATH_REST)        breath = 0;
+        else if (phase >= BJORN_BREATH_SETTLE) breath = 3;
+        else if (phase >= BJORN_BREATH_FULL)   breath = 2;
+        else if (phase >= BJORN_BREATH_SWELL)  breath = 1;
+    } else {
+        bjorn_breath_origin = bjorn_ticks;    // start the cycle at rest when he settles
     }
-    if (swell == 1) bjorn_blit(&bjorn_frames[BJORN_F_BREATH_HALF]);
-    if (swell == 2) bjorn_blit(&bjorn_frames[BJORN_F_BREATH]);
+    if (breath == 1) bjorn_blit(&bjorn_frames[BJORN_F_BREATH_SWELL]);
+    if (breath == 2) bjorn_blit(&bjorn_frames[BJORN_F_BREATH]);
+    if (breath == 3) bjorn_blit(&bjorn_frames[BJORN_F_BREATH_SETTLE]);
 
     if (bjorn_ticks - bjorn_blink_at < BJORN_BLINK_HOLD) {
-        bjorn_blit(&bjorn_frames[swell == 2   ? BJORN_F_BLINK_FULL
-                                 : swell == 1 ? BJORN_F_BLINK_HALF
-                                              : blink_of_tier[tier]]);
+        // Only the lifted states move his eyes, and both move them identically.
+        bjorn_blit(&bjorn_frames[breath >= 2 ? BJORN_F_BLINK_LIFT : blink_of_tier[tier]]);
     }
     if (bjorn_ticks - bjorn_blink_at < BJORN_BLINK_HOLD + 1) {
         bjorn_rng = bjorn_rng * 1664525u + 1013904223u;
         bjorn_blink_at = bjorn_ticks + BJORN_BLINK_MIN + (bjorn_rng >> 24) % BJORN_BLINK_SPREAD;
     }
-    // Breathing belongs to the idle, where attention is free; while he is typing the
-    // panel stays still apart from the blink. The gesture is his beard rising, not his
-    // face: an eye-region movement is indistinguishable from the blink, which is what
-    // the first attempt at this got wrong.
+
 
 }
 
