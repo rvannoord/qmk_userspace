@@ -28,8 +28,8 @@ static const uint8_t bjorn_tier_down[3] = { 6, 24, 42};   // each strictly below
 #define BJORN_BLINK_HOLD      4                            // 200 ms
 #define BJORN_BLINK_MIN     120                            // 6 s
 #define BJORN_BLINK_SPREAD   80                            // ... to 10 s
-#define BJORN_MICRO_PERIOD   72                            // 3.6 s, a breath
-#define BJORN_MICRO_HOLD      6                            // 300 ms
+#define BJORN_BREATH_PERIOD  72                            // 3.6 s awake
+#define BJORN_BREATH_INHALE  24                            // 1.2 s in, 2.4 s out
 // Asleep he breathes slower, and asymmetrically: a short draw in and a long let out.
 // An even alternation reads as a metronome rather than as breathing.
 #define BJORN_DOZE_PERIOD   108                            // 5.4 s in all
@@ -140,16 +140,17 @@ void oled_render_slave(void) {
 
     if (bjorn_ticks - bjorn_blink_at < BJORN_BLINK_HOLD) {
         bjorn_blit(&bjorn_frames[blink_of_tier[tier]]);
-        return;                               // one overlay at a time, never stacked
     }
     if (bjorn_ticks - bjorn_blink_at < BJORN_BLINK_HOLD + 1) {
         bjorn_rng = bjorn_rng * 1664525u + 1013904223u;
         bjorn_blink_at = bjorn_ticks + BJORN_BLINK_MIN + (bjorn_rng >> 24) % BJORN_BLINK_SPREAD;
     }
     // Breathing belongs to the idle, where attention is free; while he is typing the
-    // panel stays still apart from the blink.
-    if (settled && bjorn_ticks % BJORN_MICRO_PERIOD < BJORN_MICRO_HOLD) {
-        bjorn_blit(&bjorn_frames[BJORN_F_MICRO]);
+    // panel stays still apart from the blink. The gesture is his beard rising, not his
+    // face: an eye-region movement is indistinguishable from the blink, which is what
+    // the first attempt at this got wrong.
+    if (settled && bjorn_ticks % BJORN_BREATH_PERIOD < BJORN_BREATH_INHALE) {
+        bjorn_blit(&bjorn_frames[BJORN_F_BREATH]);
     }
 }
 
