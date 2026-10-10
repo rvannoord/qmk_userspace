@@ -200,17 +200,20 @@ stage 2 commits to smaller details like the crown and the axe.
 | Doze | 75 s | Eyes shut. Leaves 45 s of doze before the 120 s timeout |
 | Blink | every 6-10 s, held 200 ms | Pseudo-random from a small LCG, not `rand()`. 200 ms because at brightness 128 a shorter closure may not register |
 | Doze breath | 5.4 s: 1.8 s in, 3.6 s out | Asleep he breathes slower, and asymmetrically — an even alternation reads as a metronome. The gesture is his beard rising, since he has no chest: his own outline pushed down one pixel, not new art. No blink; his eyes are already shut |
-| Breath | 3.6 s: 1.2 s in, 2.4 s out | His beard rising 2 px, not his face. The first attempt used IDLE2 against IDLE1, which moves rows 30-37 — the same part of his face as the blink, at the same magnitude, so it was simply read as another blink. A gesture has to differ in *place*, not only in size. Resting posture only; while typing the panel stays still apart from the blink |
+| Breath | 3.6 s, ramped rest-half-full-half-rest | His whole silhouette swelling 2 px, anchored at the floor so he inflates upward and outward rather than sagging into it. Dilation is exterior-only — grown from a flood fill of the background, so his eyes, visor and helmet lines stay bit-identical and the eye has a fixed landmark to read the swell against; without that it looks like the picture zooming. Horns are held still by a local-density gate, or they fatten into clubs. A 3-step ramp rather than a 2-frame toggle, because one big jump reads as a size change and four small ones read as breathing. The first two attempts failed: rows 30-37 (his eyes, mistaken for the blink), then the lower contour travelling down (read as sagging).
 
 **Idle is gated on how long the WPM reading has been still, not on it being zero.** If the
 split link drops mid-word the slave's copy of WPM freezes non-zero for ever, and a
 `wpm == 0` test would leave Bjorn sprinting until the board is replugged. The half's own
 key activity is OR'd in, so a local keypress wakes him without waiting for a sync.
 
-Measured costs, from the generated art: blink **1 block** on every tier, breath 2, tier hop
-8, doze entry 8, doze breath 2, floor 1. Blink and breath sit on disjoint pages — 4
-against 6-7 — and the blink patch stamps bit-exactly onto the breath frame, so he can
-blink mid-inhale with no interlock and a 3-block worst case. Art is 3008 bytes as block-aligned patches rather than whole
+Measured costs, from the generated art: blink **1 block** on every tier, breath 7, tier hop
+8, doze entry 8, doze breath 7, floor 1. Art is 4224 bytes. A blink during a breath needs its own frame per swell state. The pixels do not
+collide, but a patch is a whole 64-byte block, so a blink block built from the resting
+pose carries un-swelled body edges either side of the eyes and flattens the swell where
+they share page 4. Three blink variants — rest, half, full — cost 64 bytes each and make
+the composition correct by construction. The host-side blitter harness caught this; it is
+invisible in a pixel-level comparison. Stored as block-aligned patches rather than whole
 frames, so a frame can be smaller than the column and the budget means something.
 
 ### Files
