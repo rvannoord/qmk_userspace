@@ -198,7 +198,9 @@ stage 2 commits to smaller details like the crown and the axe.
 | Tier dwell | 800 ms | A tier hop repaints the whole column, 8 blocks. Hysteresis alone does not stop a bursty WPM reading twitching the posture |
 | Settle | 8 s | Drop to the resting posture |
 | Doze | 75 s | Eyes shut. Leaves 45 s of doze before the 120 s timeout |
-| Blink | every 6-10 s, held 200 ms | Pseudo-random from a small LCG, not `rand()`. 200 ms because at brightness 128 a shorter closure may not register |
+| Blink | shut 150 ms on a cut, then 100 ms of half lid | Real lids close ballistically and open slowly, and that asymmetry is the most recognisable thing about a blink. Closure stays a cut because there is nothing to animate on the way down. Interval 6-10 s from a small LCG, and about one blink in five is doubled 400 ms apart, because real blinks cluster and irregular grouping is a stronger liveness cue than anything else at this size. The pair decision and the interval are drawn from separately advanced words, or "long gap" and "was a double" correlate perfectly and the pattern becomes legible within a minute |
+| Falling asleep | 300 ms half lid, 500 ms shut, then the pose cuts | The same three lid frames as a blink, played slowly and forwards instead of quickly and backwards. Deliberately far slower than a blink, or it reads as a blink that happened to be followed by a pose change. It waits for the bottom of a breath before starting: the unlifted lid patch is built over the resting body, so dropping it on a risen frame would snap the body back down — and nobody nods off mid-inhale |
+| Waking | correct pose immediately, eyes open over 200 ms | Waking from the panel timeout and waking from a doze are the same event, a keypress, and get one gesture. Cut the information, animate the character: the right pose for the current tier is there from the first frame with the eyes shut, and only the lids are delayed. Detected from a long gap between render calls, since the panel does not render while it sleeps |
 | Doze breath | 5.4 s: 1.8 s in, 3.6 s out | Asleep he breathes slower, and asymmetrically — an even alternation reads as a metronome. The gesture is his beard rising, since he has no chest: his own outline pushed down one pixel, not new art. No blink; his eyes are already shut |
 | Breath | 3.6 s, four states | His head and helmet **lift 1 px** while the beard stretches beneath them and his base stays pinned to the floor; the beard also pushes 1 px sideways over rows 41-52, so he fills as well as rises. 1 px is a hard ceiling, not a preference: his horn apex sits on row 1, so 2 px clips it against the top of the panel. Body leads and head follows in both directions, because the chest drives and the head is driven: rest 1.8 s, body fills 0.25 s, risen and held 0.8 s, body empties 0.4 s, head settles 0.35 s — about 1:2.4 in to out |
 
@@ -208,7 +210,7 @@ split link drops mid-word the slave's copy of WPM freezes non-zero for ever, and
 key activity is OR'd in, so a local keypress wakes him without waiting for a sync.
 
 Measured costs, from the generated art: blink **1 block** on every tier, breath 7, tier hop
-8, doze entry 8, doze breath 6, floor 1. Art is 4288 bytes. A blink during a breath needs its own frame per swell state. The pixels do not
+8, doze entry 8, doze breath 6, half lid 1 (2 while risen), floor 1. Art is 4672 bytes. A blink during a breath needs its own frame per swell state. The pixels do not
 collide, but a patch is a whole 64-byte block, so a blink block built from the resting
 pose carries un-swelled body edges either side of the eyes and flattens the swell where
 they share page 4. Three blink variants — rest, half, full — cost 64 bytes each and make
