@@ -200,7 +200,7 @@ stage 2 commits to smaller details like the crown and the axe.
 | Doze | 75 s | Eyes shut. Leaves 45 s of doze before the 120 s timeout |
 | Blink | every 6-10 s, held 200 ms | Pseudo-random from a small LCG, not `rand()`. 200 ms because at brightness 128 a shorter closure may not register |
 | Doze breath | 5.4 s: 1.8 s in, 3.6 s out | Asleep he breathes slower, and asymmetrically — an even alternation reads as a metronome. The gesture is his beard rising, since he has no chest: his own outline pushed down one pixel, not new art. No blink; his eyes are already shut |
-| Breath | 3.6 s, ramped rest-half-full-half-rest | His whole silhouette swelling 2 px, anchored at the floor so he inflates upward and outward rather than sagging into it. Dilation is exterior-only — grown from a flood fill of the background, so his eyes, visor and helmet lines stay bit-identical and the eye has a fixed landmark to read the swell against; without that it looks like the picture zooming. Horns are held still by a local-density gate, or they fatten into clubs. A 3-step ramp rather than a 2-frame toggle, because one big jump reads as a size change and four small ones read as breathing. The first two attempts failed: rows 30-37 (his eyes, mistaken for the blink), then the lower contour travelling down (read as sagging).
+| Breath | 3.6 s, four states | His head and helmet **lift 1 px** while the beard stretches beneath them and his base stays pinned to the floor; the beard also pushes 1 px sideways over rows 41-52, so he fills as well as rises. 1 px is a hard ceiling, not a preference: his horn apex sits on row 1, so 2 px clips it against the top of the panel. Body leads and head follows in both directions, because the chest drives and the head is driven: rest 1.8 s, body fills 0.25 s, risen and held 0.8 s, body empties 0.4 s, head settles 0.35 s — about 1:2.4 in to out |
 
 **Idle is gated on how long the WPM reading has been still, not on it being zero.** If the
 split link drops mid-word the slave's copy of WPM freezes non-zero for ever, and a
@@ -208,13 +208,45 @@ split link drops mid-word the slave's copy of WPM freezes non-zero for ever, and
 key activity is OR'd in, so a local keypress wakes him without waiting for a sync.
 
 Measured costs, from the generated art: blink **1 block** on every tier, breath 7, tier hop
-8, doze entry 8, doze breath 7, floor 1. Art is 4224 bytes. A blink during a breath needs its own frame per swell state. The pixels do not
+8, doze entry 8, doze breath 6, floor 1. Art is 4288 bytes. A blink during a breath needs its own frame per swell state. The pixels do not
 collide, but a patch is a whole 64-byte block, so a blink block built from the resting
 pose carries un-swelled body edges either side of the eyes and flattens the swell where
 they share page 4. Three blink variants — rest, half, full — cost 64 bytes each and make
 the composition correct by construction. The host-side blitter harness caught this; it is
 invisible in a pixel-level comparison. Stored as block-aligned patches rather than whole
 frames, so a frame can be smaller than the column and the budget means something.
+
+### Motion rules
+
+Four attempts at the breath failed before one worked, each for a different reason. These
+are what came out of that, and they apply to everything that moves, including the axe and
+the goat later.
+
+- **Anything that moves, moves as pre-dithered bits at integer offsets.** Never re-dither a
+  moving object in place. Region-locked dithering keeps a pixel's old bits wherever the
+  source grey barely changed — right for something standing still, wrong for something
+  travelling, because part of the texture stays behind while the rest slides over it. The
+  third attempt measured 16-29% of his body holding still while the rest of him moved: fine
+  in a still pair, reads as crawling on hardware.
+- **A gesture must differ in *place*, not only in size or timing.** The first attempt moved
+  rows 30-37; the blink moves 32-37. Same magnitude, same place, so it was read as the blink
+  being irregular.
+- **Dilation is not motion.** Growing the outline adds a rim of new ink, which above the
+  crown reads as a halo rather than as rising.
+- **Easing lives in hold durations.** Below about 4 px of travel there is no curve to draw,
+  so spend ticks on rhythm rather than frames on in-betweens.
+- **Put motion in long coherent edges, not in texture.** A 1 px push along a 12-row contour
+  is visible where the same pixels scattered through stipple are not.
+- **Overlap and lag belong to soft masses only** — the beard, a tail. Never the horns or an
+  axe head: at a couple of pixels of travel, lag on a rigid part is dither noise.
+- **Cuts for identity, motion for position.** Which pose he is in is a cut; where something
+  is, is animated. The four postures are different sprites with different dither lineages, so
+  an in-between would be a cross-fade between unrelated stipples. A cut is also right on
+  attention grounds: 150 ms of change across 8 blocks in peripheral vision pulls the eye,
+  where a single discontinuity is discarded by change blindness while you are concentrating.
+- **An overlay is a whole 64-byte block**, so it must carry the current state of everything
+  else in that block. A blink during a breath needs a frame built over the breathing body, or
+  it drags the body back each time it fires.
 
 ### Files
 
