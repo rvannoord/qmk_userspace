@@ -5,12 +5,16 @@
 
 #pragma once
 
-// Slave-side OLED animation. Pick ONE (defaults to SPACESHIP if none set).
-//   OLED_SLAVE_ANIMATION_SPACESHIP
+// Slave-side OLED art. Pick ONE (defaults to SPACESHIP if none set).
+//   OLED_SLAVE_ANIMATION_SPACESHIP   the WPM-driven parallax scroll
 //   OLED_SLAVE_ANIMATION_MONITOR1
 //   OLED_SLAVE_ANIMATION_MONITOR2
 //   OLED_SLAVE_ANIMATION_KYRIA
 #define OLED_SLAVE_ANIMATION_SPACESHIP
+
+// Master panel. Pick ONE (defaults to TEXT if none set).
+//   OLED_MASTER_PANEL_TEXT
+#define OLED_MASTER_PANEL_TEXT
 
 /* OLED panel. Both halves sleep together (keyboard.json syncs it). See docs/layout.md.
    120 s so the idle states are actually seen; 128 to pay for it. OLED wear rises

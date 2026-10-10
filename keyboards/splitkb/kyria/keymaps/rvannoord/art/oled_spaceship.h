@@ -1,3 +1,6 @@
+// Slave-side OLED art: the spaceship animation strips.
+// Pure data. Selection lives in oled_panel.h.
+
 #pragma once
 
 // Extended background rows generated to match the original 4-page spaceship art.
