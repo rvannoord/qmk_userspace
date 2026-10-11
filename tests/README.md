@@ -1,4 +1,13 @@
-# Scenario tests
+# Tests
+
+Two mechanisms, because they cover different things:
+
+| Runner | What | Needs |
+|--------|------|-------|
+| `tests/run_scenarios.sh` | tap-hold timing and host OS, as scenarios through stock QMK's tapping code | a `qmk_firmware` tree |
+| `tests/run_unit.sh` | the split transport's master half and the panel's drawing | just `cc` |
+
+## Scenario tests
 
 QMK unit tests (GoogleTest) for the tap-hold timing and the host OS handling. They run the real `tap_hold.c`, `host_os.c` and `keymap.c` against stock QMK's tapping code.
 
@@ -20,3 +29,26 @@ Expectations are the new setup's intended behaviour, written as what the host wo
 Results on 2026-10-09 (MIGRATION.md step 7): new 13/13. Old 10/12; the two failures are the known differences, S2 (same-hand chord after 200 ms: old `st`, new Ctrl+T) and S4 (a mod-tap settled as a tap stays down while held; the old code sent a single tap).
 
 The old tree needs `appdirs`, which the installed QMK CLI lacks, so `old` runs `make` inside a throwaway `uv` environment with that tree's `requirements.txt`.
+
+# Unit tests
+
+```bash
+tests/run_unit.sh          # build and run both
+tests/run_unit.sh --dump   # print the panel's frames instead of checking them
+```
+
+Plain C against stub headers in `unit/stub/`, with `unit.h` as the entire framework. They
+exist for the two things the scenario tests cannot reach:
+
+| File | What |
+|------|------|
+| `unit/test_split_sync.c` | the master send path. The scenario tests build `split_sync.c`'s non-`SPLIT_KEYBOARD` branch, where every function is a stub, so nothing there covers it — and a regression is silent and total: no sends at all, which on the keyboard looks like the other half's mascot going inert for no reason. Boot, the heartbeat, the hard window and recovery, on a clock that is a variable |
+| `unit/test_panel.c` | the master panel's zones. Compiles the real `oled_master_zones.c` against a buffer laid out like the driver's, then measures what was drawn: what is dark at rest, which cell inverts for which finger, which side the handedness tick takes, and whether each zone's content is centred. `--dump` prints the frames, which is how the zones get eyeballed without a flash |
+
+`unit/stub/manna-harbour_miryoku.h` copies Miryoku's layer list rather than including the
+real header, which would drag in all of QMK. The firmware build still uses the real one.
+
+The panel test asserts the mod row as built: the glyph is always drawn and inversion is
+what marks a held modifier, so four letters are lit even at rest. That is the spec's own
+choice and it is in tension with "dark at rest" — if it changes, the test and
+`docs/layout.md` change with it.

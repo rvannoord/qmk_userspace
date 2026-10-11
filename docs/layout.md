@@ -132,11 +132,11 @@ Dark at rest, so any light means something happened. Zones, all page-aligned:
 
 | Zone | Origin | Size | Content |
 |------|--------|------|---------|
-| Status bar | (0,0) | 128x8 | `WIN`/`MAC` badge, underlined if set by hand with SYS; an alarm banner takes the whole row when one is raised |
-| Mod row | (0,8) | 128x16 | four 32 px cells, 16x16 glyph each, inverted when active, 3 px handedness tick in the padding |
-| Layer band | (0,24) | 128x16 | layer name in DUNGEON.mode at 2x, so 16x16 a character, centred. Blank on base |
-| Separator | (0,40) | 128x8 | always dark. The gap is what keeps the strip from reading as a fifth line of the layer band |
-| Event strip | (0,48) | 128x16 | 16x16 icons, only the ones whose condition holds, centred as a group: Caps Lock, Caps Word, AltGr, link fault. Dark when nothing is on |
+| Status bar | (0,0) | 128x8 | `WIN`/`MAC` badge, underlined when SYS set it by hand. The right end is permanently dark, so the latched locks live there at x=100, 109, 118 — one row, so they cannot drift off a shared baseline |
+| Mod row | (0,8) | 128x16 | four 32 px cells, one per finger, outer to inner. **Dark at rest**: a cell draws its 16x16 glyph only while that finger holds something, and nothing here ever inverts. Handedness is a 3x16 bar filling the padding on that hand's side |
+| Layer band | (0,24) | 128x16 | layer name in DUNGEON.mode at 2x, so 16x16 a character, centred. Blank on base. Two rows under the name whenever the default layer — the high nibble of `layers` — is not base |
+| Alarm row | (0,40) | 128x8 | rung 2 of the ladder, and the only thing on this panel that inverts. Dark otherwise, which is also what keeps the row below from reading as a fifth line of the layer band. The split link being down is its only occupant today |
+| Trace strip | (0,48) | 128x16 | dark at rest. On a misfire, the offending finger's letter and hand at 2x for 1.5 s, then dark. The panel's only past tense |
 
 **The font is DUNGEON.mode**, an 8x8 1-bit bitmap font, not QMK's built-in 6x8. It is the same
 pack the rest of the panel's art is cut from, so the text and the glyphs share one hand. The sheet
@@ -160,9 +160,42 @@ checked against the bit the key actually registered — recorded when it was pre
 `mod_config()` is applied at press time and an OS change while a key is held must not
 re-attribute it to another finger.
 
+**Why the mod row is dark at rest.** The first build drew all four glyphs always and
+inverted a cell to mark a held modifier. Measured, that put the most routine event on
+the keyboard into the alarm's own register: rung 2 inverts 128x8 = 1024 px, and two
+held modifiers inverted 2 x 512 = exactly 1024. Ctrl+Shift, many times a minute, spent
+the whole rung — and three held modifiers outlit it. Drawing a cell only while its
+finger holds something costs nothing in legibility, because the order never moves and
+the signal was never the letter but the cell lighting up. It also makes "dark at rest"
+literally true and leaves inversion entirely to the alarm row.
+
+**The lock glyphs are 1 px and must never be inverted in place.** They are 7x7 inside an
+8x8 cell — column 7 is a gutter so the 1 px channel between neighbours cannot close under
+bloom, row 7 belongs to the SYS underline. At that size a 2 px stroke leaves no interior,
+and 1 px is what the font's own symbol cells use anyway. Inverted they would become dark
+hairlines in a lit field, which is the failure the mascot's work already measured. Nothing
+inverts this row: the alarm is a different page. If that ever changes, this set has to be
+redrawn, and 7x7 will not give one that survives it. All three carry ink on row 0 and none
+of the six badge letters does, so the cluster sits a pixel proud of any text beside it.
+
+**Why AltGr is not shown.** It is held, not latched: you are holding it at the moment
+it would be displayed, so it carries nothing — the same reason the mascot's axe excludes
+Shift. It can also be shorter than the 100 ms a flag needs to survive the 20 Hz tick,
+so it would both strobe and be missed.
+
+**Why Num Lock is not shown.** `KC_NUM` appears on no layer, so it cannot be toggled
+from this keyboard, and the Num layer sends `KC_7`/`KC_4`/`KC_1`/`KC_0` rather than
+keypad codes, so its state cannot change anything this keyboard types. `U_FLAG_NUM_LOCK`
+stays on the wire as a reserved bit. Scroll Lock is the opposite case and is shown:
+`KC_SCRL` sits on the Fun layer's home row between `KC_PSCR` and `KC_PAUS`, so it gets
+hit by accident, and it then silently changes what the arrow keys do in a spreadsheet.
+
 Alarms escalate by **scope**, not by brightness, so routine events never spend the loudest
-register: normal, then an inverted status bar, then the 1 px edge frame, then full-panel inversion.
-Entry blinks three times over 600 ms, which routine changes never do.
+register. The rungs are per panel, and the test is ordering inside one panel: nothing routine may
+light more pixels than that panel's own alarm. On the master: normal, then the inverted banner on
+the alarm row, then full-panel inversion. The master has no 1 px edge frame — the frame needs
+x=0, x=127, y=0 and y=63 kept clear and a status panel cannot promise that, since the badge itself
+lights x=0. Entry blinks three times over 600 ms, which routine changes never do.
 
 Miryoku uses the left-hand mod-tap variants on both hands (`LSFT_T(KC_T)` and `LSFT_T(KC_N)`), so
 `get_mods()` cannot tell which hand fired. Handedness comes from the matrix row, the same test
@@ -276,6 +309,7 @@ the goat later.
 | `oled_panel.h` | the only place that decides which panel and which art compile in, with an `#error` on picking two |
 | `oled.c` | dispatcher: sleep check, master/slave branch, nothing else |
 | `oled_master_zones.c` | the panel. Four zones, raw page bytes rather than `oled_write`, because a zone has to clear exactly its own area. 1x and 2x glyph blitters; the 2x one doubles each source row, so a 16x16 is two page bytes a column |
+| `panel_glyphs.c` | generated. The five mod-row glyphs — four-pane, option mark, caret, command, shift — hand-drawn at 16x16 in DUNGEON.mode's weight language, in page format. Eight slots are five drawings: shift is one drawing in both sets, and the caret is one drawing that changes cell when the OS does, so the Ctrl/GUI swap is visible as a hop from the middle finger to the pinky |
 | `panel_font.c` | generated. Printable ASCII cut out of the DUNGEON.mode sheet, one byte a row, plus the symbol cells the event strip draws. Neither the sheet nor the generator is in the repo — the table is, and the table is what builds. Regenerating means fetching the pack again (see Attribution) |
 | `oled_master_text.c` | the text panel. Layer names now come from Miryoku's `MIRYOKU_LAYER_LIST` X-macro instead of a second copy of the layer order, so they are the short forms (`Base`, `Nav`, `Sym`). Override `MIRYOKU_LAYER_LIST` to change them |
 | `oled_slave_bjorn.c` | the mascot: tier hysteresis, idle ladder, ambient clocks, blitter |

@@ -43,6 +43,8 @@ Flash size is not a concern on the RP2040. Keep a known-good `.uf2` outside the 
 
 After changing `tap_hold.c`, `host_os.c`, `keymap.c` or a tap-hold value, run the scenario tests with `tests/run_scenarios.sh new` (see `tests/README.md`). They encode the current values, so a deliberate change updates the matching test too.
 
+After changing `split_sync.c`, `oled_master_zones.c` or `panel_font.c`, run `tests/run_unit.sh`. Those are host tests in plain C and need nothing but `cc`. `tests/run_unit.sh --dump` prints the panel's frames, which is how the zones get checked without a flash.
+
 ## Host OS
 
 The keyboard plugs into Windows at work and an Apple Silicon Mac at home. One switch, `host_is_mac()` in `host_os.c`, decides everything OS-specific:
