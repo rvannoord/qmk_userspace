@@ -85,9 +85,12 @@ static bool     bjorn_blink_pair;         // the next blink is the second of a p
 // only thing that is wrong. The steps slow as the axe rises — a lifted mass
 // decelerates toward the top of its arc, and that is what makes it read as heavy.
 #define BJORN_MF_GRIP         2                            // 100 ms taking hold
-#define BJORN_MF_R1           5                            // 150 ms
-#define BJORN_MF_R2           9                            // 200 ms
-#define BJORN_MF_END         24                            // 750 ms held overhead
+#define BJORN_MF_R1           5                            // 150 ms, rising
+#define BJORN_MF_R2           9                            // 200 ms, slower near the top
+#define BJORN_MF_TOP         29                            // 1000 ms held overhead
+#define BJORN_MF_D2          31                            // and back down, faster than up:
+#define BJORN_MF_D1          33                            // lifting is effort, dropping is not
+#define BJORN_MF_END         35
 
 #define BJORN_WAKE_SHUT       2                            // 100 ms shut on waking
 #define BJORN_WAKE_OPEN       4                            // then half lid; eyes open here
@@ -278,10 +281,15 @@ void oled_render_slave(void) {
         // arousal scale, so that pose already exists, and half a droop reads as damage
         // where both falling reads as deflation. Nothing was typed, so the typing-speed
         // posture is carrying no information to preserve.
+        // Up, held, and back down. Cutting from the raised pose straight to the bare
+        // posture reads as the axe vanishing rather than as a gesture finishing.
         bjorn_blit(&bjorn_frames[mf < BJORN_MF_GRIP ? BJORN_F_AXE_T0
                                  : mf < BJORN_MF_R1 ? BJORN_F_MISFIRE_R1
                                  : mf < BJORN_MF_R2 ? BJORN_F_MISFIRE_R2
-                                                    : BJORN_F_MISFIRE_R3]);
+                                 : mf < BJORN_MF_TOP ? BJORN_F_MISFIRE_R3
+                                 : mf < BJORN_MF_D2  ? BJORN_F_MISFIRE_R2
+                                 : mf < BJORN_MF_D1  ? BJORN_F_MISFIRE_R1
+                                                     : BJORN_F_AXE_T0]);
     } else if (bjorn_axe_live && !settled) {
         bjorn_blit(&bjorn_frames[axe_of_tier[tier]]);
     }
