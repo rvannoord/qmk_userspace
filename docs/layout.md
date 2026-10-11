@@ -108,7 +108,7 @@ Ambient clocks are non-harmonic so the scene never looks metronomic: breath 1.2 
 | Trigger | Response |
 |---------|----------|
 | WPM tier (0-19 / 20-39 / 40-59 / 60+, 8 WPM hysteresis) | horn posture, four static poses from IDLE8 / IDLE1 / IDLE3 / IDLE9. No speed lines: motion in peripheral vision taxes concentration, and WPM is the one signal with nothing to act on |
-| Command modifier released after being used | axe into his hand, held 800 ms. Two dirty blocks: it is seated in his beard at rows 40-55, inside the left column, so it never crosses the dither seam and leaves the right half free for the goat. Disjoint from the blink window at rows 32-39, so the two compose with no combined variants. **Shift is excluded**: here it is a home-row mod, part of typing a capital rather than an instruction, and it fires so often that the 800 ms dwell would never expire — the prop would be permanently on rather than a signal. **And it fires only when the modifier was used**, meaning something was typed while it was held. Releasing Ctrl after Ctrl+C is a command; releasing a home-row mod that timed out unused is a finger that hovered, and that is the misfire case instead |
+| Command modifier held | axe into his hand, and for 800 ms after it is released. Two dirty blocks, seated beside him inside the left column so it never crosses the dither seam and leaves the right half free for the goat. Disjoint from the blink window, so the two compose with no combined variants. **Shift is excluded** — here it is a home-row mod, part of typing a capital rather than an instruction, and it is held so often the axe would simply always be there. The trailing dwell is what stops a 100-300 ms hold strobing the prop. An earlier rule fired on a *completed* command instead, and was wrong twice over: with Chordal Hold most same-hand shortcuts resolve as letters, and Miryoku's clipboard keys are not modifiers at all, so the event barely happens |
 | Mod anomaly (held >500 ms, no companion key) | axe raised overhead, 3 frames, 1200 ms, plus drooping horns. The misfire indicator — the only thing that animates is the only thing that is wrong |
 | Caps Word | spiked crown, and his 64x64 tile renders inverted: dark Bjorn on a white page, his native e-paper look, spent at the one moment it carries information |
 | Caps Lock | crown plus a 1 px edge frame (y=0, y=63, x=0, x=127). Nothing else ever draws there, so lighting it is unambiguous. 380 lit px |
@@ -158,7 +158,7 @@ on, and one side of that comparison is misleading on its own.
 
 ### Split sync
 
-One custom 6-byte RPC, master to slave, on change plus a 250 ms heartbeat and a 20 ms minimum
+One custom 5-byte RPC, master to slave, on change plus a 250 ms heartbeat and a 20 ms minimum
 interval. Five bytes rather than four because the wire cost is 13 bytes of fixed overhead
 against 43 us per payload byte — width is about 3% of a send, so the bytes go on clarity
 rather than packing. Not `SPLIT_LAYER_STATE_ENABLE` / `SPLIT_MODS_ENABLE` / `SPLIT_LED_STATE_ENABLE`: those

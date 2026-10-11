@@ -118,35 +118,27 @@ TEST_F(SplitState, LayersAreReportedSeparately) {
     release(space, 300);
 }
 
-// The axe fires when a command modifier was actually used — something was typed while
-// it was held. Shift is excluded: here it is a home-row mod, part of typing a capital
-// rather than an instruction, and it fires so often that an 800 ms dwell never expires.
-TEST_F(SplitState, TraceCountsUsedCommandModsOnly) {
+// A real shortcut must NOT count as a misfire. This is the case that was broken:
+// process_record_user does not run at a mod-tap's physical press, and when the companion
+// key is what forces the hold decision, the companion arrives first — so a detector built
+// on press counts sees "nothing typed" for exactly the shortcuts it should ignore.
+TEST_F(SplitState, AShortcutIsNotAMisfire) {
     TestDriver driver;
     record(driver);
     begin();
 
-    const uint8_t before = u_sync_build().trace;
+    const uint8_t before = u_sync_build().anomaly;
 
-    // The payload key must be on the OTHER hand: Chordal Hold turns a same-hand roll
-    // into letters, so s + w would resolve as a tap and never be a held modifier at all.
-    press(s, 0);                               // left Ctrl, with a right-hand key under it
-    tap(u, 100);
-    release(s, 300);
-    at(350);
-    const uint8_t used = u_sync_build().trace;
-    EXPECT_EQ((uint8_t)(used - before), 1);
-
-    press(t, 400);                             // left Shift, used — excluded
-    tap(u, 500);
-    release(t, 700);
+    press(s, 0);                               // left Ctrl
+    tap(u, 100);                               // right-hand key under it: a real shortcut
+    release(s, 700);                           // held well past the 500 ms floor
     at(750);
-    EXPECT_EQ(u_sync_build().trace, used);
+    EXPECT_EQ(u_sync_build().anomaly, before); // used, so not a misfire
 
-    press(s, 800);                             // Ctrl, held but never used
-    release(s, 1400);
-    at(1450);
-    EXPECT_EQ(u_sync_build().trace, used);     // no command was issued
+    press(s, 800);                             // the same hold with nothing typed
+    release(s, 1500);
+    at(1550);
+    EXPECT_EQ((uint8_t)(u_sync_build().anomaly - before), 1);
 }
 
 // seq advances on every build. The slave tests it for inequality, never for +1.

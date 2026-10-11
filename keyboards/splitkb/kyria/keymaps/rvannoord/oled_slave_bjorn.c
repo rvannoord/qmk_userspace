@@ -59,7 +59,6 @@ typedef struct {
     uint8_t  fingers;      // modifiers by finger, outer to inner, both hands
     uint8_t  flags;        // locks, Caps Word, host OS
     uint8_t  anomaly;      // misfire count; only ever compared for change
-    uint8_t  trace;        // count of command modifiers used; likewise
     bool     soft_stale;   // state no longer vouched for: drop the props, keep him alive
     bool     hard_stale;   // link dead
 } bjorn_in_t;
@@ -89,7 +88,6 @@ static uint8_t  bjorn_state;              // 0 awake, 1 falling asleep, 2 asleep
 static uint16_t bjorn_state_at;           // tick the current state began
 static uint16_t bjorn_wake_at;            // tick the waking gesture began
 static uint16_t bjorn_axe_at;             // tick the axe appeared
-static uint8_t  bjorn_last_trace;
 static bool     bjorn_axe_live;           // or tick 0 looks like a trace at boot
 static uint32_t bjorn_last_render;
 static uint16_t bjorn_doze_origin;        // latched on falling asleep
@@ -116,7 +114,6 @@ static void bjorn_gather(bjorn_in_t *in) {
     in->fingers    = s.fingers;
     in->flags      = s.flags;
     in->anomaly    = s.anomaly;
-    in->trace      = s.trace;
     in->soft_stale = u_sync_soft_stale();
     in->hard_stale = u_sync_hard_stale();
 
@@ -233,14 +230,19 @@ void oled_render_slave(void) {
         return;                               // asleep: eyes already shut
     }
 
-    // The axe can only fire while he is typing, and the breath only while he is settled,
-    // so the two can never want the same tick.
+    // The axe while a command modifier is held, and for 800 ms after it is released.
+    // Holding is the event worth marking: it is what he actually does, where a completed
+    // shortcut mostly is not — Chordal Hold turns his same-hand ones into letters, and
+    // Miryoku's clipboard keys are not modifiers at all. The trailing dwell is what stops
+    // a 100-300 ms hold strobing the prop on and off.
+    //
+    // Shift is excluded: here it is a home-row mod, part of typing a capital rather than
+    // an instruction, and it is held so often that the axe would simply always be there.
     static const uint8_t axe_of_tier[4] = {BJORN_F_AXE_T0, BJORN_F_AXE_T1,
                                            BJORN_F_AXE_T2, BJORN_F_AXE_T3};
-    if (in.trace != bjorn_last_trace) {
-        bjorn_last_trace = in.trace;
-        bjorn_axe_at     = bjorn_ticks;
-        bjorn_axe_live   = true;
+    if (in.fingers & (uint8_t)~(U_FIN_L_INDEX | U_FIN_R_INDEX)) {
+        bjorn_axe_at   = bjorn_ticks;         // refreshed while held
+        bjorn_axe_live = true;
     }
     if (bjorn_axe_live && (uint16_t)(bjorn_ticks - bjorn_axe_at) >= BJORN_AXE_TICKS) {
         bjorn_axe_live = false;

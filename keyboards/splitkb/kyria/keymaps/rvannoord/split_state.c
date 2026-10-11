@@ -29,15 +29,14 @@ static uint8_t expand_mod(uint8_t mod) {
 static uint8_t  tracked;             // finger bits we have seen pressed
 static uint8_t  altgr;              // U_FLAG_ALTGR_L / _R
 static uint8_t  anomalies;          // published count
-static uint8_t  traces;             // command modifiers released after being used
-static uint16_t payload_presses;    // anything that counts as something to modify
+static uint16_t last_payload_at;    // event.time of the last thing worth modifying
+static bool     had_payload;
 
 static struct {
     bool     active;
     uint8_t  slot;
     uint8_t  live;                  // the mod bit this key actually registered, expanded
     uint16_t at;                    // event.time of the press
-    uint16_t presses;               // payload_presses when the hold began
 } holds[U_HOLDS];
 
 static uint8_t declared_mod(uint16_t keycode) {
@@ -58,7 +57,15 @@ void u_sync_note_record(uint16_t keycode, keyrecord_t *record) {
     const uint8_t mod  = declared_mod(keycode);
     const bool    held = mod && (!IS_QK_MOD_TAP(keycode) || record->tap.count == 0);
 
-    if (record->event.pressed && counts_as_payload(keycode, record)) payload_presses++;
+    if (record->event.pressed && counts_as_payload(keycode, record)) {
+        // Timestamped, not counted. process_record_user does not run at the physical press
+        // of a mod-tap — it runs when the tap-or-hold decision is made — and when the
+        // companion key is what forces that decision, the companion is processed first.
+        // A counter snapshotted at hold registration therefore misses the very key that
+        // caused the hold. Event times are correct whatever order the records arrive in.
+        last_payload_at = record->event.time;
+        had_payload     = true;
+    }
     if (!mod) return;
 
     const bool right = chordal_hold_handedness(record->event.key) == 'R';
@@ -85,7 +92,6 @@ void u_sync_note_record(uint16_t keycode, keyrecord_t *record) {
                 holds[i].slot    = bit;
                 holds[i].live    = expand_mod(mod_config(mod));
                 holds[i].at      = record->event.time;
-                holds[i].presses = payload_presses;
                 break;
             }
         }
@@ -97,18 +103,14 @@ void u_sync_note_record(uint16_t keycode, keyrecord_t *record) {
                 // Ordering cannot be trusted here — action_tapping.c processes a rolled
                 // press of three tap-hold keys out of order — so ask whether anything was
                 // typed during the hold, not whether a particular key came after it.
-                if (payload_presses == holds[i].presses) {
-                    // Held with nothing typed. Long enough and it is a misfire; shorter
-                    // and it is just a finger that hovered, which is not worth a prop.
-                    if (TIMER_DIFF_16(record->event.time, holds[i].at) > U_ANOMALY_MS) {
-                        anomalies++;
-                    }
-                } else if (!(holds[i].live & (MOD_BIT(KC_LSFT) | MOD_BIT(KC_RSFT)))) {
-                    // Something was typed while it was held: a command was issued. Shift is
-                    // excluded because here it is a home-row mod — part of typing a capital
-                    // rather than an instruction — and it fires so often that an 800 ms
-                    // dwell would never expire, leaving the prop permanently on.
-                    traces++;
+                const uint16_t held_for = TIMER_DIFF_16(record->event.time, holds[i].at);
+                // Was anything typed between the press and the release? A payload from
+                // before the hold gives a difference near 2^16, so it fails this on its own.
+                const bool used = had_payload &&
+                                  TIMER_DIFF_16(last_payload_at, holds[i].at) <= held_for;
+                if (!used && held_for > U_ANOMALY_MS) {
+                    // Held long, nothing typed: the signature of a home-row misfire.
+                    anomalies++;
                 }
                 holds[i].active = false;
                 break;
@@ -162,6 +164,5 @@ u_split_state_t u_sync_build(void) {
                              (get_highest_layer(default_layer_state) << 4)),
         .flags   = flags,
         .anomaly = anomalies,
-        .trace   = traces,
     };
 }
