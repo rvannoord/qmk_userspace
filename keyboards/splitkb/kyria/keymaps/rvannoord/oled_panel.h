@@ -62,5 +62,11 @@
 
 // Implemented by whichever renderer was selected above. Each is a no-op in the
 // builds where its own file compiled to nothing.
+//
+// oled_render_* draw, and run at the panel's update rate — 20 Hz, and not at all
+// while it sleeps. oled_*_task run every main loop on their own half, so they are
+// where state that must not miss an edge belongs.
 void oled_render_master(void);
 void oled_render_slave(void);
+void oled_master_task(void);
+void oled_slave_task(void);

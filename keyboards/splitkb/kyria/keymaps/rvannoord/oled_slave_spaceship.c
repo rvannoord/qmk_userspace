@@ -86,4 +86,6 @@ void oled_render_slave(void) {
 	render_space();
 }
 
+void oled_slave_task(void) {}
+
 #endif     // OLED_SLAVE_ANIMATION_SPACESHIP

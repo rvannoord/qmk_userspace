@@ -66,4 +66,6 @@ void oled_render_master(void) {
     oled_write_P(led_usb_state.scroll_lock ? PSTR("SCRLCK ") : PSTR("       "), false);
 }
 
+void oled_master_task(void) {}
+
 #endif     // OLED_MASTER_PANEL_TEXT

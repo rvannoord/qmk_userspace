@@ -5,6 +5,21 @@
 #include QMK_KEYBOARD_H
 #include "manna-harbour_miryoku.h"
 #include "host_os.h"
+#ifdef OLED_ENABLE
+#    include "oled_panel.h"   // only needed by housekeeping_task_user below
+#endif
+
+// Every main loop, on both halves. QMK allows exactly one definition of this, so it
+// lives here rather than inside whichever OLED renderer happens to be selected.
+void housekeeping_task_user(void) {
+#ifdef OLED_ENABLE
+    if (is_keyboard_master()) {
+        oled_master_task();
+    } else {
+        oled_slave_task();
+    }
+#endif
+}
 
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
     switch (keycode) {

@@ -103,9 +103,7 @@ static void bjorn_update_tier(uint8_t wpm) {
 }
 
 // Runs every main loop on this half, so it cannot miss an edge.
-void housekeeping_task_user(void) {
-    if (is_keyboard_master()) return;
-
+void oled_slave_task(void) {
     bjorn_in_t in;
     bjorn_gather(&in);
     bjorn_update_tier(in.wpm);

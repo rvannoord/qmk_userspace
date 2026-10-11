@@ -25,4 +25,6 @@ void oled_render_slave(void) {
 #endif
 }
 
+void oled_slave_task(void) {}
+
 #endif
