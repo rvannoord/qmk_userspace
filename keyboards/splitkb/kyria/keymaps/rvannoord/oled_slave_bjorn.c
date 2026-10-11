@@ -80,6 +80,15 @@ static bool     bjorn_blink_pair;         // the next blink is the second of a p
 // change reads as static rather than as a flicker.
 #define BJORN_AXE_TICKS      16                            // 800 ms
 
+// A misfire: a command modifier held past half a second with nothing typed. The one
+// thing in the design that animates, because the only thing that should move is the
+// only thing that is wrong. The steps slow as the axe rises — a lifted mass
+// decelerates toward the top of its arc, and that is what makes it read as heavy.
+#define BJORN_MF_GRIP         2                            // 100 ms taking hold
+#define BJORN_MF_R1           5                            // 150 ms
+#define BJORN_MF_R2           9                            // 200 ms
+#define BJORN_MF_END         24                            // 750 ms held overhead
+
 #define BJORN_WAKE_SHUT       2                            // 100 ms shut on waking
 #define BJORN_WAKE_OPEN       4                            // then half lid; eyes open here
 #define BJORN_RENDER_GAP_MS 500                            // a longer gap means the panel slept
@@ -88,7 +97,10 @@ static uint8_t  bjorn_state;              // 0 awake, 1 falling asleep, 2 asleep
 static uint16_t bjorn_state_at;           // tick the current state began
 static uint16_t bjorn_wake_at;            // tick the waking gesture began
 static uint16_t bjorn_axe_at;             // tick the axe appeared
-static bool     bjorn_axe_live;           // or tick 0 looks like a trace at boot
+static bool     bjorn_axe_live;           // or tick 0 looks like a release at boot
+static uint16_t bjorn_mf_at;              // tick the misfire began
+static bool     bjorn_mf_live;
+static uint8_t  bjorn_last_anomaly;
 static uint32_t bjorn_last_render;
 static uint16_t bjorn_doze_origin;        // latched on falling asleep
 static uint32_t bjorn_rng = 1;
@@ -221,7 +233,8 @@ void oled_render_slave(void) {
 
     // --- draw ---------------------------------------------------------------
     bjorn_blit_base();
-    bjorn_blit(&bjorn_frames[bjorn_state == 2 ? BJORN_F_DOZE : pose_of_tier[tier]]);
+    const uint8_t draw_tier = bjorn_mf_live ? 0 : tier;   // drooped for the misfire
+    bjorn_blit(&bjorn_frames[bjorn_state == 2 ? BJORN_F_DOZE : pose_of_tier[draw_tier]]);
     bjorn_blit(&bjorn_frames[BJORN_F_FLOOR_RIGHT]);
 
     if (bjorn_state == 2) {
@@ -229,6 +242,17 @@ void oled_render_slave(void) {
         if (phase < BJORN_DOZE_INHALE) bjorn_blit(&bjorn_frames[BJORN_F_DOZE_BREATH]);
         return;                               // asleep: eyes already shut
     }
+
+    // A misfire outranks the axe and cancels it rather than suspending it: resuming a
+    // stale success indicator afterwards would read as a second event that never happened.
+    if (in.anomaly != bjorn_last_anomaly) {
+        bjorn_last_anomaly = in.anomaly;
+        bjorn_mf_at        = bjorn_ticks;
+        bjorn_mf_live      = true;
+        bjorn_axe_live     = false;
+    }
+    const uint16_t mf = bjorn_ticks - bjorn_mf_at;
+    if (bjorn_mf_live && mf >= BJORN_MF_END) bjorn_mf_live = false;
 
     // The axe while a command modifier is held, and for 800 ms after it is released.
     // Holding is the event worth marking: it is what he actually does, where a completed
@@ -247,7 +271,18 @@ void oled_render_slave(void) {
     if (bjorn_axe_live && (uint16_t)(bjorn_ticks - bjorn_axe_at) >= BJORN_AXE_TICKS) {
         bjorn_axe_live = false;
     }
-    if (bjorn_axe_live && !settled) {
+
+    if (bjorn_mf_live) {
+        // His horns droop for the duration. The whole figure cuts to the drooped posture
+        // rather than splicing horns into the current one: the tier progression is an
+        // arousal scale, so that pose already exists, and half a droop reads as damage
+        // where both falling reads as deflation. Nothing was typed, so the typing-speed
+        // posture is carrying no information to preserve.
+        bjorn_blit(&bjorn_frames[mf < BJORN_MF_GRIP ? BJORN_F_AXE_T0
+                                 : mf < BJORN_MF_R1 ? BJORN_F_MISFIRE_R1
+                                 : mf < BJORN_MF_R2 ? BJORN_F_MISFIRE_R2
+                                                    : BJORN_F_MISFIRE_R3]);
+    } else if (bjorn_axe_live && !settled) {
         bjorn_blit(&bjorn_frames[axe_of_tier[tier]]);
     }
 
@@ -258,8 +293,8 @@ void oled_render_slave(void) {
     // Which eye frame, if any. Picked from this tick's breath state, not from the one
     // the gesture started in: a blink is five ticks long and can straddle a change, and
     // an unlifted patch over a risen body drags his horn tip and beard back down.
-    const uint8_t shut = (breath >= 2) ? BJORN_F_BLINK_LIFT : blink_of_tier[tier];
-    const uint8_t half = (breath >= 2) ? BJORN_F_HALF_LIFT  : half_of_tier[tier];
+    const uint8_t shut = (breath >= 2) ? BJORN_F_BLINK_LIFT : blink_of_tier[draw_tier];
+    const uint8_t half = (breath >= 2) ? BJORN_F_HALF_LIFT  : half_of_tier[draw_tier];
 
     if (bjorn_state == 1) {                   // falling asleep: slow, forwards
         const uint16_t d = bjorn_ticks - bjorn_state_at;
