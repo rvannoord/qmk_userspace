@@ -11,6 +11,7 @@
 #include "manna-harbour_miryoku.h"
 #include "oled_panel.h"
 #include "host_os.h"
+#include "split_state.h"
 
 #ifdef OLED_MASTER_PANEL_TEXT
 
@@ -22,25 +23,27 @@ static const char *const layer_names[] = {
 #undef MIRYOKU_X
 };
 
-static void render_mods(void) {
-    uint8_t mods = get_mods();
+// The state the panel draws from, rebuilt every main loop by oled_master_task so a
+// modifier cannot be missed between two 20 Hz frames.
+static u_split_state_t panel;
 
-    // A slot is a finger, pinky to index — not a modifier. get_mods() returns post-swap
-    // bits, because mod_config() runs when a keycode becomes an action, so on the Mac the
-    // pinky key reports Ctrl and the middle finger reports GUI. The slot never moves, only
-    // the label. Five-wide fields, blanks the same width, so nothing shifts.
-    if (host_is_mac()) {
-        oled_write_P(mods & MOD_MASK_CTRL  ? PSTR("CTRL ") : PSTR("     "), false);
-        oled_write_P(mods & MOD_MASK_ALT   ? PSTR("OPT  ") : PSTR("     "), false);
-        oled_write_P(mods & MOD_MASK_GUI   ? PSTR("CMD  ") : PSTR("     "), false);
-        oled_write_P(mods & MOD_MASK_SHIFT ? PSTR("SHIFT") : PSTR("     "), false);
-    } else {
-        oled_write_P(mods & MOD_MASK_GUI   ? PSTR("GUI  ") : PSTR("     "), false);
-        oled_write_P(mods & MOD_MASK_ALT   ? PSTR("ALT  ") : PSTR("     "), false);
-        oled_write_P(mods & MOD_MASK_CTRL  ? PSTR("CTRL ") : PSTR("     "), false);
-        oled_write_P(mods & MOD_MASK_SHIFT ? PSTR("SHIFT") : PSTR("     "), false);
+static void render_mods(void) {
+    // A cell is a finger, pinky to index — not a modifier. The slot comes from the
+    // key's declared mod, so it never moves; only the label follows the OS. That is
+    // why this used to light the wrong cell on the Mac, where Ctrl and GUI swap.
+    static const char *const win[4] = {"GUI  ", "ALT  ", "CTRL ", "SHIFT"};
+    static const char *const mac[4] = {"CTRL ", "OPT  ", "CMD  ", "SHIFT"};
+    const char *const *label = (panel.flags & U_FLAG_IS_MAC) ? mac : win;
+    const uint8_t      cells = U_FIN_CELLS(panel.fingers);
+
+    for (uint8_t i = 0; i < 4; i++) {
+        oled_write((cells & (1u << i)) ? label[i] : "     ", false);
     }
-    oled_write_P(PSTR("\n"), false);        // clears to end of line, so the locks start clean
+    oled_write_P(PSTR("\n"), false);        // clears to end of line
+}
+
+void oled_master_task(void) {
+    panel = u_sync_build();
 }
 
 void oled_render_master(void) {
@@ -52,20 +55,17 @@ void oled_render_master(void) {
     oled_write_P(qmk_logo, false);
     // 20 columns, so the line doesn't wrap before the newline
     oled_write_P(PSTR("Kyria rev3       "), false);
-    oled_write_P(host_is_mac() ? PSTR("Mac\n\n") : PSTR("Win\n\n"), false);
+    oled_write_P(panel.flags & U_FLAG_IS_MAC ? PSTR("Mac\n\n") : PSTR("Win\n\n"), false);
 
     oled_write_P(PSTR("Layer: "), false);
-    oled_write(layer_names[get_highest_layer(layer_state | default_layer_state)], false);
+    oled_write(layer_names[panel.layers & 0x0F], false);
     oled_write_P(PSTR("\n"), false);
 
     render_mods();
 
-    const led_t led_usb_state = host_keyboard_led_state();
-    oled_write_P(led_usb_state.num_lock    ? PSTR("NUMLCK ") : PSTR("       "), false);
-    oled_write_P(led_usb_state.caps_lock   ? PSTR("CAPLCK ") : PSTR("       "), false);
-    oled_write_P(led_usb_state.scroll_lock ? PSTR("SCRLCK ") : PSTR("       "), false);
+    oled_write_P(panel.flags & U_FLAG_NUM_LOCK    ? PSTR("NUMLCK ") : PSTR("       "), false);
+    oled_write_P(panel.flags & U_FLAG_CAPS_LOCK   ? PSTR("CAPLCK ") : PSTR("       "), false);
+    oled_write_P(panel.flags & U_FLAG_SCROLL_LOCK ? PSTR("SCRLCK ") : PSTR("       "), false);
 }
-
-void oled_master_task(void) {}
 
 #endif     // OLED_MASTER_PANEL_TEXT

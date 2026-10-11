@@ -5,6 +5,7 @@
 #include QMK_KEYBOARD_H
 #include "manna-harbour_miryoku.h"
 #include "host_os.h"
+#include "split_state.h"
 #ifdef OLED_ENABLE
 #    include "oled_panel.h"   // only needed by housekeeping_task_user below
 #endif
@@ -22,6 +23,8 @@ void housekeeping_task_user(void) {
 }
 
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
+    u_sync_note_record(keycode, record);
+
     switch (keycode) {
         case U_SYS:
             if (record->event.pressed) {

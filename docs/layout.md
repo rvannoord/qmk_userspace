@@ -141,7 +141,11 @@ Dark at rest, so any light means something happened. Zones, all page-aligned:
 those keys give GUI, Alt, Ctrl, Shift; on macOS the Ctrl/GUI swap means the same fingers give
 Ctrl, Option, Cmd, Shift — the order on a MacBook's bottom row. Only the glyph changes with the
 OS. `get_mods()` returns post-swap bits (`mod_config()` runs at keycode-to-action translation,
-`quantum/keymap_common.c:162`), which is why the current display lights the wrong slot on the Mac.
+`quantum/keymap_common.c:162`), which is why the display used to light the wrong slot on the
+Mac. Fixed: the slot comes from the key's *declared* mod, so it never moves, and liveness is
+checked against the bit the key actually registered — recorded when it was pressed, because
+`mod_config()` is applied at press time and an OS change while a key is held must not
+re-attribute it to another finger.
 
 Alarms escalate by **scope**, not by brightness, so routine events never spend the loudest
 register: normal, then an inverted status bar, then the 1 px edge frame, then full-panel inversion.
