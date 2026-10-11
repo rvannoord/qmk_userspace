@@ -14,6 +14,7 @@ typedef struct {
     uint8_t layers;    // low nibble active, high nibble default
     uint8_t flags;     // see below
     uint8_t anomaly;   // misfire count, wraps; only ever tested for change
+    uint8_t trace;     // count of command modifiers actually used, same rules
 } u_split_state_t;
 
 // fingers: outer to inner, the order the panel's cells are in.

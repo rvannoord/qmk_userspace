@@ -59,6 +59,7 @@ typedef struct {
     uint8_t  fingers;      // modifiers by finger, outer to inner, both hands
     uint8_t  flags;        // locks, Caps Word, host OS
     uint8_t  anomaly;      // misfire count; only ever compared for change
+    uint8_t  trace;        // count of command modifiers used; likewise
     bool     soft_stale;   // state no longer vouched for: drop the props, keep him alive
     bool     hard_stale;   // link dead
 } bjorn_in_t;
@@ -76,6 +77,10 @@ static bool     bjorn_blink_pair;         // the next blink is the second of a p
 // Falling asleep is the blink played slowly and forwards; waking is it played back.
 #define BJORN_DOZE_HALF       6                            // 300 ms of half lid
 #define BJORN_DOZE_SHUT      16                            // then shut until here, then the pose
+// A command modifier, released after it was used. 800 ms is the floor at which a pose
+// change reads as static rather than as a flicker.
+#define BJORN_AXE_TICKS      16                            // 800 ms
+
 #define BJORN_WAKE_SHUT       2                            // 100 ms shut on waking
 #define BJORN_WAKE_OPEN       4                            // then half lid; eyes open here
 #define BJORN_RENDER_GAP_MS 500                            // a longer gap means the panel slept
@@ -83,6 +88,8 @@ static bool     bjorn_blink_pair;         // the next blink is the second of a p
 static uint8_t  bjorn_state;              // 0 awake, 1 falling asleep, 2 asleep
 static uint16_t bjorn_state_at;           // tick the current state began
 static uint16_t bjorn_wake_at;            // tick the waking gesture began
+static uint16_t bjorn_axe_at;             // tick the axe appeared
+static uint8_t  bjorn_last_trace;
 static uint32_t bjorn_last_render;
 static uint16_t bjorn_doze_origin;        // latched on falling asleep
 static uint32_t bjorn_rng = 1;
@@ -108,6 +115,7 @@ static void bjorn_gather(bjorn_in_t *in) {
     in->fingers    = s.fingers;
     in->flags      = s.flags;
     in->anomaly    = s.anomaly;
+    in->trace      = s.trace;
     in->soft_stale = u_sync_soft_stale();
     in->hard_stale = u_sync_hard_stale();
 
@@ -222,6 +230,18 @@ void oled_render_slave(void) {
         const uint16_t phase = (uint16_t)(bjorn_ticks - bjorn_doze_origin) % BJORN_DOZE_PERIOD;
         if (phase < BJORN_DOZE_INHALE) bjorn_blit(&bjorn_frames[BJORN_F_DOZE_BREATH]);
         return;                               // asleep: eyes already shut
+    }
+
+    // The axe can only fire while he is typing, and the breath only while he is settled,
+    // so the two can never want the same tick.
+    static const uint8_t axe_of_tier[4] = {BJORN_F_AXE_T0, BJORN_F_AXE_T1,
+                                           BJORN_F_AXE_T2, BJORN_F_AXE_T3};
+    if (in.trace != bjorn_last_trace) {
+        bjorn_last_trace = in.trace;
+        bjorn_axe_at     = bjorn_ticks;
+    }
+    if ((uint16_t)(bjorn_ticks - bjorn_axe_at) < BJORN_AXE_TICKS && !settled) {
+        bjorn_blit(&bjorn_frames[axe_of_tier[tier]]);
     }
 
     if (breath == 1) bjorn_blit(&bjorn_frames[BJORN_F_BREATH_SWELL]);

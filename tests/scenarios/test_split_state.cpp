@@ -118,6 +118,37 @@ TEST_F(SplitState, LayersAreReportedSeparately) {
     release(space, 300);
 }
 
+// The axe fires when a command modifier was actually used — something was typed while
+// it was held. Shift is excluded: here it is a home-row mod, part of typing a capital
+// rather than an instruction, and it fires so often that an 800 ms dwell never expires.
+TEST_F(SplitState, TraceCountsUsedCommandModsOnly) {
+    TestDriver driver;
+    record(driver);
+    begin();
+
+    const uint8_t before = u_sync_build().trace;
+
+    // The payload key must be on the OTHER hand: Chordal Hold turns a same-hand roll
+    // into letters, so s + w would resolve as a tap and never be a held modifier at all.
+    press(s, 0);                               // left Ctrl, with a right-hand key under it
+    tap(u, 100);
+    release(s, 300);
+    at(350);
+    const uint8_t used = u_sync_build().trace;
+    EXPECT_EQ((uint8_t)(used - before), 1);
+
+    press(t, 400);                             // left Shift, used — excluded
+    tap(u, 500);
+    release(t, 700);
+    at(750);
+    EXPECT_EQ(u_sync_build().trace, used);
+
+    press(s, 800);                             // Ctrl, held but never used
+    release(s, 1400);
+    at(1450);
+    EXPECT_EQ(u_sync_build().trace, used);     // no command was issued
+}
+
 // seq advances on every build. The slave tests it for inequality, never for +1.
 TEST_F(SplitState, SeqAdvances) {
     TestDriver driver;

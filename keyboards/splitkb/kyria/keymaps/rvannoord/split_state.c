@@ -29,6 +29,7 @@ static uint8_t expand_mod(uint8_t mod) {
 static uint8_t  tracked;             // finger bits we have seen pressed
 static uint8_t  altgr;              // U_FLAG_ALTGR_L / _R
 static uint8_t  anomalies;          // published count
+static uint8_t  traces;             // command modifiers released after being used
 static uint16_t payload_presses;    // anything that counts as something to modify
 
 static struct {
@@ -96,9 +97,18 @@ void u_sync_note_record(uint16_t keycode, keyrecord_t *record) {
                 // Ordering cannot be trusted here — action_tapping.c processes a rolled
                 // press of three tap-hold keys out of order — so ask whether anything was
                 // typed during the hold, not whether a particular key came after it.
-                if (payload_presses == holds[i].presses &&
-                    TIMER_DIFF_16(record->event.time, holds[i].at) > U_ANOMALY_MS) {
-                    anomalies++;
+                if (payload_presses == holds[i].presses) {
+                    // Held with nothing typed. Long enough and it is a misfire; shorter
+                    // and it is just a finger that hovered, which is not worth a prop.
+                    if (TIMER_DIFF_16(record->event.time, holds[i].at) > U_ANOMALY_MS) {
+                        anomalies++;
+                    }
+                } else if (!(holds[i].live & (MOD_BIT(KC_LSFT) | MOD_BIT(KC_RSFT)))) {
+                    // Something was typed while it was held: a command was issued. Shift is
+                    // excluded because here it is a home-row mod — part of typing a capital
+                    // rather than an instruction — and it fires so often that an 800 ms
+                    // dwell would never expire, leaving the prop permanently on.
+                    traces++;
                 }
                 holds[i].active = false;
                 break;
@@ -152,5 +162,6 @@ u_split_state_t u_sync_build(void) {
                              (get_highest_layer(default_layer_state) << 4)),
         .flags   = flags,
         .anomaly = anomalies,
+        .trace   = traces,
     };
 }
