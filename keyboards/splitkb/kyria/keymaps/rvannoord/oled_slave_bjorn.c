@@ -92,6 +92,10 @@ static bool     bjorn_blink_pair;         // the next blink is the second of a p
 #define BJORN_MF_D1          33                            // lifting is effort, dropping is not
 #define BJORN_MF_END         35
 
+// Caps Word: a crown, and his tile flipped to dark-on-white. That is the polarity his
+// art was drawn in — it is an e-paper original — so inverted he reads better, not worse.
+#define BJORN_CAPS_FLIP       2                            // crown first, world 100 ms later
+
 #define BJORN_WAKE_SHUT       2                            // 100 ms shut on waking
 #define BJORN_WAKE_OPEN       4                            // then half lid; eyes open here
 #define BJORN_RENDER_GAP_MS 500                            // a longer gap means the panel slept
@@ -104,6 +108,9 @@ static bool     bjorn_axe_live;           // or tick 0 looks like a release at b
 static uint16_t bjorn_mf_at;              // tick the misfire began
 static bool     bjorn_mf_live;
 static uint8_t  bjorn_last_anomaly;
+static uint16_t bjorn_caps_at;            // tick Caps Word began
+static bool     bjorn_caps_was;
+static bool     bjorn_invert;             // his tile only, never the other half
 static uint32_t bjorn_last_render;
 static uint16_t bjorn_doze_origin;        // latched on falling asleep
 static uint32_t bjorn_rng = 1;
@@ -159,22 +166,34 @@ void oled_slave_task(void) {
 }
 
 // --- drawing ----------------------------------------------------------------
+// His tile inverts; the other half never does. Row 63 is preserved — it is the floor
+// rule, and it runs across both halves, so flipping only the left of it would put the
+// two halves' dots a pixel out of phase and recreate the seam step the floor exists to
+// avoid. Row 63 is bit 7 of page 7, hence 0x7f.
+static uint8_t bjorn_mask(uint8_t block) {
+    if (!bjorn_invert || (block & 1u)) return 0x00;        // odd blocks are the right column
+    return (block == 14) ? 0x7f : 0xff;                    // block 14 is page 7, left
+}
+
 static void bjorn_blit(const bjorn_frame_t *f) {
     for (uint8_t p = 0; p < f->count; p++) {
         // block * 64 IS the absolute buffer index the driver indexes by, and the mask
         // keeps us off block 16 — oled_write_raw_byte guards with > rather than >=.
         const uint16_t base = (uint16_t)(f->patches[p].block & 0x0F) * BJORN_PATCH_BYTES;
         const char    *src  = f->patches[p].data;
+        const uint8_t  m    = bjorn_mask(f->patches[p].block);
         for (uint8_t i = 0; i < BJORN_PATCH_BYTES; i++) {
-            oled_write_raw_byte(pgm_read_byte(src + i), base + i);
+            oled_write_raw_byte((char)(pgm_read_byte(src + i) ^ m), base + i);
         }
     }
 }
 
 static void bjorn_blit_base(void) {
     for (uint8_t page = 0; page < 8; page++) {
+        const uint8_t m = bjorn_mask((uint8_t)(page * 2));
         for (uint8_t x = 0; x < 64; x++) {
-            oled_write_raw_byte(pgm_read_byte(bjorn_base + page * 64 + x), page * 128 + x);
+            oled_write_raw_byte((char)(pgm_read_byte(bjorn_base + page * 64 + x) ^ m),
+                                page * 128 + x);
         }
     }
 }
@@ -235,6 +254,14 @@ void oled_render_slave(void) {
     if (bjorn_state == 1) breath = 0;         // hold him still while his eyes close
 
     // --- draw ---------------------------------------------------------------
+    // He puts the crown on, and the world flips 100 ms later — one beat of sequencing
+    // that makes the loudest event in the design feel authored rather than like a glitch.
+    // Leaving is both at once: slow in, quick out, as the blink and the axe are.
+    const bool caps = (in.flags & U_FLAG_CAPS_WORD) && bjorn_state != 2;
+    if (caps && !bjorn_caps_was) bjorn_caps_at = bjorn_ticks;
+    bjorn_caps_was = caps;
+    bjorn_invert   = caps && (uint16_t)(bjorn_ticks - bjorn_caps_at) >= BJORN_CAPS_FLIP;
+
     bjorn_blit_base();
     const uint8_t draw_tier = bjorn_mf_live ? 0 : tier;   // drooped for the misfire
     bjorn_blit(&bjorn_frames[bjorn_state == 2 ? BJORN_F_DOZE : pose_of_tier[draw_tier]]);
@@ -273,6 +300,12 @@ void oled_render_slave(void) {
     }
     if (bjorn_axe_live && (uint16_t)(bjorn_ticks - bjorn_axe_at) >= BJORN_AXE_TICKS) {
         bjorn_axe_live = false;
+    }
+
+    if (caps) {
+        static const uint8_t crown_of_tier[4] = {BJORN_F_CROWN_T0, BJORN_F_CROWN_T1,
+                                                 BJORN_F_CROWN_T2, BJORN_F_CROWN_T3};
+        bjorn_blit(&bjorn_frames[crown_of_tier[draw_tier]]);
     }
 
     if (bjorn_mf_live) {
