@@ -15,3 +15,9 @@ When a QMK update breaks Miryoku, fix it here and add a line below. Checking whe
 | 2026-10-09 | `rules.mk` | `include users/manna-harbour_miryoku/...` → `include $(USER_PATH)/...` for `custom_rules.mk` and `post_rules.mk` | In an external userspace make runs from the `qmk_firmware` root, so the cwd-relative path doesn't exist, and `VPATH` doesn't apply to `include`. QMK sets `USER_PATH` to the userspace copy |
 | 2026-10-09 | `manna-harbour_miryoku.c` | `key_overrides` from a NULL-terminated pointer to an array: `const key_override_t *key_overrides[] = { &capsword_key_override };` | Current QMK takes `ARRAY_SIZE(key_overrides)`, a hard error on a pointer |
 | 2026-10-09 | `custom_config.h` (mine) | Keycode shims for the renamed mouse keys (`KC_MS_*`, `KC_WH_*`, `KC_BTN*` → `MS_*`) and RGB keys (`RGB_*` → `RM_*` / `UG_*`, or `KC_NO`) | QMK renamed them after Miryoku's layers were generated. Shimmed instead of editing `miryoku_babel/`. Also covers the `KC_BTN*` in the thumb combos in `manna-harbour_miryoku.c` |
+
+## `keyboards/splitkb/kyria/keymaps/rvannoord/panel_font.c`
+
+Glyphs extracted from **DUNGEON.mode** by datagoblin ([datagoblin.itch.io/dungeonmode](https://datagoblin.itch.io/dungeonmode)), an 8x8 1-bit bitmap font released **CC0 1.0 Universal** — public domain, so no attribution is required and none is imposed on anything built with it. Credited by choice.
+
+Taken from the pack's `bitmap/dungeon-mode.png`, a 16x16 grid of 8x8 cells, with `playscii/charsets/dungeon-mode.char` as the character map. Only the printable ASCII range and four symbol cells were extracted; the pack itself is not in this repo. The table in `panel_font.c` is generated and never hand-edited — to change which characters it carries, extract again from the pack.

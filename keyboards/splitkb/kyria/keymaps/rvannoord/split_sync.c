@@ -17,6 +17,13 @@
 static volatile u_split_state_t slots[2];
 static volatile uint8_t         slot_live;
 
+// File scope so the panel can ask about the link. On the master the only evidence the
+// other half is there is transaction_rpc_send returning true, so "when a send last
+// succeeded" is the whole health signal. It starts at zero, which reads as uptime until
+// the first success — so a half that was never there is reported, rather than excused.
+static uint32_t last_sent_at;
+static bool     primed;
+
 static uint32_t last_seen_at;          // when the sequence number last changed
 static uint8_t  last_seen_seq;
 
@@ -54,10 +61,16 @@ bool u_sync_hard_stale(void) {
     return u_sync_age_ms() >= U_SYNC_HARD_MS;
 }
 
+// Asked by both panels, and it means the same thing on each: this half has not heard
+// from the other one for long enough to stop pretending. The evidence differs — the
+// master watches its own sends, the slave watches the sequence number.
+bool u_sync_link_down(void) {
+    if (!is_keyboard_master()) return u_sync_hard_stale();
+    return timer_elapsed32(last_sent_at) >= U_SYNC_HARD_MS;
+}
+
 static void u_sync_master_task(void) {
     static u_split_state_t last_sent;
-    static uint32_t        last_sent_at;
-    static bool            primed;
 
     u_split_state_t next = u_sync_build();
     const uint32_t  age  = timer_elapsed32(last_sent_at);
@@ -102,5 +115,6 @@ u_split_state_t u_sync_state(void) { return u_sync_build(); }
 uint32_t        u_sync_age_ms(void) { return 0; }
 bool            u_sync_soft_stale(void) { return false; }
 bool            u_sync_hard_stale(void) { return false; }
+bool            u_sync_link_down(void) { return false; }
 
 #endif

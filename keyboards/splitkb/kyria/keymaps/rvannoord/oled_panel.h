@@ -52,10 +52,16 @@
 #    define U_OLED_MASTER_N_TEXT 0
 #endif
 
-#define U_OLED_MASTER_N (U_OLED_MASTER_N_TEXT)
+#if defined(OLED_MASTER_PANEL_ZONES)
+#    define U_OLED_MASTER_N_ZONES 1
+#else
+#    define U_OLED_MASTER_N_ZONES 0
+#endif
+
+#define U_OLED_MASTER_N (U_OLED_MASTER_N_TEXT + U_OLED_MASTER_N_ZONES)
 
 #if U_OLED_MASTER_N == 0
-#    define OLED_MASTER_PANEL_TEXT
+#    define OLED_MASTER_PANEL_ZONES
 #elif U_OLED_MASTER_N > 1
 #    error "Pick exactly one OLED_MASTER_PANEL_* in custom_config.h"
 #endif

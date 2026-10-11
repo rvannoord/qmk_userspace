@@ -24,3 +24,7 @@ uint32_t        u_sync_age_ms(void);
 
 bool u_sync_soft_stale(void);
 bool u_sync_hard_stale(void);
+
+// Either half: the other one has gone quiet for U_SYNC_HARD_MS. The master knows it
+// from its own failed sends, the slave from the sequence number standing still.
+bool u_sync_link_down(void);

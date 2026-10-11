@@ -13,9 +13,10 @@
 //   OLED_SLAVE_ANIMATION_KYRIA
 #define OLED_SLAVE_ANIMATION_BJORN
 
-// Master panel. Pick ONE (defaults to TEXT if none set).
-//   OLED_MASTER_PANEL_TEXT
-#define OLED_MASTER_PANEL_TEXT
+// Master panel. Pick ONE (defaults to ZONES if none set).
+//   OLED_MASTER_PANEL_ZONES   the pixel-art panel: badge, mod row, layer band, events
+//   OLED_MASTER_PANEL_TEXT    the old 21-column text readout
+#define OLED_MASTER_PANEL_ZONES
 
 /* OLED panel. Both halves sleep together (keyboard.json syncs it). See docs/layout.md.
    120 s so the idle states are actually seen; 128 to pay for it. OLED wear rises

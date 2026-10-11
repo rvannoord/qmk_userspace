@@ -132,10 +132,23 @@ Dark at rest, so any light means something happened. Zones, all page-aligned:
 
 | Zone | Origin | Size | Content |
 |------|--------|------|---------|
-| Status bar | (0,0) | 128x8 | `Win`/`Mac` badge, underlined if set by hand with SYS; fault or surprising-lock glyph; alarm banner; `AGR` / `MOD!` / `LYR!` |
+| Status bar | (0,0) | 128x8 | `WIN`/`MAC` badge, underlined if set by hand with SYS; an alarm banner takes the whole row when one is raised |
 | Mod row | (0,8) | 128x16 | four 32 px cells, 16x16 glyph each, inverted when active, 3 px handedness tick in the padding |
-| Layer band | (46,24) | 36x16 | layer name, 12x16, blank on base |
-| Layer map | (30,40) | 60x24 | the layer's own legends, 10x3, hidden per layer once that layer has been used enough |
+| Layer band | (0,24) | 128x16 | layer name in DUNGEON.mode at 2x, so 16x16 a character, centred. Blank on base |
+| Separator | (0,40) | 128x8 | always dark. The gap is what keeps the strip from reading as a fifth line of the layer band |
+| Event strip | (0,48) | 128x16 | 16x16 icons, only the ones whose condition holds, centred as a group: Caps Lock, Caps Word, AltGr, link fault. Dark when nothing is on |
+
+**The font is DUNGEON.mode**, an 8x8 1-bit bitmap font, not QMK's built-in 6x8. It is the same
+pack the rest of the panel's art is cut from, so the text and the glyphs share one hand. The sheet
+is a 16x16 grid of 8x8 cells with its own character map; the build extracts only the characters
+the panel actually draws. 8x8 gives 16 columns instead of 21, which is why the layer name is the
+only text long enough to care and gets the whole width.
+
+**There is no layer map.** The first design had one at (30,40), 60x24, one 6x8 legend a key,
+erasing itself per layer once that layer had been used enough. Cut before it was built: it only
+repeats what the finger already knows by the time it can read it, and it was the one zone whose
+size forced the 6x8 font on everything else. The 24 px it held went to the event strip, which
+shows the things the layer name cannot.
 
 **Mod slots are fingers, not modifiers.** Outer to inner: pinky, ring, middle, index. On Windows
 those keys give GUI, Alt, Ctrl, Shift; on macOS the Ctrl/GUI swap means the same fingers give
@@ -262,6 +275,8 @@ the goat later.
 |------|-------|
 | `oled_panel.h` | the only place that decides which panel and which art compile in, with an `#error` on picking two |
 | `oled.c` | dispatcher: sleep check, master/slave branch, nothing else |
+| `oled_master_zones.c` | the panel. Four zones, raw page bytes rather than `oled_write`, because a zone has to clear exactly its own area. 1x and 2x glyph blitters; the 2x one doubles each source row, so a 16x16 is two page bytes a column |
+| `panel_font.c` | generated. Printable ASCII cut out of the DUNGEON.mode sheet, one byte a row, plus the symbol cells the event strip draws. Neither the sheet nor the generator is in the repo — the table is, and the table is what builds. Regenerating means fetching the pack again (see Attribution) |
 | `oled_master_text.c` | the text panel. Layer names now come from Miryoku's `MIRYOKU_LAYER_LIST` X-macro instead of a second copy of the layer order, so they are the short forms (`Base`, `Nav`, `Sym`). Override `MIRYOKU_LAYER_LIST` to change them |
 | `oled_slave_bjorn.c` | the mascot: tier hysteresis, idle ladder, ambient clocks, blitter |
 | `oled_slave_spaceship.c` | `render_space()`, moved byte-for-byte |
@@ -277,8 +292,13 @@ correct the moment the screen comes back.
 ### Attribution
 
 Bjorn's sprites are MIT licensed. The art files carry infinition's copyright notice and
-`VENDORED.md` records where they came from. This is the only part of this repo that is not my own
-work.
+`VENDORED.md` records where they came from.
+
+The panel's font is **DUNGEON.mode** by datagoblin, released CC0 — public domain, no attribution
+required. Credited anyway, and recorded in `VENDORED.md`. Only the extracted glyph table is in the
+repo, not the pack.
+
+These two are the only parts of this repo that are not my own work.
 
 ## Open experiments
 
@@ -292,6 +312,7 @@ work.
 | Flow Tap after any key | If mods misfire right after Backspace, Enter or digits, widen `is_flow_tap_key()` to match the old typing streak | only if it happens |
 | `PERMISSIVE_HOLD` | QMK's recommended pairing with Chordal Hold. Makes quick deliberate shortcuts register before 200 ms | after the migration settles |
 | OLED redesign in pixel art | Specified in full under OLED above, including the Bjorn mascot, the goat, the master panel zones and the split-sync design | specified, not yet built |
+| Invert the whole OLED | The inverted Bjorn reads better than the normal one. The SSD1306 inverts in hardware, so flipping both halves is a one-line change — but every zone here draws lit-on-dark against a hardcoded `0x00`, "dark at rest" is the whole premise of the master panel, and the alarm ladder ends in full-panel inversion, which an already-inverted panel cannot escalate to. Look at it once the animations, the extras and the goat are done |
 
 ## Tuning log
 
