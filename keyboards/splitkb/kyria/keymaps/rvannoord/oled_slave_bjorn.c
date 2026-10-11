@@ -11,6 +11,7 @@
 #ifdef OLED_SLAVE_ANIMATION_BJORN
 
 #include "bjorn_art.h"
+#include "split_sync.h"
 
 // --- tuning -----------------------------------------------------------------
 // WPM tiers. Deliberately low while the Colemak-DH migration is still settling;
@@ -217,6 +218,10 @@ void oled_render_slave(void) {
         bjorn_blit(&bjorn_frames[w < BJORN_WAKE_SHUT ? shut : half]);
         return;
     }
+
+    // Frozen mid-pose with no blink is the fault vocabulary: the absence of a blink is
+    // the error message. Nothing else changes, so a dead link is unmistakable but quiet.
+    if (u_sync_hard_stale()) return;
 
     const uint16_t d = bjorn_ticks - bjorn_blink_at;
     if (d < BJORN_BLINK_SHUT) {

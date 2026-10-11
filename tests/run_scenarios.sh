@@ -27,7 +27,8 @@ if [ "$mode" = new ]; then
     miryoku=$repo/users/manna-harbour_miryoku
     cp "$here/scenarios/test_host_os.cpp" "$here/scenarios/test_split_state.cpp" \
        "$keymap/tap_hold.c" "$keymap/host_os.c" "$keymap/host_os.h" \
-       "$keymap/split_state.c" "$keymap/split_state.h" "$stage/"
+       "$keymap/split_state.c" "$keymap/split_state.h" \
+       "$keymap/split_sync.c" "$keymap/split_sync.h" "$stage/"
     # The test framework has its own keymap.c and config.h, so these get other names
     cp "$keymap/keymap.c" "$stage/rvannoord_keymap.c"
     cp "$keymap/config.h" "$stage/rvannoord_keymap_config.h"

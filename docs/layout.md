@@ -158,8 +158,10 @@ on, and one side of that comparison is misleading on its own.
 
 ### Split sync
 
-One custom 4-byte RPC, master to slave, on change plus a 250 ms heartbeat and a 20 ms minimum
-interval. Not `SPLIT_LAYER_STATE_ENABLE` / `SPLIT_MODS_ENABLE` / `SPLIT_LED_STATE_ENABLE`: those
+One custom 5-byte RPC, master to slave, on change plus a 250 ms heartbeat and a 20 ms minimum
+interval. Five bytes rather than four because the wire cost is 13 bytes of fixed overhead
+against 43 us per payload byte — width is about 3% of a send, so the bytes go on clarity
+rather than packing. Not `SPLIT_LAYER_STATE_ENABLE` / `SPLIT_MODS_ENABLE` / `SPLIT_LED_STATE_ENABLE`: those
 re-send every 100 ms whether or not anything changed, and they cannot carry Caps Word (QMK has no
 sync for it) or the host OS (`SPLIT_DETECTED_OS_ENABLE` ignores the SYS override). Layout: layer,
 finger-ordered mods, locks, flags, and a sequence counter the slave uses as its staleness clock.

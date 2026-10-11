@@ -6,13 +6,22 @@
 #include "manna-harbour_miryoku.h"
 #include "host_os.h"
 #include "split_state.h"
+#include "split_sync.h"
 #ifdef OLED_ENABLE
 #    include "oled_panel.h"   // only needed by housekeeping_task_user below
 #endif
 
+// Before the split transport starts, so the slave's handler can never be called while
+// the callback pointer is still null.
+void keyboard_pre_init_user(void) {
+    u_sync_init();
+}
+
 // Every main loop, on both halves. QMK allows exactly one definition of this, so it
 // lives here rather than inside whichever OLED renderer happens to be selected.
 void housekeeping_task_user(void) {
+    u_sync_task();
+
 #ifdef OLED_ENABLE
     if (is_keyboard_master()) {
         oled_master_task();
