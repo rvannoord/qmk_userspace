@@ -90,6 +90,7 @@ static uint16_t bjorn_state_at;           // tick the current state began
 static uint16_t bjorn_wake_at;            // tick the waking gesture began
 static uint16_t bjorn_axe_at;             // tick the axe appeared
 static uint8_t  bjorn_last_trace;
+static bool     bjorn_axe_live;           // or tick 0 looks like a trace at boot
 static uint32_t bjorn_last_render;
 static uint16_t bjorn_doze_origin;        // latched on falling asleep
 static uint32_t bjorn_rng = 1;
@@ -239,8 +240,12 @@ void oled_render_slave(void) {
     if (in.trace != bjorn_last_trace) {
         bjorn_last_trace = in.trace;
         bjorn_axe_at     = bjorn_ticks;
+        bjorn_axe_live   = true;
     }
-    if ((uint16_t)(bjorn_ticks - bjorn_axe_at) < BJORN_AXE_TICKS && !settled) {
+    if (bjorn_axe_live && (uint16_t)(bjorn_ticks - bjorn_axe_at) >= BJORN_AXE_TICKS) {
+        bjorn_axe_live = false;
+    }
+    if (bjorn_axe_live && !settled) {
         bjorn_blit(&bjorn_frames[axe_of_tier[tier]]);
     }
 
