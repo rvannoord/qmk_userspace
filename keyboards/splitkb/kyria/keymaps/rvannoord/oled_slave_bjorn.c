@@ -51,6 +51,16 @@ static const uint8_t bjorn_tier_down[3] = { 6, 24, 42};   // each strictly below
 typedef struct {
     uint8_t  wpm;
     uint32_t idle_ms;
+
+    // From the master, via the split transaction. Nothing draws from these yet; the
+    // props that will are added one at a time from here.
+    uint8_t  layer;        // the active layer
+    uint8_t  base_layer;   // the default layer — not U_BASE means silently on QWERTY
+    uint8_t  fingers;      // modifiers by finger, outer to inner, both hands
+    uint8_t  flags;        // locks, Caps Word, host OS
+    uint8_t  anomaly;      // misfire count; only ever compared for change
+    bool     soft_stale;   // state no longer vouched for: drop the props, keep him alive
+    bool     hard_stale;   // link dead
 } bjorn_in_t;
 
 static uint8_t  bjorn_tier;              // never reinitialised: correct across a sleep
@@ -91,6 +101,23 @@ static void bjorn_gather(bjorn_in_t *in) {
     const uint32_t since_wpm = timer_elapsed32(bjorn_wpm_changed);
     const uint32_t since_key = last_input_activity_elapsed();   // this half's own keys
     in->idle_ms = since_wpm < since_key ? since_wpm : since_key;
+
+    const u_split_state_t s = u_sync_state();
+    in->layer      = s.layers & 0x0F;
+    in->base_layer = s.layers >> 4;
+    in->fingers    = s.fingers;
+    in->flags      = s.flags;
+    in->anomaly    = s.anomaly;
+    in->soft_stale = u_sync_soft_stale();
+    in->hard_stale = u_sync_hard_stale();
+
+    // Soft stale means the master has gone quiet for longer than two heartbeats, so the
+    // transient state is no longer worth believing. Blanking it here means no prop added
+    // later can show something stale — the props read these fields and nothing else.
+    if (in->soft_stale) {
+        in->fingers = 0;
+        in->flags  &= (uint8_t)~(U_FLAG_CAPS_WORD | U_FLAG_NUM_LOCK | U_FLAG_CAPS_LOCK | U_FLAG_SCROLL_LOCK);
+    }
 }
 
 static void bjorn_update_tier(uint8_t wpm) {
