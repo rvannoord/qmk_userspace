@@ -85,3 +85,38 @@ bool u_stats_sys_was_tap(void);        // at release: short enough to mean "togg
 void u_stats_note_key(void);           // any other key closes the page
 bool u_stats_page_open(void);
 
+// --- self-heal --------------------------------------------------------------
+// If the other half stops answering, let it restart itself. On 2026-10-13 it stayed
+// dead for twenty minutes and only a replug fixed it, so the alternative to this is
+// reaching for the cable.
+//
+// Every condition below exists to stop it firing when it would do harm:
+//
+//  - A reset within 500 ms of a boot lands in the USB bootloader, not the firmware
+//    (RP2040_BOOTLOADER_DOUBLE_TAP_RESET_TIMEOUT is 500U in this build), which would
+//    take the half off the keyboard entirely. Hence the uptime floor, with margin.
+//  - A reset costs about a second of that half's keys, so never while typing.
+//  - During host sleep the master sends "panel off" every 100 ms and housekeeping stops,
+//    so the state legitimately goes stale. Requiring the panel to have been lit
+//    throughout disarms the whole thing while the computer is away.
+//  - Backoff, and a hard cap: a half that will not stay up should end up visibly broken
+//    rather than rebooting for ever, because a reboot loop hides the fault it is caused
+//    by. After the cap it stays dead, which is the honest state, and the stats page says
+//    how many times it tried.
+
+#define U_HEAL_MAX_RESETS 3
+#define U_HEAL_MIN_UPTIME_MS 10000   // far outside the 500 ms double-tap window
+#define U_HEAL_MIN_PANEL_MS   5000
+#define U_HEAL_MIN_IDLE_MS    2000
+
+typedef struct {
+    uint32_t state_age_ms;   // u_sync_age_ms(): how long since the master was heard
+    uint32_t panel_on_ms;    // how long the panel has been continuously lit
+    uint32_t uptime_ms;
+    uint32_t idle_ms;        // last_input_activity_elapsed(), both halves' keys
+    uint8_t  resets_done;    // this power-on
+} u_heal_in_t;
+
+// Pure, so the whole decision can be pinned down on the host rather than by rebooting
+// a keyboard and hoping.
+bool u_heal_should_reset(const u_heal_in_t *in);

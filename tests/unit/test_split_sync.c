@@ -190,5 +190,45 @@ int main(void) {
     check("the other half's reply arrived", u_health_have_reply());
     check("and carries its uptime", u_health_slave_seen().uptime_s == 42);
 
+    // --- the self-heal decision ---------------------------------------------
+    // Every one of these conditions is a way it could do harm, so each gets its own
+    // check rather than being trusted to the one that happens to be tested.
+    {
+        const u_heal_in_t ok = {.state_age_ms = 6000, .panel_on_ms = 9000,
+                                .uptime_ms = 60000, .idle_ms = 5000, .resets_done = 0};
+        check("it fires when the other half has gone quiet", u_heal_should_reset(&ok));
+
+        u_heal_in_t t = ok; t.state_age_ms = 4000;
+        check("not before the silence is long enough", !u_heal_should_reset(&t));
+
+        t = ok; t.uptime_ms = 9000;
+        check("not within ten seconds of boot", !u_heal_should_reset(&t));
+        t.uptime_ms = 400;
+        check("and certainly not inside the double-tap window", !u_heal_should_reset(&t));
+
+        t = ok; t.panel_on_ms = 1000;
+        check("not while the panel has only just come on", !u_heal_should_reset(&t));
+        t.panel_on_ms = 0;
+        check("and never with the panel dark, which is how host sleep disarms it",
+              !u_heal_should_reset(&t));
+
+        t = ok; t.idle_ms = 500;
+        check("not while typing", !u_heal_should_reset(&t));
+
+        // Backoff: each attempt needs a longer silence than the last.
+        t = ok; t.resets_done = 1; t.state_age_ms = 6000;
+        check("the second attempt waits longer than the first", !u_heal_should_reset(&t));
+        t.state_age_ms = 31000;
+        check("and fires once that silence is reached", u_heal_should_reset(&t));
+
+        t = ok; t.resets_done = 2; t.state_age_ms = 31000;
+        check("the third waits longer still", !u_heal_should_reset(&t));
+        t.state_age_ms = 301000;
+        check("and then fires", u_heal_should_reset(&t));
+
+        t = ok; t.resets_done = 3; t.state_age_ms = 999999;
+        check("after three it stays dead rather than looping", !u_heal_should_reset(&t));
+    }
+
     return unit_done("split_sync");
 }

@@ -53,6 +53,40 @@ static bool     booted;
 static uint16_t fail_streak;
 static bool     suspended;
 
+#if defined(U_SELF_HEAL) && defined(SPLIT_KEYBOARD)
+#    include "bootloader.h"          // mcu_reset
+
+// Survives a reset: the linker leaves .ram0.* uninitialised, which is the same trick
+// QMK's own double-tap bootloader magic uses (platforms/chibios/bootloaders/rp2040.c).
+// Guarded by a magic word, because uninitialised RAM is whatever was there before —
+// at power-on that is noise, and noise must not read as "already reset twice".
+#    define U_HEAL_MAGIC 0x4859454Bu
+
+typedef struct {
+    uint32_t magic;
+    uint8_t  resets;
+    uint8_t  cause;
+} u_heal_persist_t;
+
+static volatile u_heal_persist_t __attribute__((section(".ram0.u_heal"))) heal_mem;
+
+static void heal_init(void) {
+    if (heal_mem.magic != U_HEAL_MAGIC) {
+        heal_mem.magic  = U_HEAL_MAGIC;
+        heal_mem.resets = 0;
+        heal_mem.cause  = U_RESET_NONE;
+    }
+}
+#endif
+
+#if defined(U_WATCHDOG_MS) && defined(__has_include)
+#    if __has_include("hardware/watchdog.h")
+#        include "hardware/watchdog.h"
+#        define U_WATCHDOG_REAL 1
+#    endif
+#endif
+
+
 // --- the master's view ------------------------------------------------------
 
 static void master_task(void) {
@@ -135,6 +169,37 @@ static void slave_task(void) {
     }
     was_stale = stale;
 
+#if defined(U_SELF_HEAL) && defined(SPLIT_KEYBOARD)
+    slave.resets           = heal_mem.resets;
+    slave.last_reset_cause = heal_mem.cause;
+
+    // "The panel has been lit continuously" is the guard that disarms all of this while
+    // the host is asleep: during suspend the master sends "off" every 100 ms, so the
+    // panel is dark exactly when the state legitimately goes stale.
+    static uint32_t panel_on_at;
+    static bool     panel_was_on;
+#    ifdef OLED_ENABLE
+    const bool panel_on = is_oled_on();
+#    else
+    const bool panel_on = false;
+#    endif
+    if (panel_on && !panel_was_on) panel_on_at = timer_read32();
+    panel_was_on = panel_on;
+
+    const u_heal_in_t in = {
+        .state_age_ms = u_sync_age_ms(),
+        .panel_on_ms  = panel_on ? timer_elapsed32(panel_on_at) : 0,
+        .uptime_ms    = timer_elapsed32(boot_at),
+        .idle_ms      = last_input_activity_elapsed(),
+        .resets_done  = heal_mem.resets,
+    };
+    if (u_heal_should_reset(&in)) {
+        heal_mem.resets = (uint8_t)(heal_mem.resets + 1);
+        heal_mem.cause  = U_RESET_SILENT_LINK;
+        mcu_reset();
+    }
+#endif
+
     const uint8_t next = pub_live ^ 1u;
     pub[next]          = slave;
     __atomic_signal_fence(__ATOMIC_RELEASE);     // never publish a half-written slot
@@ -172,7 +237,22 @@ void u_health_task(void) {
     if (!booted) {
         boot_at = timer_read32();
         booted  = true;
+#if defined(U_SELF_HEAL) && defined(SPLIT_KEYBOARD)
+        heal_init();
+#endif
+#ifdef U_WATCHDOG_REAL
+        // Only the half without the cable. The timeout is far above anything the main
+        // loop legitimately does — the OLED's own I2C timeout is 100 ms — and far above
+        // the 500 ms double-tap window, so a watchdog reset can never land inside it and
+        // drop the half into the USB bootloader. A half that wedges immediately will
+        // reboot in a loop rather than disappear, and the stats page shows that as an
+        // uptime that never grows.
+        if (!is_keyboard_master()) watchdog_enable(U_WATCHDOG_MS, false);
+#endif
     }
+#ifdef U_WATCHDOG_REAL
+    if (!is_keyboard_master()) watchdog_update();
+#endif
     count_loop();
     if (is_keyboard_master()) {
         master_task();
@@ -196,6 +276,20 @@ void suspend_power_down_user(void) {
 
 void suspend_wakeup_init_user(void) {
     suspended = false;
+}
+
+// --- self-heal --------------------------------------------------------------
+
+bool u_heal_should_reset(const u_heal_in_t *in) {
+    // Silence required before each attempt. Growing, so a half that keeps going quiet
+    // is not restarted every five seconds for ever.
+    static const uint32_t backoff_ms[U_HEAL_MAX_RESETS] = {5000, 30000, 300000};
+
+    if (in->resets_done >= U_HEAL_MAX_RESETS) return false;
+    if (in->uptime_ms < U_HEAL_MIN_UPTIME_MS) return false;
+    if (in->panel_on_ms < U_HEAL_MIN_PANEL_MS) return false;
+    if (in->idle_ms < U_HEAL_MIN_IDLE_MS) return false;
+    return in->state_age_ms >= backoff_ms[in->resets_done];
 }
 
 // --- the stats page ---------------------------------------------------------

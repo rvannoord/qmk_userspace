@@ -74,3 +74,9 @@
 #    define RGB_SAI KC_NO
 #    define RGB_VAI KC_NO
 #endif
+
+// The other half restarts itself if the link stays dead, and a hardware watchdog
+// catches the case a software reset cannot: a half whose code has stopped running.
+// See docs/oled-v2.md and the comments in split_health.h for every guard on these.
+#define U_SELF_HEAL
+#define U_WATCHDOG_MS 2000
