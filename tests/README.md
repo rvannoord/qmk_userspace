@@ -34,7 +34,8 @@ The old tree needs `appdirs`, which the installed QMK CLI lacks, so `old` runs `
 
 ```bash
 tests/run_unit.sh          # build and run both
-tests/run_unit.sh --dump   # print the panel's frames instead of checking them
+tests/run_unit.sh --dump   # print the panel's frames as text instead of checking them
+tests/run_unit.sh --raw    # the raw 1024-byte buffers, one per frame, for a renderer
 ```
 
 Plain C against stub headers in `unit/stub/`, with `unit.h` as the entire framework. They
@@ -43,12 +44,12 @@ exist for the two things the scenario tests cannot reach:
 | File | What |
 |------|------|
 | `unit/test_split_sync.c` | the master send path. The scenario tests build `split_sync.c`'s non-`SPLIT_KEYBOARD` branch, where every function is a stub, so nothing there covers it — and a regression is silent and total: no sends at all, which on the keyboard looks like the other half's mascot going inert for no reason. Boot, the heartbeat, the hard window and recovery, on a clock that is a variable |
-| `unit/test_panel.c` | the master panel's zones. Compiles the real `oled_master_zones.c` against a buffer laid out like the driver's, then measures what was drawn: what is dark at rest, which cell inverts for which finger, which side the handedness tick takes, and whether each zone's content is centred. `--dump` prints the frames, which is how the zones get eyeballed without a flash |
+| `unit/test_panel.c` | the master panel's zones. Compiles the real `oled_master_zones.c` against a buffer laid out like the driver's, then measures what was drawn: that the panel is dark at rest below the badge, that a held finger draws its cell while an idle one draws nothing, which side the handedness bar takes, that each zone's content is centred, and that the alarm row is the only thing that inverts. `--dump` prints the frames and `--raw` the buffers, which is how the zones get looked at without a flash |
 
 `unit/stub/manna-harbour_miryoku.h` copies Miryoku's layer list rather than including the
 real header, which would drag in all of QMK. The firmware build still uses the real one.
 
-The panel test asserts the mod row as built: the glyph is always drawn and inversion is
-what marks a held modifier, so four letters are lit even at rest. That is the spec's own
-choice and it is in tension with "dark at rest" — if it changes, the test and
-`docs/layout.md` change with it.
+The panel test asserts the mod row as built: **dark at rest**, a cell drawing its glyph
+only while that finger holds something, and nothing on that row inverting. Inversion is
+reserved for the alarm row, which is what keeps a routine held modifier from spending the
+alarm's own register. If that changes, the test and `docs/layout.md` change with it.
