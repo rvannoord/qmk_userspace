@@ -75,10 +75,16 @@ static void u_sync_master_task(void) {
     u_split_state_t next = u_sync_build();
     const uint32_t  age  = timer_elapsed32(last_sent_at);
 
-    // Compare everything but seq, which changes on every build by design.
+    // Compare everything but seq, which the build leaves at zero and this function
+    // stamps on the way out.
     const bool changed = !primed || memcmp(&next.fingers, &last_sent.fingers,
                                            sizeof(u_split_state_t) - offsetof(u_split_state_t, fingers)) != 0;
     if (!((changed && age >= U_SYNC_MIN_MS) || age >= U_SYNC_HEARTBEAT_MS)) return;
+
+    // One step per delivered state, so the slave's staleness clock measures what
+    // actually arrived. last_sent only advances on success, so a failed send repeats
+    // the same number rather than burning one.
+    next.seq = (uint8_t)(last_sent.seq + 1);
 
     if (!transaction_rpc_send(U_SYNC_STATE, sizeof(next), &next)) {
         // There is no retry inside transaction_rpc_send, so leaving the timestamp and the

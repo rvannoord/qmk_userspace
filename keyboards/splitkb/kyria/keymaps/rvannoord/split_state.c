@@ -119,9 +119,12 @@ void u_sync_note_record(uint16_t keycode, keyrecord_t *record) {
     }
 }
 
+// A build is pure: two builds with nothing in between are equal. The sequence number
+// is stamped by the sender instead, because the master builds twice per main loop (once
+// to decide whether anything changed, once for the panel) and a counter that advances
+// per build makes the number say how often we looked rather than how often we sent.
 u_split_state_t u_sync_build(void) {
-    static uint8_t seq;
-    const uint8_t  mods = get_mods();
+    const uint8_t mods = get_mods();
 
     // Publish only what is both tracked and actually held. A tracker bit that leaked —
     // a release swallowed by the tap-hold queue — can then never light a cell for a
@@ -158,7 +161,7 @@ u_split_state_t u_sync_build(void) {
     if (host_os_is_manual())flags |= U_FLAG_OS_MANUAL;
 
     return (u_split_state_t){
-        .seq     = ++seq,
+        .seq     = 0,               // stamped by u_sync_master_task on the way out
         .fingers = fingers,
         .layers  = (uint8_t)(get_highest_layer(layer_state | default_layer_state) |
                              (get_highest_layer(default_layer_state) << 4)),

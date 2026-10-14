@@ -21,13 +21,28 @@ static uint32_t sends     = 0;
 static uint32_t last_ok   = 0;
 
 static u_split_state_t drive;
+static uint8_t         build_noise;     // what a per-build counter would have put there
+static uint8_t         sent_seq[64];
+static uint8_t         sent_n;
 
-u_split_state_t u_sync_build(void) { return drive; }
+// The build deliberately carries junk in seq, so the test proves the sender stamps it
+// rather than passing through whatever the build happened to produce. The master builds
+// twice per main loop, so a per-build counter advanced by 2L between two heartbeats L
+// loops apart — and at L = 128 the slave saw the same number twice and aged itself into
+// hard staleness while every send was succeeding.
+u_split_state_t u_sync_build(void) {
+    u_split_state_t s = drive;
+    s.seq = build_noise++;
+    return s;
+}
 void            u_sync_note_record(uint16_t keycode, keyrecord_t *record) { (void)keycode; (void)record; }
 
 bool transaction_rpc_send(uint8_t id, uint8_t size, const void *data) {
-    (void)id; (void)size; (void)data;
+    (void)id;
     if (!send_ok) return false;
+    if (size == sizeof(u_split_state_t) && sent_n < sizeof(sent_seq)) {
+        sent_seq[sent_n++] = ((const u_split_state_t *)data)->seq;
+    }
     sends++;
     last_ok = fake_now;
     return true;
@@ -84,6 +99,40 @@ int main(void) {
     send_ok = true;
     run_ms(U_SYNC_HEARTBEAT_MS + 1);
     check("back up once a send lands again", !u_sync_link_down());
+
+    // --- the sequence number ------------------------------------------------
+    // One step per delivered state. Consecutive sends must differ however many builds
+    // happened in between, and a failed send must not burn a number.
+    sent_n = 0;
+    send_ok = true;
+    for (int i = 0; i < 6; i++) {
+        drive.fingers = (uint8_t)(i + 1);      // something changed, so it sends
+        run_ms(U_SYNC_MIN_MS + 1);
+    }
+    bool consecutive = sent_n >= 6;
+    for (uint8_t i = 1; i < sent_n; i++) {
+        if ((uint8_t)(sent_seq[i] - sent_seq[i - 1]) != 1) consecutive = false;
+    }
+    check("every delivered state steps the sequence by one", consecutive);
+
+    // 128 builds between two sends is the case that used to alias back to the same
+    // number. Nothing the build does can reach the wire any more.
+    const uint8_t before_gap = sent_seq[sent_n - 1];
+    for (int i = 0; i < 128; i++) (void)u_sync_build();
+    drive.fingers = 0x7f;
+    run_ms(U_SYNC_MIN_MS + 1);
+    check("128 builds in between change nothing",
+          sent_n > 0 && (uint8_t)(sent_seq[sent_n - 1] - before_gap) == 1);
+
+    // A send that fails repeats the same number next time rather than skipping one.
+    const uint8_t last_good = sent_seq[sent_n - 1];
+    send_ok = false;
+    drive.fingers = 0x11;
+    run_ms(U_SYNC_HEARTBEAT_MS + 1);
+    send_ok = true;
+    run_ms(U_SYNC_MIN_MS + 1);
+    check("a failed send does not burn a sequence number",
+          (uint8_t)(sent_seq[sent_n - 1] - last_good) == 1);
 
     return unit_done("split_sync");
 }

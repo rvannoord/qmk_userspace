@@ -142,9 +142,17 @@ TEST_F(SplitState, AShortcutIsNotAMisfire) {
 }
 
 // seq advances on every build. The slave tests it for inequality, never for +1.
-TEST_F(SplitState, SeqAdvances) {
+// A build is pure: it reports the state at the instant it is called and nothing else.
+// It used to advance a sequence counter, which made the number say how often the
+// firmware looked rather than how often it sent — and the master looks twice per main
+// loop, once to decide whether anything changed and once for its own panel. The sender
+// stamps the sequence now; see "every delivered state steps the sequence by one" in
+// tests/unit/test_split_sync.c.
+TEST_F(SplitState, ABuildIsPure) {
     TestDriver driver;
     record(driver);
     begin();
-    EXPECT_NE(u_sync_build().seq, u_sync_build().seq);
+    const u_split_state_t a = u_sync_build();
+    const u_split_state_t b = u_sync_build();
+    EXPECT_EQ(0, memcmp(&a, &b, sizeof(u_split_state_t)));
 }
