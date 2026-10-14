@@ -28,6 +28,14 @@ Bjorn, the Tamagotchi Viking, from **[infinition/Bjorn](https://github.com/infin
 
 Frames `IDLE1`, `IDLE3`, `IDLE8` and `IDLE9` from `resources/images/status/IDLE/`, 78x78, box-filtered to 64x64 and Floyd-Steinberg dithered in separate 64-column passes with region locking across the set, so the four postures share their dither pattern and a tier change does not shimmer. The blink, breath, doze, axe, crown and misfire frames are hand edits of those four.
 
-The source commit was not recorded at the time. GitHub shows `main` unchanged since `61a4758e5ee3d37d43c10eb690340626139912c0` (2026-05-04), so the art generated on 2026-10-10 almost certainly came from it — an inference, to be confirmed when the sprites are fetched.
+Source commit **`61a4758e5ee3d37d43c10eb690340626139912c0`** (2026-05-04), confirmed on 2026-10-14 by fetching it: it is still the head of `main`, and its `resources/images/status/` holds exactly the 17 folders, 106 BMPs and 89 frames of 78x78 the art was taken from.
+
+Nothing of infinition's is copied into this repo. The frames were **drawn by hand** at 64x64 from the originals, as text grids in `tools/bjorn/STAGE1.txt`; see `tools/README.md` for why a mechanical reduction is not usable. Fetch the originals with:
+
+```sh
+git clone --filter=blob:none --no-checkout https://github.com/infinition/Bjorn ~/bjorn-src
+cd ~/bjorn-src && git sparse-checkout init --cone && git sparse-checkout set resources/images actions
+git checkout 61a4758e5ee3d37d43c10eb690340626139912c0
+```
 
 The art is **regenerable**: `tools/` holds the generator and the text grids it reads (`STAGE1.txt`), verified on 2026-10-14 to reproduce `bjorn_art.c` and `bjorn_art.h` byte for byte. Edit the grids, never the generated file.
