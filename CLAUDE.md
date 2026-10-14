@@ -26,6 +26,10 @@ Miryoku options in use (everything else is Miryoku's default):
 
 The other options (`MIRYOKU_ALPHAS`, `_EXTRA`, `_TAP`, `_NAV`, `_LAYERS`) and their values are listed in Miryoku's `readme.org` and `miryoku_babel/miryoku_layer_selection.h`. A change to any of them is a layout change: log it in `docs/layout.md`.
 
+## Work in progress
+
+`docs/oled-v2.md` is the staged plan for the current round of OLED work: the panels not sleeping, the link between the halves, the idle director, the goat, weather by season, and all of Bjorn's sprite sets. Work through it in order, stop at every checkpoint it names, and keep its Progress table current. It is removed when the last stage is done.
+
 ## Build and flash
 
 QMK runs in WSL Ubuntu, with `qmk_firmware` in the WSL home and `user.overlay_dir` pointing at this repo under `/mnt/c/...`.
