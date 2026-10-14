@@ -1,9 +1,11 @@
 // Slave-side OLED: Bjorn, the Tamagotchi Viking, reacting to typing speed.
 //
-// Stage 1 of the OLED redesign in docs/layout.md. Deliberately needs no new split
-// traffic: WPM already crosses the link through SPLIT_WPM_ENABLE, and everything
-// else here is local timing. The axe, Caps Word, the alarms and the goat all need
-// the custom split transaction and arrive in stage 2.
+// The design is in docs/layout.md, OLED section; the build order is docs/oled-v2.md.
+// WPM crosses the link through SPLIT_WPM_ENABLE and drives the postures; everything
+// the props need — held modifiers, Caps Word, misfires, the layers — arrives on the
+// custom U_SYNC_STATE transaction. Built here: postures, blink, breath, doze and
+// waking, the axe, the misfire raise, the Caps Word crown and tile inversion. Not
+// built yet: the goat, Caps Lock, the defeated pose for a non-base default layer.
 
 #include QMK_KEYBOARD_H
 #include "oled_panel.h"
@@ -52,8 +54,8 @@ typedef struct {
     uint8_t  wpm;
     uint32_t idle_ms;
 
-    // From the master, via the split transaction. Nothing draws from these yet; the
-    // props that will are added one at a time from here.
+    // From the master, via the split transaction. Everything below is drawn, except
+    // base_layer, which the defeated pose will use.
     uint8_t  layer;        // the active layer
     uint8_t  base_layer;   // the default layer — not U_BASE means silently on QWERTY
     uint8_t  fingers;      // modifiers by finger, outer to inner, both hands
@@ -115,7 +117,6 @@ static uint32_t bjorn_last_render;
 static uint16_t bjorn_doze_origin;        // latched on falling asleep
 static uint32_t bjorn_rng = 1;
 
-// Stage 2 adds layer, mods, locks and flags here, and nothing else in this file moves.
 static void bjorn_gather(bjorn_in_t *in) {
     in->wpm = get_current_wpm();
 
