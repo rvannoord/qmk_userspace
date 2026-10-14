@@ -21,26 +21,29 @@ cd tools/panel && python3 -I gen_glyphs.py ../../keyboards/splitkb/kyria/keymaps
 
 Both were checked on 2026-10-14 to reproduce the committed files byte for byte.
 
-## STAGE1.txt is drawn, not traced automatically
+## How the art is reduced
 
-`STAGE1.txt` holds Bjorn's art as text grids, one per frame: `@ name width height`
-followed by rows of `#` and `.`. They were drawn by hand from the upstream sprites,
-and that is not incidental.
+Floyd-Steinberg, and it works. Box-filter the 78x78 source to 64x64, dither in two
+separate 64-column passes, and invert — the source is dark ink on a white page, so the
+*ink* becomes the lit figure. That lands at **22-24% lit**, which is where the shipped
+art sits (`bjorn_tier0` is 23%).
 
-Dithering the upstream 78x78 frames down to 64x64 produces something about **76% lit**.
-The art that ships is **23% lit**. The panel's whole premise is dark at rest, and a
-three-quarters-lit figure would also burn in and spend the entire block budget on every
-change. So the reduction path is: look at the source, draw the silhouette by hand at
-64x64, and keep the line weight the panel can actually show.
+> A correction worth keeping, because it cost a day. This was first measured as "the
+> dither gives 76% lit, the shipped art is 23%, so the reduction is unusable and every
+> frame must be hand-drawn". That was wrong: 76% was the **white page**, counted as ink.
+> The figure is 23% and always was. The conclusion drawn from it — hand-draw everything
+> — produced clean outline art with none of Bjorn's mass, which is not what he looks
+> like. Measure the ink, not the background.
 
-`sprites.py` exists to make that looking possible, not to generate art. It renders the
-upstream frames as contact sheets — the source in grey next to the automatic dither —
-so the drawable ones can be picked out. Point it at a checkout of the upstream
-resources:
+`STAGE1.txt` holds the shipped frames as text grids, and they are hand-finished: the
+blink, breath, doze, axe, crown and misfire frames are edits on top of the four dithered
+IDLE poses. So the pipeline is dither first, then hand-work the frames that need to move,
+not hand-draw from nothing.
 
-```sh
-cd tools/bjorn && python3 -I sprites.py ~/bjorn-src/resources/images /tmp/sheets
-```
+One thing the dither genuinely cannot fix: the hooded poses. The cowl is a solid dark
+mass in the source, so it reduces to about **33% lit** and reads as a blob rather than as
+a face inside a hood. Six images are affected (SSH1, 2, 3, 7, 8, 13). That is a polarity
+problem, not a resolution one.
 
 ## The upstream sets are pose variants, not animations
 

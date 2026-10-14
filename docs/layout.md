@@ -390,12 +390,17 @@ something the panel already uses as a signal — a sword at this size sits where
 sits, and the axe means a command modifier is held — the answer is *when that pose may
 appear*, never removing the prop.
 
-The one limit is physical rather than chosen: a hand trace to 64x64 in 1 bit is lossy,
-because the source is 78x78 greyscale. So "as drawn" means every element present and
-nothing substituted, not pixel-identical, which is not available at this size. Where a
-detail cannot resolve — the laptop has a face on its screen that lands at about four
-pixels — it is drawn as faithfully as the resolution allows and the loss is recorded,
-rather than being swapped for something tidier.
+They are reduced by box filter and Floyd-Steinberg, which is how the shipped poses were
+made and is what gives Bjorn his mass. The figure lands at 22-24% lit, right on the
+shipped 23%. An attempt to hand-draw them instead produced clean outlines with none of
+his weight and was rejected on sight; the shading is the style, not a texture on top of
+it. Frames that have to move are hand-finished on top of the dither, which is what
+`STAGE1.txt` already is.
+
+The hooded poses are the one case the reduction does not solve: the cowl is a solid dark
+mass in the source, so it comes out near 33% lit and reads as a blob. Six images are
+affected. Inverting the panel would restore it exactly, which is a second reason to look
+at the inversion experiment.
 
 Of the eleven unique icons, seven are typeset words (`FTP`, `SSH`, `SMB`, `SQL`, `RDP`,
 `Telnet`, `TEST`) and are not usable here — they would be illegible shrunk and would

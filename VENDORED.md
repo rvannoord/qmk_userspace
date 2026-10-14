@@ -30,7 +30,7 @@ Frames `IDLE1`, `IDLE3`, `IDLE8` and `IDLE9` from `resources/images/status/IDLE/
 
 Source commit **`61a4758e5ee3d37d43c10eb690340626139912c0`** (2026-05-04), confirmed on 2026-10-14 by fetching it: it is still the head of `main`, and its `resources/images/status/` holds exactly the 17 folders, 106 BMPs and 89 frames of 78x78 the art was taken from.
 
-Nothing of infinition's is copied into this repo. The frames were **drawn by hand** at 64x64 from the originals, as text grids in `tools/bjorn/STAGE1.txt`; see `tools/README.md` for why a mechanical reduction is not usable. Fetch the originals with:
+Nothing of infinition's is copied into this repo. The frames are reduced to 64x64 by box filter and Floyd-Steinberg, then hand-finished as text grids in `tools/bjorn/STAGE1.txt` — see `tools/README.md`. Fetch the originals with:
 
 ```sh
 git clone --filter=blob:none --no-checkout https://github.com/infinition/Bjorn ~/bjorn-src

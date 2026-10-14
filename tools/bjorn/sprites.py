@@ -123,7 +123,16 @@ def dither(grey, w, h, split=64):
 
 
 def ink(bits):
-    return sum(sum(r) for r in bits)
+    """How much of the frame is the FIGURE, as a fraction of 4096.
+
+    dither() returns 1 for a bright pixel, and the source is dark ink on a white page —
+    so the ones are the background and the zeros are Bjorn. Counting the ones gives
+    about 76% and looks like a catastrophically over-lit image; it is the paper.
+
+    This was got wrong once and the cost was a day's work in the wrong direction, so it
+    is spelled out rather than left to the reader. The figure is what lands on the
+    panel, because the frame is inverted when it is drawn: ink becomes lit."""
+    return sum(len(r) - sum(r) for r in bits)
 
 
 # --- PNG ---------------------------------------------------------------------
@@ -257,8 +266,9 @@ def main(src, out):
             srcrows, grey, bits = reduce_frame(f)
             label(c, f.stem[:18], x, yy, 1)
             blit_grey(c, box_filter(srcrows, len(srcrows[0]), len(srcrows), 64, 64), x, yy + LBL, S)
-            label(c, f'{ink(bits)*100//4096}PC INK', x, yy + LBL + 64 * S + 2, 1)
-            blit_bits(c, bits, x, yy + LBL * 2 + 64 * S + 4, S)
+            label(c, f'{ink(bits)*100//4096}PC FIGURE', x, yy + LBL + 64 * S + 2, 1)
+            # inverted, because that is how it reaches the panel: ink lit, paper dark
+            blit_bits(c, [[v == 0 for v in r] for r in bits], x, yy + LBL * 2 + 64 * S + 4, S)
             tiles.append((f'{d.name}/{f.stem}', bits))
         png(out / f'{d.name}.png', c)
 
@@ -272,7 +282,7 @@ def main(src, out):
         x = PAD + col * (64 * 2 + GAP)
         y = PAD + row * (64 * 2 + LBL + GAP)
         label(c, name.split('/')[-1][:16], x, y, 1)
-        blit_bits(c, bits, x, y + LBL, 2)
+        blit_bits(c, [[v == 0 for v in r] for r in bits], x, y + LBL, 2)
     png(out / 'ALL.png', c)
     print(f'{len(tiles)} frames -> {out}')
 
