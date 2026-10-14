@@ -26,6 +26,7 @@
 #include "split_sync.h"
 #include "panel_font.h"
 #include "panel_glyphs.h"
+#include "oled_canvas.h"
 
 #ifdef OLED_MASTER_PANEL_ZONES
 
@@ -44,15 +45,17 @@ static const char *const layer_names[] = {
 // loop and latches it, which is the only reason a misfire can be shown at all.
 static u_split_state_t panel;
 
-// --- the buffer -------------------------------------------------------------
+// --- the canvas -------------------------------------------------------------
 // 8 pages of 128 columns, each byte a vertical strip of 8 pixels with bit 0 at the
-// top. Raw bytes rather than oled_write, because a zone has to clear exactly its own
-// area: text drawing leaves whatever was to the right of it in place. Unchanged bytes
-// cost nothing — oled_write_raw_byte returns early and leaves the block clean.
+// top. Everything below draws into u_canvas, never into the driver's buffer, and
+// oled_render_master commits once at the end. That is what lets a zone clear itself
+// and redraw — which it must, since text drawing leaves whatever was to the right of
+// it in place — without the frame counting as changed. Every page is filled by some
+// zone each frame, so the canvas is always fully defined.
 
 static void fill(uint8_t page, uint8_t x, uint8_t w, uint8_t byte) {
     for (uint8_t i = 0; i < w; i++) {
-        oled_write_raw_byte((char)byte, (uint16_t)page * OLED_DISPLAY_WIDTH + x + i);
+        u_canvas[(uint16_t)page * OLED_DISPLAY_WIDTH + x + i] = byte;
     }
 }
 
@@ -81,7 +84,7 @@ static const uint8_t *glyph_of(char c) {
 
 static void draw_glyph_1x(uint8_t x, uint8_t page, const uint8_t *g) {
     for (uint8_t sx = 0; sx < 8; sx++) {
-        oled_write_raw_byte((char)col_1x(g, sx), (uint16_t)page * OLED_DISPLAY_WIDTH + x + sx);
+        u_canvas[(uint16_t)page * OLED_DISPLAY_WIDTH + x + sx] = col_1x(g, sx);
     }
 }
 
@@ -90,8 +93,8 @@ static void draw_glyph_2x(uint8_t x, uint8_t page, const uint8_t *g) {
         for (uint8_t sx = 0; sx < 8; sx++) {
             const uint8_t  b  = col_2x(g, sx, q);
             const uint16_t at = (uint16_t)(page + q) * OLED_DISPLAY_WIDTH + x + sx * 2;
-            oled_write_raw_byte((char)b, at);
-            oled_write_raw_byte((char)b, at + 1);
+            u_canvas[at]     = b;
+            u_canvas[at + 1] = b;
         }
     }
 }
@@ -101,8 +104,8 @@ static void draw_glyph_16(uint8_t x, uint8_t page, uint8_t which) {
     const uint8_t *src = u_glyph16[which];
     for (uint8_t q = 0; q < 2; q++) {
         for (uint8_t i = 0; i < 16; i++) {
-            oled_write_raw_byte((char)pgm_read_byte(&src[q * 16 + i]),
-                                (uint16_t)(page + q) * OLED_DISPLAY_WIDTH + x + i);
+            u_canvas[(uint16_t)(page + q) * OLED_DISPLAY_WIDTH + x + i] =
+                pgm_read_byte(&src[q * 16 + i]);
         }
     }
 }
@@ -121,14 +124,13 @@ static uint8_t text_len(const char *s) {
     return n;
 }
 
-// Dark on lit. The driver has no way to read a byte back, so an inverted row is
-// composed rather than drawn and then flipped.
+// Dark on lit, composed rather than drawn and then flipped: the row is filled solid
+// first and the glyphs are written through it inverted.
 static void draw_text_1x_inverse(uint8_t x, uint8_t page, const char *s) {
     for (; *s; s++, x += 8) {
         const uint8_t *g = glyph_of(*s);
         for (uint8_t sx = 0; sx < 8; sx++) {
-            oled_write_raw_byte((char)~col_1x(g, sx),
-                                (uint16_t)page * OLED_DISPLAY_WIDTH + x + sx);
+            u_canvas[(uint16_t)page * OLED_DISPLAY_WIDTH + x + sx] = (uint8_t)~col_1x(g, sx);
         }
     }
 }
@@ -195,7 +197,7 @@ static void render_status(void) {
         // keeps it one pass, and none of the six letters the badge can hold reaches
         // row 7 on its own.
         for (uint8_t x = 0; x < 24; x++) {
-            oled_write_raw_byte((char)(0x80u | col_1x(glyph_of(badge[x / 8]), x % 8)), x);
+            u_canvas[x] = (uint8_t)(0x80u | col_1x(glyph_of(badge[x / 8]), x % 8));
         }
     }
 
@@ -335,6 +337,7 @@ void oled_render_master(void) {
     render_layer();
     render_alarm();
     render_trace();
+    u_canvas_commit();     // the only point that touches the driver's buffer
 }
 
 #endif     // OLED_MASTER_PANEL_ZONES

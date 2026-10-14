@@ -14,6 +14,7 @@
 
 #include "bjorn_art.h"
 #include "split_sync.h"
+#include "oled_canvas.h"
 
 // --- tuning -----------------------------------------------------------------
 // WPM tiers. Deliberately low while the Colemak-DH migration is still settling;
@@ -176,15 +177,20 @@ static uint8_t bjorn_mask(uint8_t block) {
     return (block == 14) ? 0x7f : 0xff;                    // block 14 is page 7, left
 }
 
+// Both of these draw into u_canvas, never into the driver's buffer. Laying the base
+// down and then patching poses over it means the blocks an overlay covers are written
+// twice a frame; in the driver that marked them dirty every frame and kept this half's
+// I2C busy for ever. In RAM it costs nothing, and u_canvas_commit decides what is
+// actually different.
 static void bjorn_blit(const bjorn_frame_t *f) {
     for (uint8_t p = 0; p < f->count; p++) {
-        // block * 64 IS the absolute buffer index the driver indexes by, and the mask
-        // keeps us off block 16 — oled_write_raw_byte guards with > rather than >=.
+        // block * 64 IS the absolute buffer index, and the & 0x0F keeps us inside the
+        // canvas no matter what the art says.
         const uint16_t base = (uint16_t)(f->patches[p].block & 0x0F) * BJORN_PATCH_BYTES;
         const char    *src  = f->patches[p].data;
         const uint8_t  m    = bjorn_mask(f->patches[p].block);
         for (uint8_t i = 0; i < BJORN_PATCH_BYTES; i++) {
-            oled_write_raw_byte((char)(pgm_read_byte(src + i) ^ m), base + i);
+            u_canvas[base + i] = (uint8_t)(pgm_read_byte(src + i) ^ m);
         }
     }
 }
@@ -193,13 +199,12 @@ static void bjorn_blit_base(void) {
     for (uint8_t page = 0; page < 8; page++) {
         const uint8_t m = bjorn_mask((uint8_t)(page * 2));
         for (uint8_t x = 0; x < 64; x++) {
-            oled_write_raw_byte((char)(pgm_read_byte(bjorn_base + page * 64 + x) ^ m),
-                                page * 128 + x);
+            u_canvas[page * 128 + x] = (uint8_t)(pgm_read_byte(bjorn_base + page * 64 + x) ^ m);
         }
     }
 }
 
-void oled_render_slave(void) {
+static void bjorn_compose(void) {
     static const uint8_t pose_of_tier[4]  = {BJORN_F_POSE_T0,  BJORN_F_POSE_T1,
                                              BJORN_F_POSE_T2,  BJORN_F_POSE_T3};
     static const uint8_t blink_of_tier[4] = {BJORN_F_BLINK_T0, BJORN_F_BLINK_T1,
@@ -375,6 +380,14 @@ void oled_render_slave(void) {
             bjorn_blink_at = bjorn_ticks + BJORN_BLINK_MIN + (bjorn_rng >> 24) % BJORN_BLINK_SPREAD;
         }
     }
+}
+
+void oled_render_slave(void) {
+    // Compose first, commit once. Every early return in bjorn_compose is a frame that
+    // still has to reach the panel, which is why the commit lives out here.
+    memset(u_canvas, 0, OLED_MATRIX_SIZE);
+    bjorn_compose();
+    u_canvas_commit();
 }
 
 #endif     // OLED_SLAVE_ANIMATION_BJORN

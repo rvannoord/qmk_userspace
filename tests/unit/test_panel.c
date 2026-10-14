@@ -9,13 +9,13 @@
 #include "split_state.h"
 #include "split_sync.h"
 
-uint8_t  fake_oled[OLED_DISPLAY_WIDTH * 8];
+#include "driver.h"
+
+uint8_t  fake_oled[OLED_MATRIX_SIZE + 1];
+uint16_t fake_dirty;
 uint32_t fake_now;
 
-void oled_write_raw_byte(const char data, uint16_t index) {
-    if (index > sizeof(fake_oled)) return;         // the driver's own off-by-one
-    fake_oled[index] = (uint8_t)data;
-}
+void oled_write_raw_byte(const char data, uint16_t index) { u_fake_write(data, index); }
 
 static u_split_state_t drive;
 static bool            drive_link_down;
@@ -30,7 +30,9 @@ bool            u_sync_hard_stale(void) { return false; }
 void            u_sync_init(void) {}
 void            u_sync_task(void) {}
 
-#define QMK_KEYBOARD_H "qmk_keyboard.h"
+#ifndef QMK_KEYBOARD_H
+#    define QMK_KEYBOARD_H "qmk_keyboard.h"
+#endif
 #include "oled_master_zones.c"
 
 // --- looking at the buffer --------------------------------------------------
@@ -118,10 +120,27 @@ static bool hand_bar(uint8_t cell, bool right) {
 
 // --- driving ----------------------------------------------------------------
 
-static void step(void) {           // one main loop, then one render
+// One main loop, then one render. The buffer is NOT cleared between frames: the
+// driver's is not either, and clearing it here is exactly what hid Bug A — every byte
+// looked new every frame, so nothing could be seen to be unchanged.
+static void step(void) {
     oled_master_task();
-    memset(fake_oled, 0, sizeof(fake_oled));
     oled_render_master();
+}
+
+// Render a state, let 50 ms pass, render the same state again. The second render must
+// write nothing at all. When this fails the panels cannot sleep: a dirty block makes
+// the driver call oled_on(), which re-arms OLED_TIMEOUT, for ever.
+//
+// The regression it guards, measured before the fix: at rest block 0 (the badge), Nav
+// blocks 0/6/7/8/9, a held Ctrl 0/3/5, LINK DOWN steady 0/10/11.
+static uint16_t redraw_cost(u_split_state_t s, bool link) {
+    drive = s; drive_link_down = link;
+    step();
+    fake_now += 50;
+    fake_dirty = 0;
+    step();
+    return fake_dirty;
 }
 
 static void frame(u_split_state_t s, bool link) {
@@ -289,6 +308,49 @@ int main(int argc, char **argv) {
 
     frame(at_rest, false);
     check("returning to rest clears everything again", !any_lit(8, 63));
+
+    // --- an unchanged frame must write nothing -----------------------------
+    {
+        const u_split_state_t caps = {.layers = U_BASE,
+                                      .flags  = U_FLAG_CAPS_LOCK | U_FLAG_SCROLL_LOCK};
+        const u_split_state_t word = {.layers = U_BASE, .flags = U_FLAG_CAPS_WORD};
+        const u_split_state_t dflt = {.layers = (uint8_t)(U_NAV | (U_EXTRA << 4))};
+
+        check("at rest on Windows, a redraw is free", redraw_cost(at_rest, false) == 0);
+        check("at rest on the Mac, a redraw is free",
+              redraw_cost((u_split_state_t){.layers = U_BASE, .flags = U_FLAG_IS_MAC}, false) == 0);
+        check("on Nav, a redraw is free",
+              redraw_cost((u_split_state_t){.layers = U_NAV}, false) == 0);
+        check("with the locks lit, a redraw is free", redraw_cost(caps, false) == 0);
+        check("with Caps Word on, a redraw is free", redraw_cost(word, false) == 0);
+        check("with a non-base default, a redraw is free", redraw_cost(dflt, false) == 0);
+
+        bool every_finger_free = true;
+        for (uint8_t i = 0; i < 8; i++) {
+            const u_split_state_t held = {.layers = U_BASE, .fingers = (uint8_t)(1u << i)};
+            if (redraw_cost(held, false) != 0) every_finger_free = false;
+        }
+        check("every finger of both hands, a redraw is free", every_finger_free);
+        check("all eight at once, a redraw is free",
+              redraw_cost((u_split_state_t){.layers = U_BASE, .fingers = 0xff}, false) == 0);
+
+        // Past the 600 ms entry blink, where the alarm row is steady.
+        drive = at_rest; drive_link_down = true;
+        step();
+        fake_now += 1000;
+        check("LINK DOWN steady, a redraw is free", redraw_cost(at_rest, true) == 0);
+
+        // Inside the 1.5 s the trace is shown.
+        frame((u_split_state_t){.layers = U_BASE, .fingers = U_FIN_L_PINKY, .anomaly = 1}, false);
+        frame((u_split_state_t){.layers = U_BASE, .fingers = 0, .anomaly = 2}, false);
+        fake_dirty = 0;
+        fake_now += 50;
+        step();
+        check("a trace being shown costs nothing to redraw", fake_dirty == 0);
+    }
+
+    check("the driver's one-past-the-end byte was never touched",
+          fake_oled[OLED_MATRIX_SIZE] == 0);
 
     return unit_done("panel");
 }
