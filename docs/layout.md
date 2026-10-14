@@ -353,6 +353,25 @@ the panel and resumes where it stopped instead of jumping to a random phase on w
 tier and the idle ladder use the wall clock and are never reset, so both are already
 correct the moment the screen comes back.
 
+### All seventeen sprite sets, decided 2026-10-14
+
+Every one of infinition's seventeen sets lands on the keyboard somehow. They do **not**
+have to be attached to an action or a keypress: a set may earn its place purely as idle
+content — a costume he wears for a while, a prop he picks up, a mood that passes — with
+nothing on the keyboard causing it and nothing being signalled by it.
+
+That is the design's own third category rather than an exception to it: an expression is
+for something wrong, a prop is for something true, and idle is for everything else. The
+mistake would be the opposite one, inventing a meaning for a costume so that it looks
+like a signal. Decoration must not read as information.
+
+A set whose frames cannot be made to read at 64x64 may land as its 28x28 icon instead,
+provided the icon appears as something real in the scene rather than as a badge.
+
+What constrains this is unchanged: about 23% lit, the block budget, the motion rules,
+and every frame drawn by hand, because the mechanical reduction is not usable
+(`tools/README.md`).
+
 ### Built and still to do
 
 Built, newest first: dark at rest, the alarm row, the trace strip and the latched locks
