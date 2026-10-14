@@ -10,7 +10,7 @@ Keep the Progress table below current, in the same commit that finishes a stage.
 
 | Stage | Status |
 |-------|--------|
-| 0. Docs tell the truth | open |
+| 0. Docs tell the truth | **done 2026-10-14** (firmware byte-identical, proven) |
 | 1. Bug A: the panels sleep, Bjorn keeps blinking, sequence per send | open |
 | 2. Bug B: link health, stats page, self-heal | open |
 | 3. Survey of all 17 sprite sets | open |
