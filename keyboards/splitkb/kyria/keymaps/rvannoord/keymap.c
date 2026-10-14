@@ -25,6 +25,11 @@ void housekeeping_task_user(void) {
 #ifdef OLED_ENABLE
     if (is_keyboard_master()) {
         oled_master_task();
+        // Both panels off two idle minutes after the last key, whatever is being drawn.
+        // Here rather than in the 20 Hz render, so a stray dirty block can light the
+        // panel for one main loop at most. The other half follows within one forced
+        // sync; waking is QMK's own (keyboard.c calls oled_on() on activity).
+        if (u_oled_should_sleep(is_oled_on(), last_input_activity_elapsed())) oled_off();
     } else {
         oled_slave_task();
     }

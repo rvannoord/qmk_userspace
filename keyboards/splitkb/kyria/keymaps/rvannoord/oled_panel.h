@@ -72,6 +72,13 @@
 // oled_render_* draw, and run at the panel's update rate — 20 Hz, and not at all
 // while it sleeps. oled_*_task run every main loop on their own half, so they are
 // where state that must not miss an edge belongs.
+// QMK's own display timeout follows oled_on(), which any dirty block calls, so a panel
+// that keeps drawing can hold itself awake for ever. This reads the input clock instead,
+// which no amount of drawing can re-arm. Pure, so the tests can pin the boundary.
+static inline bool u_oled_should_sleep(bool on, uint32_t idle_ms) {
+    return OLED_TIMEOUT > 0 && on && idle_ms >= OLED_TIMEOUT;
+}
+
 void oled_render_master(void);
 void oled_render_slave(void);
 void oled_master_task(void);

@@ -349,6 +349,11 @@ int main(int argc, char **argv) {
         check("a trace being shown costs nothing to redraw", fake_dirty == 0);
     }
 
+    // --- the sleep predicate ------------------------------------------------
+    check("awake at 119,999 ms idle", !u_oled_should_sleep(true, 119999));
+    check("asleep at 120,000 ms idle", u_oled_should_sleep(true, 120000));
+    check("and nothing to do when already off", !u_oled_should_sleep(false, 500000));
+
     check("the driver's one-past-the-end byte was never touched",
           fake_oled[OLED_MATRIX_SIZE] == 0);
 
