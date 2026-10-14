@@ -383,6 +383,20 @@ thirteen of them — and under this approach that simply does not matter.
 breath: one pixel of travel on the whole figure, the easing carried by the dwell, body
 leading and head following. Blink, breath, small lifts, and cuts between authored states.
 
+**All 32 are drawn, and every element in them.** Not a reduced set, not the legible ones:
+the sword, the shield, the spectacles, the bottle, the laptop, the hood, the horned mask
+and the bandit mask all get drawn as they appear. Where an element collides with
+something the panel already uses as a signal — a sword at this size sits where the axe
+sits, and the axe means a command modifier is held — the answer is *when that pose may
+appear*, never removing the prop.
+
+The one limit is physical rather than chosen: a hand trace to 64x64 in 1 bit is lossy,
+because the source is 78x78 greyscale. So "as drawn" means every element present and
+nothing substituted, not pixel-identical, which is not available at this size. Where a
+detail cannot resolve — the laptop has a face on its screen that lands at about four
+pixels — it is drawn as faithfully as the resolution allows and the loss is recorded,
+rather than being swapped for something tidier.
+
 Of the eleven unique icons, seven are typeset words (`FTP`, `SSH`, `SMB`, `SQL`, `RDP`,
 `Telnet`, `TEST`) and are not usable here — they would be illegible shrunk and would
 clash with DUNGEON.mode. Four are pictorial and are worth drawing: a longship with shields
