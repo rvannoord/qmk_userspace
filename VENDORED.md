@@ -21,3 +21,13 @@ When a QMK update breaks Miryoku, fix it here and add a line below. Checking whe
 Glyphs extracted from **DUNGEON.mode** by datagoblin ([datagoblin.itch.io/dungeonmode](https://datagoblin.itch.io/dungeonmode)), an 8x8 1-bit bitmap font released **CC0 1.0 Universal** — public domain, so no attribution is required and none is imposed on anything built with it. Credited by choice.
 
 Taken from the pack's `bitmap/dungeon-mode.png`, a 16x16 grid of 8x8 cells, with `playscii/charsets/dungeon-mode.char` as the character map. Only the printable ASCII range and four symbol cells were extracted; the pack itself is not in this repo. The table in `panel_font.c` is generated and never hand-edited — to change which characters it carries, extract again from the pack.
+
+## `keyboards/splitkb/kyria/keymaps/rvannoord/bjorn_art.c`
+
+Bjorn, the Tamagotchi Viking, from **[infinition/Bjorn](https://github.com/infinition/Bjorn)**, MIT licensed, "Copyright (c) 2024 infinition".
+
+Frames `IDLE1`, `IDLE3`, `IDLE8` and `IDLE9` from `resources/images/status/IDLE/`, 78x78, box-filtered to 64x64 and Floyd-Steinberg dithered in separate 64-column passes with region locking across the set, so the four postures share their dither pattern and a tier change does not shimmer. The blink, breath, doze, axe, crown and misfire frames are hand edits of those four.
+
+The source commit was not recorded at the time. GitHub shows `main` unchanged since `61a4758e5ee3d37d43c10eb690340626139912c0` (2026-05-04), so the art generated on 2026-10-10 almost certainly came from it — an inference, to be confirmed when the sprites are fetched.
+
+The art is **regenerable**: `tools/` holds the generator and the text grids it reads (`STAGE1.txt`), verified on 2026-10-14 to reproduce `bjorn_art.c` and `bjorn_art.h` byte for byte. Edit the grids, never the generated file.
