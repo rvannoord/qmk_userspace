@@ -68,8 +68,6 @@ typedef struct {
 
 static uint8_t  bjorn_tier;              // never reinitialised: correct across a sleep
 static uint32_t bjorn_tier_changed;
-static uint8_t  bjorn_last_wpm;
-static uint32_t bjorn_wpm_changed;
 static uint16_t bjorn_ticks;
 static uint16_t bjorn_breath_origin;      // latched when he settles, so the first
                                           // thing he does is a full rest, then an inhale
@@ -122,16 +120,18 @@ static bool     bjorn_was_hard_stale;
 static void bjorn_gather(bjorn_in_t *in) {
     in->wpm = get_current_wpm();
 
-    if (in->wpm != bjorn_last_wpm) {
-        bjorn_last_wpm   = in->wpm;
-        bjorn_wpm_changed = timer_read32();
-    }
-    // Gate on how long the reading has been STILL, not on it being zero. If the split
-    // link drops mid-word the slave's copy of WPM freezes non-zero for ever, and a
-    // wpm == 0 test would leave him sprinting until the board is replugged.
-    const uint32_t since_wpm = timer_elapsed32(bjorn_wpm_changed);
-    const uint32_t since_key = last_input_activity_elapsed();   // this half's own keys
-    in->idle_ms = since_wpm < since_key ? since_wpm : since_key;
+    // One clock, shared with the master through SPLIT_ACTIVITY_ENABLE, so this half
+    // starts idling at the same instant the master does and the panels agree about when
+    // the show ends. It used to take the smaller of this and "how long the WPM reading
+    // has been still", which lagged by up to five seconds: WPM keeps changing all the
+    // way down as it decays over its own five-second window, so the reading is never
+    // still until long after the typing stopped.
+    //
+    // WPM is still what picks the posture tier. It is just no longer asked what time it
+    // is. The old concern it answered — that a dropped link freezes WPM non-zero and
+    // leaves him sprinting for ever — is covered by the tier being forced to its
+    // resting value once settled, which this clock now decides honestly.
+    in->idle_ms = last_input_activity_elapsed();
 
     const u_split_state_t s = u_sync_state();
     in->layer      = s.layers & 0x0F;

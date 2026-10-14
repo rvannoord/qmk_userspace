@@ -91,3 +91,10 @@
 // rest" becomes "lit at rest"; and pixel wear goes from about a quarter lit to about
 // three quarters, which matters less now the panels actually sleep after two minutes.
 #define U_OLED_INVERT
+
+// Give the other half the master's activity timestamps, so last_input_activity_elapsed()
+// is the same clock on both. Without it the mascot derives idle from how long the WPM
+// reading has been still, and WPM keeps changing while it decays over its five-second
+// window — so idle started up to five seconds late on that half while the master was
+// already counting down to switching the panels off.
+#define SPLIT_ACTIVITY_ENABLE
