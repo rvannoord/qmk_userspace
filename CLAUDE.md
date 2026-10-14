@@ -38,7 +38,9 @@ QMK runs in WSL Ubuntu, with `qmk_firmware` in the WSL home and `user.overlay_di
 qmk compile -kb splitkb/kyria/rev3 -km rvannoord
 ```
 
-Both halves take the same `.uf2`: the Kyria rev3 reads left/right from a pin on the PCB. Flash one half at a time:
+**Always flash both halves with the same build.** `NUM_TOTAL_TRANSACTIONS` is XORed into every split handshake, so a mismatched pair fails every split transaction, the matrix included — the other half just stops typing.
+
+Both halves take the same `.uf2`: the Kyria rev3 reads left/right from a pin on the PCB. On the Mac `qmk flash` works directly, because macOS mounts the `RPI-RP2` volume; from Windows the file is copied in Explorer. Flash one half at a time:
 1. Plug USB into that half.
 2. Put it in the bootloader with Miryoku's Boot key (double-tap). If the firmware is broken, hold the SYS key (outer column, top row) while plugging in; that's the Bootmagic key.
 3. Copy the `.uf2` to the `RPI-RP2` drive from Windows Explorer. `qmk flash` inside WSL can't see the drive.
