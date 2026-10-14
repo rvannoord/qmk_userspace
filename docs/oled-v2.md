@@ -14,7 +14,7 @@ Keep the Progress table below current, in the same commit that finishes a stage.
 | 1. Bug A: the panels sleep, Bjorn keeps blinking, sequence per send | **done 2026-10-14**, flashed `c95356d`, checked on the board |
 | 2. Bug B: link health, stats page, self-heal | **done 2026-10-14**, cause still unknown; §2.5 skipped for want of evidence |
 | 3. Survey of all 17 sprite sets | fetched and sheets rendered 2026-10-14; tools committed. Mapping with the animator |
-| 4. Director, layered compositor, preview harness | open |
+| 4. Director, layered compositor, preview harness | preview harness and one idle clock done 2026-10-14; compositor and director open |
 | 5. The goat | open |
 | 6. Weather by season | open |
 | 7. Doze extras and the heart | open |

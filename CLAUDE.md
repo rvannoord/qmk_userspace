@@ -38,6 +38,8 @@ QMK runs in WSL Ubuntu, with `qmk_firmware` in the WSL home and `user.overlay_di
 qmk compile -kb splitkb/kyria/rev3 -km rvannoord
 ```
 
+Before flashing, read `docs/flash-checklist.md`: it lists what is waiting to be checked on the board and which commit each item came from, and it is where the result goes afterwards.
+
 **Always flash both halves with the same build.** `NUM_TOTAL_TRANSACTIONS` is XORed into every split handshake, so a mismatched pair fails every split transaction, the matrix included — the other half just stops typing.
 
 Both halves take the same `.uf2`: the Kyria rev3 reads left/right from a pin on the PCB. On the Mac `qmk flash` works directly, because macOS mounts the `RPI-RP2` volume; from Windows the file is copied in Explorer. Flash one half at a time:
