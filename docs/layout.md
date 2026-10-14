@@ -103,6 +103,17 @@ than dropping it. At most one actor initiates per step, the other limited to 2 b
 **While typing the budget drops to 2 blocks** — ambient only — which makes "nothing loops while he
 types" a number the compositor enforces rather than a rule to remember.
 
+**What the budget is actually protecting, corrected 2026-10-14.** Not typing feel. The driver
+sends at most one block per main loop (`OLED_UPDATE_PROCESS_LIMIT` is 1, `oled_driver.c:457`), so
+the I2C cost of a frame is about 1.7 ms per loop whether one block changed or all sixteen — more
+dirty blocks make the *panel* lag, not the keyboard. The evidence is the old spaceship, which
+repainted every frame for months and never felt mushy, and Bug A, which did the same thing
+accidentally for just as long without anyone noticing it in the typing. What the budget buys is
+display latency — sixteen dirty blocks take sixteen loops to appear, so a frame that changes
+everything is already a fifth of a second behind — and restraint, which is the design's real
+concern. The number that would show typing being hurt is the main loop rate, which the stats page
+reports.
+
 Ambient clocks are non-harmonic so the scene never looks metronomic: breath 3.6 s, goat tail
 1.9 s, goat ear 4.3 s, blink pseudo-random 6-10 s.
 
@@ -380,10 +391,18 @@ and `transaction_rpc_send()` then refuses immediately, which is the banner. QMK 
 500 ms while disconnected, so ~2,400 attempts went unanswered over those twenty minutes — the
 other half was wedged or unpowered rather than suffering a line glitch, and replugging the USB
 half power-cycles it over TRRS, which is why that fixed it. What wedged it is not established.
-Bug A is an aggravating factor: it kept that half pushing an I²C block every main loop for the
-whole period instead of going dark at 120 s. A software self-reset cannot help a half whose code
-has stopped, so the hardware watchdog in `docs/oled-v2.md` §2.4 is the fix that matches this
-evidence.
+Bug A was first written up here as an aggravating factor, on the grounds that it kept that half
+pushing an I²C block every main loop for the whole period instead of going dark at 120 s. **That
+is weak, and Roel supplied the counter-evidence on 2026-10-14:** the old spaceship repainted every
+frame for months, which both kept the panel from ever sleeping and kept the same I²C traffic
+running, and nothing ever wedged. Continuous I²C on this half is therefore not sufficient on its
+own. The one thing that genuinely changed with the zones panel is that the *master* began doing it
+too, so both halves were saturating their buses rather than one — a difference, but not an
+explanation. What wedged it is not established, and nothing here should be read as if it were.
+
+A software self-reset cannot help a half whose code has stopped, so the hardware watchdog in
+`docs/oled-v2.md` §2.4 is the fix that matches this evidence regardless of the cause — which is
+the point of preferring it: it does not depend on guessing right.
 
 ### Attribution
 
