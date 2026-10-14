@@ -16,6 +16,19 @@
 bool oled_task_user(void) {
 	if (!is_oled_on()) return false;
 
+#ifdef U_OLED_INVERT
+	// Black and white swapped, in the panel itself rather than in the buffer: the
+	// SSD1306 has an invert-display command and QMK exposes it. Bjorn's source art is
+	// dark ink on a white page — it is an e-paper original — so this is the medium he
+	// was drawn for, and it is what makes the hooded poses legible: a solid cowl
+	// instead of a 33% blob.
+	//
+	// Called every frame on purpose. oled_invert() returns early when the panel is
+	// already in that state, so it costs a comparison, and it re-applies itself if
+	// anything ever resets the display.
+	oled_invert(true);
+#endif
+
 	if (is_keyboard_master()) {
 		oled_render_master();
 	} else {

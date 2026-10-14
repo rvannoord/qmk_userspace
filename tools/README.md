@@ -45,6 +45,28 @@ mass in the source, so it reduces to about **33% lit** and reads as a blob rathe
 a face inside a hood. Six images are affected (SSH1, 2, 3, 7, 8, 13). That is a polarity
 problem, not a resolution one.
 
+## If the panel ever gets bigger
+
+A 128x128 OLED is a possibility. When that happens, **re-dither from the source BMPs at
+the new size. Never scale the 64x64 output.**
+
+Doubling 1-bit art doubles its pixels: every dither dot becomes a 2x2 block, the texture
+that gives Bjorn his mass turns into visible chequerboard, and the result looks worse
+than the small version rather than better. Re-dithering puts the error diffusion back to
+work at the new resolution — the source is 78x78 greyscale, so 128 is an upscale that
+adds no detail, but it gives the dither four times as many pixels to spread its error
+into, and the gradients come out smoother.
+
+`sprites.py` takes the target size as an argument to `box_filter`; the dither's 64-column
+split is the panel's own half-width and would become 64 still, since that is about the
+two halves' independent compositing rather than about the frame size.
+
+What else would have to change: `OLED_MATRIX_SIZE` and `OLED_BLOCK_SIZE` are different on
+a 128x128 panel, so every block index in `bjorn_art.c` and every patch origin is wrong,
+and `gen_bjorn.py` would need its `block = index / 64` arithmetic revisited.
+`oled_canvas.c` already carries `_Static_assert`s on both constants, so such a build
+fails loudly at compile time rather than drawing nonsense — that is deliberate.
+
 ## The upstream sets are pose variants, not animations
 
 `shared.py` upstream picks a **random** frame from a set each time it draws, from a list

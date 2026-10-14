@@ -80,3 +80,14 @@
 // See docs/oled-v2.md and the comments in split_health.h for every guard on these.
 #define U_SELF_HEAL
 #define U_WATCHDOG_MS 2000
+
+// Swap black and white on both panels, in hardware. Bjorn's art is dark ink on a white
+// page, so this puts him back on paper; it also makes the six hooded poses legible,
+// which on a dark panel are a 33% blob. Comment it out to go back — nothing else
+// depends on it, and the art is identical either way.
+//
+// Known costs, before deciding to keep it: the alarm ladder's loudest rung was
+// full-panel inversion, which now means inverting *back* rather than forth; "dark at
+// rest" becomes "lit at rest"; and pixel wear goes from about a quarter lit to about
+// three quarters, which matters less now the panels actually sleep after two minutes.
+#define U_OLED_INVERT
