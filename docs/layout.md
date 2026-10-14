@@ -70,9 +70,10 @@ The symbol layer is the number layer with Shift held. Every key is the shifted v
 
 ## OLED
 
-Two SSD1306 panels, 128x64, 1-bit, one per half. Specified 2026-10-10, not yet in the firmware.
-The master half (whichever has the USB cable) is the instrument panel; the other half is the
-mascot. Plug into the same half every time, or the two swap places.
+Two SSD1306 panels, 128x64, 1-bit, one per half. Specified 2026-10-10; what is built and what
+is not is listed under **Built and still to do** below. The master half (whichever has the USB
+cable) is the instrument panel; the other half is the mascot. Plug into the same half every time,
+or the two swap places.
 
 ### Mascot: Bjorn
 
@@ -102,14 +103,14 @@ than dropping it. At most one actor initiates per step, the other limited to 2 b
 **While typing the budget drops to 2 blocks** — ambient only — which makes "nothing loops while he
 types" a number the compositor enforces rather than a rule to remember.
 
-Ambient clocks are non-harmonic so the scene never looks metronomic: breath 1.2 s, goat tail
+Ambient clocks are non-harmonic so the scene never looks metronomic: breath 3.6 s, goat tail
 1.9 s, goat ear 4.3 s, blink pseudo-random 6-10 s.
 
 | Trigger | Response |
 |---------|----------|
 | WPM tier (0-19 / 20-39 / 40-59 / 60+, 8 WPM hysteresis) | horn posture, four static poses from IDLE8 / IDLE1 / IDLE3 / IDLE9. No speed lines: motion in peripheral vision taxes concentration, and WPM is the one signal with nothing to act on |
 | Command modifier held | axe into his hand, and for 800 ms after it is released. Two dirty blocks, seated beside him inside the left column so it never crosses the dither seam and leaves the right half free for the goat. Disjoint from the blink window, so the two compose with no combined variants. **Shift is excluded** — here it is a home-row mod, part of typing a capital rather than an instruction, and it is held so often the axe would simply always be there. The trailing dwell is what stops a 100-300 ms hold strobing the prop. An earlier rule fired on a *completed* command instead, and was wrong twice over: with Chordal Hold most same-hand shortcuts resolve as letters, and Miryoku's clipboard keys are not modifiers at all, so the event barely happens |
-| Misfire: a command modifier held past 500 ms with nothing typed | the axe raises overhead over three frames and holds, 1200 ms in all, with his horns drooping. The only thing in the design that animates, on the principle that the only thing which moves should be the only thing that is wrong. The steps *slow* as it rises — 100 ms taking hold, then 150, 200 and 750 held at the top — because a lifted mass decelerates toward the top of its arc, and that is what makes it read as heavy rather than as a sprite being repositioned. Measured 4, 5 and 4 blocks for the raise; 8 entering or leaving a non-drooped posture, 3 leaving to the drooped one. The whole figure cuts to the drooped posture rather than splicing horns into the current one: the tier progression is an arousal scale so that pose already exists, half a droop reads as damage where both falling reads as deflation, and since nothing was typed the typing-speed posture carries no information worth preserving. A misfire outranks the held axe and **cancels** it rather than suspending it — resuming a stale success indicator afterwards would read as a second event that never happened |
+| Misfire: a command modifier held past 500 ms with nothing typed | the axe raises overhead over three frames and holds, 1750 ms in all, with his horns drooping. The only thing in the design that animates, on the principle that the only thing which moves should be the only thing that is wrong. The steps *slow* as it rises — 100 ms taking hold, then 150 and 200 rising, 1000 ms held at the top, and three 100 ms steps back down — because a lifted mass decelerates toward the top of its arc, and that is what makes it read as heavy rather than as a sprite being repositioned. Measured 4, 5 and 4 blocks for the raise; 8 entering or leaving a non-drooped posture, 3 leaving to the drooped one. The whole figure cuts to the drooped posture rather than splicing horns into the current one: the tier progression is an arousal scale so that pose already exists, half a droop reads as damage where both falling reads as deflation, and since nothing was typed the typing-speed posture carries no information worth preserving. A misfire outranks the held axe and **cancels** it rather than suspending it — resuming a stale success indicator afterwards would read as a second event that never happened |
 | Caps Word | a three-point crown, then his tile flips to dark-on-white 100 ms later. Inverted he reads **better**, not worse: his art is an e-paper original drawn as dark lines on a white page, so flipping restores the polarity the linework was made for. The bloom objection was measured rather than argued — 26 isolated pixels of 983, and inversion is a bijection so that count is identical in both polarities, bounding the loss at 2.6%. The earlier 77%-lit figure still stands but argued about *sustained* brightness, not legibility. Done at runtime as one XOR per byte, so every frame — blink, axe, misfire, breath, all four postures — composes unchanged and gets its inverted form free. Crown first and the flip a beat later makes the loudest event in the design feel authored; leaving is both at once, slow in and quick out. **Pages 0-6 invert with `0xFF`, page 7 with `0x7F`**, preserving row 63: the floor rule runs across both halves, and flipping only the left of it would put the two halves' dots a pixel out of phase and recreate the seam step the floor exists to remove. The right column never inverts — a white card beside black reads as deliberate, and it is a defined register one step below full-panel inversion |
 | Caps Lock | crown plus a 1 px edge frame (y=0, y=63, x=0, x=127). Nothing else ever draws there, so lighting it is unambiguous. 380 lit px |
 | Default layer != Base | helmet off, head bowed, axe dropped at his feet, plus the edge frame. A defeated bare-headed Bjorn reads instantly as "you are silently on QWERTY"; the emotion carries the meaning |
@@ -253,7 +254,7 @@ stage 2 commits to smaller details like the crown and the axe.
 | Blink | shut 150 ms on a cut, then 100 ms of half lid | Real lids close ballistically and open slowly, and that asymmetry is the most recognisable thing about a blink. Closure stays a cut because there is nothing to animate on the way down. Interval 6-10 s from a small LCG, and about one blink in five is doubled 400 ms apart, because real blinks cluster and irregular grouping is a stronger liveness cue than anything else at this size. The pair decision and the interval are drawn from separately advanced words, or "long gap" and "was a double" correlate perfectly and the pattern becomes legible within a minute |
 | Falling asleep | 300 ms half lid, 500 ms shut, then the pose cuts | The same three lid frames as a blink, played slowly and forwards instead of quickly and backwards. Deliberately far slower than a blink, or it reads as a blink that happened to be followed by a pose change. It waits for the bottom of a breath before starting: the unlifted lid patch is built over the resting body, so dropping it on a risen frame would snap the body back down — and nobody nods off mid-inhale |
 | Waking | correct pose immediately, eyes open over 200 ms | Waking from the panel timeout and waking from a doze are the same event, a keypress, and get one gesture. Cut the information, animate the character: the right pose for the current tier is there from the first frame with the eyes shut, and only the lids are delayed. Detected from a long gap between render calls, since the panel does not render while it sleeps |
-| Doze breath | 5.4 s: 1.8 s in, 3.6 s out | Asleep he breathes slower, and asymmetrically — an even alternation reads as a metronome. The gesture is his beard rising, since he has no chest: his own outline pushed down one pixel, not new art. No blink; his eyes are already shut |
+| Doze breath | 6 s: 1.5 s in, 4.5 s out | Asleep he breathes slower, and asymmetrically — an even alternation reads as a metronome. The gesture is his beard rising, since he has no chest: his own outline pushed down one pixel, not new art. No blink; his eyes are already shut |
 | Breath | 3.6 s, four states | His head and helmet **lift 1 px** while the beard stretches beneath them and his base stays pinned to the floor; the beard also pushes 1 px sideways over rows 41-52, so he fills as well as rises. 1 px is a hard ceiling, not a preference: his horn apex sits on row 1, so 2 px clips it against the top of the panel. Body leads and head follows in both directions, because the chest drives and the head is driven: rest 1.8 s, body fills 0.25 s, risen and held 0.8 s, body empties 0.4 s, head settles 0.35 s — about 1:2.4 in to out |
 
 **Idle is gated on how long the WPM reading has been still, not on it being zero.** If the
@@ -262,7 +263,7 @@ split link drops mid-word the slave's copy of WPM freezes non-zero for ever, and
 key activity is OR'd in, so a local keypress wakes him without waiting for a sync.
 
 Measured costs, from the generated art: blink **1 block** on every tier, breath 7, tier hop
-8, doze entry 8, doze breath 6, half lid 1 (2 while risen), floor 1. Art is 4672 bytes. A blink during a breath needs its own frame per swell state. The pixels do not
+8, doze entry 8, doze breath 6, half lid 1 (2 while risen), floor 1. Art is 7,232 bytes: a 512-byte base plus 105 patches of 64 bytes. A blink during a breath needs its own frame per swell state. The pixels do not
 collide, but a patch is a whole 64-byte block, so a blink block built from the resting
 pose carries un-swelled body edges either side of the eyes and flattens the swell where
 they share page 4. Three blink variants — rest, half, full — cost 64 bytes each and make
@@ -313,6 +314,8 @@ the goat later.
 | `panel_font.c` | generated. Printable ASCII cut out of the DUNGEON.mode sheet, one byte a row, plus the symbol cells the event strip draws. Neither the sheet nor the generator is in the repo — the table is, and the table is what builds. Regenerating means fetching the pack again (see Attribution) |
 | `oled_master_text.c` | the text panel. Layer names now come from Miryoku's `MIRYOKU_LAYER_LIST` X-macro instead of a second copy of the layer order, so they are the short forms (`Base`, `Nav`, `Sym`). Override `MIRYOKU_LAYER_LIST` to change them |
 | `oled_slave_bjorn.c` | the mascot: tier hysteresis, idle ladder, ambient clocks, blitter |
+| `split_state.c` / `.h` | the 5-byte payload the master gathers: modifiers in finger order, the active and default layers, locks and Caps Word, the host OS, and a misfire count. Built fresh every main loop; a modifier it reports is one that is held at that instant |
+| `split_sync.c` / `.h` | the transport for that payload. Double-buffered on the slave because the callback runs on a HIGHPRIO thread; heartbeat 250 ms, minimum interval 20 ms, soft stale 600 ms, hard stale 1250 ms. `u_sync_link_down()` answers for both halves — the master from its own failed sends, the slave from the sequence number standing still |
 | `oled_slave_spaceship.c` | `render_space()`, moved byte-for-byte |
 | `oled_slave_logo.c` | the three static logos |
 | `bjorn_art.c` / `.h` | generated: base, patch table, frame index |
@@ -322,6 +325,50 @@ Ambient timing counts render ticks rather than wall-clock milliseconds, so it fr
 the panel and resumes where it stopped instead of jumping to a random phase on wake. The
 tier and the idle ladder use the wall clock and are never reset, so both are already
 correct the moment the screen comes back.
+
+### Built and still to do
+
+Built, newest first: dark at rest, the alarm row, the trace strip and the latched locks
+(`c4c93b9`); the master's zones and the DUNGEON.mode font (`df9231f`); the Caps Word crown and
+tile inversion (`43ef4ae`); the misfire raise (`7b78012`, `eafad3b`); the axe (`ef99af4`,
+`fe95b61`, `c158c8c`); Bjorn reading the master's state (`162fb40`); the split sync (`d195f6a`,
+`df5c23b`); the per-half tasks (`591a32f`); Bjorn's postures, blink, breath, doze and waking
+(`4465d74`, `cefa650`, `4cae216`, `85ac2bc`, `f4dad75`, `9d066bb`). The old art and the text
+panel are still selectable in `custom_config.h`.
+
+Still to do: the goat (wander from 20 s, pet at 45 s); Caps Lock on the mascot (crown plus the
+1 px edge frame — he reacts only to Caps Word today); the defeated helmet-off pose when the
+default layer is not base (the master already draws a rule under the layer name, the mascot
+draws nothing); the "invert the whole OLED" look; raising the WPM tiers once typing speed
+settles. Beyond the original spec, `docs/oled-v2.md` adds the idle director, weather by season,
+the doze extras, and a place for every one of Bjorn's seventeen sprite sets.
+
+**Known defects, found 2026-10-14.** Each line goes when the commit that fixes it lands.
+
+| # | Defect | Fixed in |
+|---|--------|----------|
+| Bug A | Every zone clears itself and redraws, so an unchanged frame still dirties its blocks; a dirty block calls `oled_on()`, which re-arms the timeout. The panels therefore never sleep and the badge burns in, and one block goes over I²C every main loop for ever. The slave has the same flaw through its base-then-patch blit. Reproduced on the Mac: at rest the badge's block, Nav blocks 0/6/7/8/9, a held Ctrl 0/3/5, LINK DOWN 0/10/11 | Stage 1 |
+| D-1 | Bjorn stops blinking after every doze and after any stale period, for up to ~55 minutes, because the reschedule is an exact equality test on a 16-bit tick difference that the doze and stale paths return before reaching. Reproduced: 1 blink in 120 s after a doze, 0 after a stale period, against the ~15-20 expected. This shows the design's "link is dead" signal with nothing wrong on the link | Stage 1 |
+| D-2 | The slave writes the blocks an overlay covers twice every frame: 6.0 blocks a frame typing at tier 3, 2.7 settled, 8.0 dozing | Stage 1 |
+| D-3 | The sequence number advances per *build*, not per send, and the master builds twice a loop. Between heartbeats `L` loops apart the sent `seq` changes by `2L mod 256`, so a heartbeat `L = 128` loops after the last one carries an unchanged `seq` and the slave's staleness clock keeps ageing while every send succeeds | Stage 1 |
+| D-4 | A misfire that happened during an outage replays when the link returns, because soft staleness blanks the fingers and flags but not the misfire count | Stage 2 |
+| D-5 | The slave's idle clock lags by up to ~5 s: it takes the smaller of "time since WPM changed" and the input clock, and WPM keeps changing while it decays over its 5 s window | Stage 4 |
+| D-6 | A dead link leaves the slave's panel lit with a frozen frame, because the slave applies the last OLED state it received. A slave whose code has stopped does the same, since the SSD1306 holds its picture by itself | Stage 2 |
+| D-7 | QMK's driver writes one byte past its buffer for `index >= 1024`. Keep every index below 1024; the host stubs carry a canary | n/a, guarded |
+
+**The link loss of 2026-10-13** (Windows, cable in the right half, away ~20 minutes): the master
+showed the `LINK DOWN` banner, Bjorn did not blink, **the other half's keys did not type** while
+the master's did, and it cleared only after replugging. Keys dying on the far half is the
+signature of the *standard* transport being down, not of an RPC-only failure: the master zeroes
+the other half's matrix when the transport counts as disconnected (`quantum/matrix_common.c:101`),
+and `transaction_rpc_send()` then refuses immediately, which is the banner. QMK retries once per
+500 ms while disconnected, so ~2,400 attempts went unanswered over those twenty minutes — the
+other half was wedged or unpowered rather than suffering a line glitch, and replugging the USB
+half power-cycles it over TRRS, which is why that fixed it. What wedged it is not established.
+Bug A is an aggravating factor: it kept that half pushing an I²C block every main loop for the
+whole period instead of going dark at 120 s. A software self-reset cannot help a half whose code
+has stopped, so the hardware watchdog in `docs/oled-v2.md` §2.4 is the fix that matches this
+evidence.
 
 ### Attribution
 
@@ -345,7 +392,7 @@ These two are the only parts of this repo that are not my own work.
 | OS-aware navigation | Word jump is Ctrl+Arrow on Windows but Option+Arrow on macOS; line start/end is Home/End vs Cmd+Arrow. OS detection can drive these too | later |
 | Flow Tap after any key | If mods misfire right after Backspace, Enter or digits, widen `is_flow_tap_key()` to match the old typing streak | only if it happens |
 | `PERMISSIVE_HOLD` | QMK's recommended pairing with Chordal Hold. Makes quick deliberate shortcuts register before 200 ms | after the migration settles |
-| OLED redesign in pixel art | Specified in full under OLED above, including the Bjorn mascot, the goat, the master panel zones and the split-sync design | specified, not yet built |
+| OLED redesign in pixel art | Specified in full under OLED above, including the Bjorn mascot, the goat, the master panel zones and the split-sync design | partly built, see Built and still to do |
 | Invert the whole OLED | The inverted Bjorn reads better than the normal one. The SSD1306 inverts in hardware, so flipping both halves is a one-line change — but every zone here draws lit-on-dark against a hardcoded `0x00`, "dark at rest" is the whole premise of the master panel, and the alarm ladder ends in full-panel inversion, which an already-inverted panel cannot escalate to. Look at it once the animations, the extras and the goat are done |
 
 ## Tuning log
