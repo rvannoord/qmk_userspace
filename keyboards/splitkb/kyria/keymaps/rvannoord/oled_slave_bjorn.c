@@ -117,6 +117,7 @@ static bool     bjorn_invert;             // his tile only, never the other half
 static uint32_t bjorn_last_render;
 static uint16_t bjorn_doze_origin;        // latched on falling asleep
 static uint32_t bjorn_rng = 1;
+static bool     bjorn_was_hard_stale;
 
 static void bjorn_gather(bjorn_in_t *in) {
     in->wpm = get_current_wpm();
@@ -204,6 +205,15 @@ static void bjorn_blit_base(void) {
     }
 }
 
+// Six to ten seconds from now. Called when a blink finishes, and whenever he comes
+// back from somewhere the blink code does not run — the doze, the waking lids, a dead
+// link — so the length of that gap can never matter.
+static void bjorn_schedule_blink(void) {
+    bjorn_rng        = bjorn_rng * 1664525u + 1013904223u;
+    bjorn_blink_at   = bjorn_ticks + BJORN_BLINK_MIN + (bjorn_rng >> 24) % BJORN_BLINK_SPREAD;
+    bjorn_blink_pair = false;
+}
+
 static void bjorn_compose(void) {
     static const uint8_t pose_of_tier[4]  = {BJORN_F_POSE_T0,  BJORN_F_POSE_T1,
                                              BJORN_F_POSE_T2,  BJORN_F_POSE_T3};
@@ -224,6 +234,10 @@ static void bjorn_compose(void) {
 
     const bool settled = in.idle_ms >= BJORN_SETTLE_MS;
     const uint8_t tier = settled ? 1 : bjorn_tier;
+
+    // The tick the waking gesture ends on, so the reschedule happens exactly once.
+    const bool woke_from_lids =
+        bjorn_state == 0 && (uint16_t)(bjorn_ticks - bjorn_wake_at) == BJORN_WAKE_OPEN;
 
     // Breath phase, latched to the moment he settles so his first act is a full rest.
     uint8_t breath = 0;                       // 0 rest, 1 swell, 2 full, 3 settle
@@ -257,6 +271,16 @@ static void bjorn_compose(void) {
         bjorn_doze_origin = bjorn_ticks;      // sleeping breath starts from rest
     }
     if (panel_woke && bjorn_state == 0) bjorn_wake_at = bjorn_ticks;
+
+    // He blinks again after anywhere he has been where the blink code below does not
+    // run. Without this he comes back from a doze and never blinks — and a figure that
+    // moves but never blinks is this design's signal that the link is dead, so it would
+    // report a fault that is not there.
+    if (bjorn_state != 0 || woke_from_lids) bjorn_schedule_blink();
+
+    const bool hard = u_sync_hard_stale();
+    if (bjorn_was_hard_stale && !hard) bjorn_schedule_blink();
+    bjorn_was_hard_stale = hard;
     if (bjorn_state == 1) breath = 0;         // hold him still while his eyes close
 
     // --- draw ---------------------------------------------------------------
@@ -359,16 +383,21 @@ static void bjorn_compose(void) {
     // the error message. Nothing else changes, so a dead link is unmistakable but quiet.
     if (u_sync_hard_stale()) return;
 
-    const uint16_t d = bjorn_ticks - bjorn_blink_at;
-    if (d < BJORN_BLINK_SHUT) {
+    // Signed, so a schedule in the past is recognisable as past rather than as an
+    // enormous positive number. It used to test d == BJORN_BLINK_OPEN exactly: step
+    // over that one tick and the test only came true again when the 16-bit counter
+    // wrapped, about 55 minutes of panel-on time later.
+    const int16_t d = (int16_t)(bjorn_ticks - bjorn_blink_at);
+    if (d < 0) {
+        // not due yet
+    } else if (d < BJORN_BLINK_SHUT) {
         bjorn_blit(&bjorn_frames[shut]);
     } else if (d < BJORN_BLINK_OPEN) {
         bjorn_blit(&bjorn_frames[half]);
     } else if (d == BJORN_BLINK_OPEN) {
         bjorn_rng = bjorn_rng * 1664525u + 1013904223u;
         if (bjorn_blink_pair) {               // that was the second of the pair
-            bjorn_blink_pair = false;
-            bjorn_blink_at = bjorn_ticks + BJORN_BLINK_MIN + (bjorn_rng >> 24) % BJORN_BLINK_SPREAD;
+            bjorn_schedule_blink();
         } else if ((bjorn_rng >> 24) < BJORN_BLINK_PAIR_P) {
             // Real blinks cluster. Keep the beat exact by counting from the last start.
             bjorn_blink_pair = true;
@@ -376,9 +405,12 @@ static void bjorn_compose(void) {
         } else {
             // A fresh word for the interval, or "long gap" and "was a double" end up
             // perfectly correlated and the pattern becomes legible within a minute.
-            bjorn_rng = bjorn_rng * 1664525u + 1013904223u;
-            bjorn_blink_at = bjorn_ticks + BJORN_BLINK_MIN + (bjorn_rng >> 24) % BJORN_BLINK_SPREAD;
+            bjorn_schedule_blink();
         }
+    } else {
+        // The schedule went by while he was asleep, waking or stale. Start again from
+        // now rather than waiting out the counter.
+        bjorn_schedule_blink();
     }
 }
 

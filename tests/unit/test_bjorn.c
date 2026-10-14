@@ -98,6 +98,8 @@ static void tick(void) {
     blinking = shut;
 }
 
+static void arm_first(void) { first_blink_at = 0; }
+
 static void run(uint32_t ms, uint8_t wpm, bool typing) {
     for (uint32_t t = 0; t < ms; t += 50) {
         fake_wpm = wpm;
@@ -110,8 +112,43 @@ static void run(uint32_t ms, uint8_t wpm, bool typing) {
     }
 }
 
+static int blinks_in(uint32_t ms, uint8_t wpm, bool typing) {
+    const int before = blinks;
+    run(ms, wpm, typing);
+    return blinks - before;
+}
+
 int main(void) {
     fake_now = 100000;
+
+    // --- he blinks, and keeps blinking -------------------------------------
+    check("he blinks while awake", blinks_in(30000, 40, true) >= 3);
+
+    // Idle long enough to settle and then doze. The blink schedule falls due while his
+    // eyes are shut, which is where the old code lost it.
+    run(170000, 0, false);
+    const int asleep = blinks_in(20000, 0, false);
+    check("he does not blink while asleep", asleep == 0);
+
+    // A key wakes him. This is the case Roel saw after every walk away.
+    const uint32_t woke = fake_now;
+    arm_first();
+    const int after_doze = blinks_in(120000, 40, true);
+    check("he blinks again after a doze", after_doze >= 10);
+    check("and the first one comes within about ten seconds",
+          first_blink_at != 0 && first_blink_at - woke <= 10500);
+
+    // Same thing after the link has been dead: no blink while stale, by design, and
+    // blinking again once it returns.
+    run(30000, 40, true);
+    stale_soft = stale_hard = true;
+    check("no blink while the link is dead", blinks_in(75000, 40, true) == 0);
+    stale_soft = stale_hard = false;
+    const uint32_t back = fake_now;
+    arm_first();
+    check("he blinks again once the link returns", blinks_in(120000, 40, true) >= 10);
+    check("and that first one is within about ten seconds too",
+          first_blink_at != 0 && first_blink_at - back <= 10500);
 
     // --- an unchanged frame costs nothing ----------------------------------
     // Cover the tiers and the quiet states, so the run above and this one between them
