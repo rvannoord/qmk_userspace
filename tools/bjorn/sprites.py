@@ -238,6 +238,55 @@ def reduce_frame(path):
     return rows, grey, dither(grey, 64, 64)
 
 
+def unique_frames(src):
+    """The 32 distinct images, deduplicated by content.
+
+    The 17 folders hold 89 frames but only 32 distinct pictures: one hood-and-laptop
+    image appears in 13 of them, and four whole sets are byte-identical to each other.
+    The folders are packaging; these are the work.
+    """
+    import hashlib
+    seen = {}
+    for d in sorted(p for p in (src / 'status').iterdir() if p.is_dir()):
+        for f in frames_of(d)[0]:
+            seen.setdefault(hashlib.sha256(f.read_bytes()).hexdigest(), (f, d.name, []))[2].append(d.name)
+    out = []
+    for _, (f, first, users) in seen.items():
+        out.append((f, f.stem, len(users)))
+    return sorted(out, key=lambda r: (len(r[1]), r[1]))
+
+
+def cast_sheet(src, out, scale=3, cols=8, invert=True):
+    """Every distinct image at panel scale, as the panel will show it.
+
+    invert=True draws ink lit on a dark panel, which is how it looks today. False draws
+    ink dark on a lit panel, which is the source's own polarity and what the display
+    would show if it were inverted in hardware.
+    """
+    items = unique_frames(src)
+    rows_n = (len(items) + cols - 1) // cols
+    PAD, GAP, LBL = 16, 10, 7
+    cw = PAD * 2 + cols * (64 * scale + GAP)
+    ch = PAD * 2 + rows_n * (64 * scale + LBL * 2 + GAP)
+    c = canvas(cw, ch, BG if invert else (210, 210, 214))
+    for i, (path, name, shared) in enumerate(items):
+        col, row = i % cols, i // cols
+        x = PAD + col * (64 * scale + GAP)
+        y = PAD + row * (64 * scale + LBL * 2 + GAP)
+        w, h, srcrows = read_bmp(path)
+        bits = dither(box_filter(srcrows, w, h, 64, 64), 64, 64)
+        fig = [[v == 0 for v in r] for r in bits]          # ink
+        label(c, name[:18], x, y, 1, LABEL if invert else (60, 60, 70))
+        if invert:
+            blit_bits(c, fig, x, y + LBL, scale)
+        else:
+            blit_bits(c, fig, x, y + LBL, scale, lit=(20, 20, 24), dark=(236, 236, 240))
+        tag = f'{ink(bits)*100//4096}PC' + (f' X{shared}' if shared > 1 else '')
+        label(c, tag, x, y + LBL + 64 * scale + 1, 1, LABEL if invert else (60, 60, 70))
+    png(out, c)
+    return len(items)
+
+
 def main(src, out):
     src, out = pathlib.Path(src), pathlib.Path(out)
     out.mkdir(parents=True, exist_ok=True)
@@ -284,7 +333,9 @@ def main(src, out):
         label(c, name.split('/')[-1][:16], x, y, 1)
         blit_bits(c, [[v == 0 for v in r] for r in bits], x, y + LBL, 2)
     png(out / 'ALL.png', c)
-    print(f'{len(tiles)} frames -> {out}')
+    n = cast_sheet(src, out / 'CAST.png', invert=True)
+    cast_sheet(src, out / 'CAST_inverted.png', invert=False)
+    print(f'{len(tiles)} frames, {n} distinct -> {out}')
 
 
 if __name__ == '__main__':
