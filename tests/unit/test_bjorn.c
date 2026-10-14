@@ -150,6 +150,37 @@ int main(void) {
     check("and that first one is within about ten seconds too",
           first_blink_at != 0 && first_blink_at - back <= 10500);
 
+    // --- nothing stale replays ---------------------------------------------
+    // A misfire during an outage is over by the time the link returns. Raising the axe
+    // then would report a second event that never happened.
+    {
+        run(10000, 40, true);
+        const uint8_t before = drive.anomaly;
+        stale_soft = stale_hard = true;
+        run(30000, 40, true);
+        drive.anomaly = (uint8_t)(before + 3);     // three misfires we never saw
+        stale_soft = stale_hard = false;
+
+        // The first fresh frames must not start the raise. The misfire animation
+        // droops him to tier 0 and swaps in the raise frames, so the axe-at-rest frame
+        // appearing is the tell.
+        bool raised = false;
+        for (int i = 0; i < 40; i++) {           // two seconds, longer than the 1.75 s raise
+            run(50, 40, true);
+            if (frame_present(BJORN_F_MISFIRE_R2) || frame_present(BJORN_F_MISFIRE_R3)) raised = true;
+        }
+        check("a misfire the link missed does not replay", !raised);
+
+        // But a real one, after the link is back, still does.
+        drive.anomaly++;
+        bool raised_now = false;
+        for (int i = 0; i < 40; i++) {
+            run(50, 40, true);
+            if (frame_present(BJORN_F_MISFIRE_R2) || frame_present(BJORN_F_MISFIRE_R3)) raised_now = true;
+        }
+        check("a misfire after the link returns still shows", raised_now);
+    }
+
     // --- an unchanged frame costs nothing ----------------------------------
     // Cover the tiers and the quiet states, so the run above and this one between them
     // have been through typing at every tier, settling, breathing, dozing and waking.

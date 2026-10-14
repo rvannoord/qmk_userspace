@@ -279,7 +279,16 @@ static void bjorn_compose(void) {
     if (bjorn_state != 0 || woke_from_lids) bjorn_schedule_blink();
 
     const bool hard = u_sync_hard_stale();
-    if (bjorn_was_hard_stale && !hard) bjorn_schedule_blink();
+    if (bjorn_was_hard_stale && !hard) {
+        bjorn_schedule_blink();
+        // Adopt the misfire count without animating. A misfire that happened while the
+        // link was dead is over by the time the link returns, and the axe code's own
+        // rule is that a stale indicator must not replay: raising it now would report a
+        // second event that never happened. This runs before the comparison below, so
+        // the first fresh state only ever starts an animation for a misfire that
+        // happened while we were watching.
+        bjorn_last_anomaly = u_sync_state().anomaly;
+    }
     bjorn_was_hard_stale = hard;
     if (bjorn_state == 1) breath = 0;         // hold him still while his eyes close
 
