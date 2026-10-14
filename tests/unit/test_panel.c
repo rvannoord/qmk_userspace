@@ -8,6 +8,7 @@
 #include "qmk_keyboard.h"
 #include "split_state.h"
 #include "split_sync.h"
+#include "split_health.h"
 
 #include "driver.h"
 
@@ -16,6 +17,12 @@ uint16_t fake_dirty;
 uint32_t fake_now;
 
 void oled_write_raw_byte(const char data, uint16_t index) { u_fake_write(data, index); }
+
+// split_health.c is linked in because the panel draws the stats page from it; these
+// are the few things it expects from the world around it.
+bool     fake_is_master = true;
+bool     fake_connected = true;
+bool     is_transport_connected(void) { return fake_connected; }
 
 static u_split_state_t drive;
 static bool            drive_link_down;
@@ -124,6 +131,7 @@ static bool hand_bar(uint8_t cell, bool right) {
 // driver's is not either, and clearing it here is exactly what hid Bug A — every byte
 // looked new every frame, so nothing could be seen to be unchanged.
 static void step(void) {
+    u_health_task();          // drives the stats page's open/close timing
     oled_master_task();
     oled_render_master();
 }
@@ -174,6 +182,12 @@ static const u_split_state_t latched = {
     .flags  = U_FLAG_CAPS_LOCK | U_FLAG_SCROLL_LOCK,
 };
 
+// Hold SYS for two seconds, which is what opens the page.
+static void open_stats(void) {
+    u_stats_note_sys(true);
+    for (int i = 0; i < 45; i++) { fake_now += 50; step(); }
+}
+
 static void each_state(void (*then)(const char *)) {
     frame(at_rest, false); then("base, windows, nothing held");
     frame(on_nav, false);  then("nav, mac by hand, right option + left shift, caps word");
@@ -184,6 +198,11 @@ static void each_state(void (*then)(const char *)) {
     frame((u_split_state_t){.layers = U_BASE, .fingers = U_FIN_L_PINKY, .anomaly = 1}, false);
     frame((u_split_state_t){.layers = U_BASE, .fingers = 0, .anomaly = 2}, false);
     then("base, windows, a left pinky misfire just happened");
+
+    drive = at_rest;
+    open_stats();
+    then("the stats page, asked for by holding SYS");
+    u_stats_note_key();
 }
 
 static void emit(const char *label) {
@@ -308,6 +327,55 @@ int main(int argc, char **argv) {
 
     frame(at_rest, false);
     check("returning to rest clears everything again", !any_lit(8, 63));
+
+    // --- the stats page -----------------------------------------------------
+    // Dark at rest is kept by only ever showing it on demand.
+    {
+        check("the page is shut until it is asked for", !u_stats_page_open());
+
+        u_stats_note_sys(true);
+        fake_now += 1000;
+        step();
+        check("a second of holding SYS is not enough", !u_stats_page_open());
+
+        fake_now += 1200;
+        step();
+        check("two seconds opens it", u_stats_page_open());
+        check("and it fills the panel", any_lit(0, 7) && any_lit(24, 31) && any_lit(56, 63));
+
+        u_stats_note_sys(false);
+        fake_now += 500;
+        step();
+        check("it stays after SYS is let go", u_stats_page_open());
+
+        u_stats_note_key();
+        step();
+        check("any other key closes it", !u_stats_page_open());
+        check("and the zones come back", !any_lit(24, 63));
+
+        // A short press is still the OS toggle, which is the behaviour being traded.
+        u_stats_note_sys(true);
+        fake_now += 300;
+        check("a short press still reads as a tap", u_stats_sys_was_tap());
+        u_stats_note_sys(false);
+
+        u_stats_note_sys(true);
+        fake_now += 2500;
+        check("a long one does not", !u_stats_sys_was_tap());
+        u_stats_note_sys(false);
+        u_stats_note_key();
+        step();
+
+        // And it gives up on its own, so it cannot be left burning into the panel.
+        u_stats_note_sys(true);
+        fake_now += 2100;
+        step();
+        u_stats_note_sys(false);
+        check("it is open", u_stats_page_open());
+        fake_now += U_STATS_LINGER_MS + 100;
+        step();
+        check("and closes itself after fifteen seconds", !u_stats_page_open());
+    }
 
     // --- an unchanged frame must write nothing -----------------------------
     {

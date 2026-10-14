@@ -7,6 +7,7 @@
 #include "host_os.h"
 #include "split_state.h"
 #include "split_sync.h"
+#include "split_health.h"
 #ifdef OLED_ENABLE
 #    include "oled_panel.h"   // only needed by housekeeping_task_user below
 #endif
@@ -20,6 +21,7 @@ void keyboard_pre_init_user(void) {
 // Every main loop, on both halves. QMK allows exactly one definition of this, so it
 // lives here rather than inside whichever OLED renderer happens to be selected.
 void housekeeping_task_user(void) {
+    u_health_task();
     u_sync_task();
 
 #ifdef OLED_ENABLE
@@ -38,10 +40,15 @@ void housekeeping_task_user(void) {
 
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
     u_sync_note_record(keycode, record);
+    if (record->event.pressed && keycode != U_SYS) u_stats_note_key();   // closes the page
 
     switch (keycode) {
         case U_SYS:
-            if (record->event.pressed) {
+            // The OS now flips on *release* of a short press, because a long press is
+            // how the stats page is asked for. Bootmagic is untouched: that is a
+            // boot-time matrix scan, not a keypress.
+            u_stats_note_sys(record->event.pressed);
+            if (!record->event.pressed && u_stats_sys_was_tap()) {
                 host_os_toggle();
             }
             return false;

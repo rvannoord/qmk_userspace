@@ -27,6 +27,7 @@
 #include "panel_font.h"
 #include "panel_glyphs.h"
 #include "oled_canvas.h"
+#include "split_health.h"
 
 #ifdef OLED_MASTER_PANEL_ZONES
 
@@ -324,6 +325,107 @@ static void render_trace(void) {
     }
 }
 
+// --- the stats page ---------------------------------------------------------
+// Sixteen characters by eight lines at 1x fills the panel exactly. The build has
+// NO_PRINT, so there is no printf here and none is wanted: a handful of numbers do not
+// justify dragging formatting code into the firmware.
+
+// Appends an unsigned decimal. Returns where the next character goes.
+static uint8_t num(char *dst, uint8_t at, uint32_t v) {
+    char tmp[10];
+    uint8_t n = 0;
+    do {
+        tmp[n++] = (char)('0' + (v % 10));
+        v /= 10;
+    } while (v && n < sizeof(tmp));
+    while (n && at < 16) dst[at++] = tmp[--n];
+    return at;
+}
+
+static uint8_t text(char *dst, uint8_t at, const char *s) {
+    while (*s && at < 16) dst[at++] = *s++;
+    return at;
+}
+
+static uint8_t hex4(char *dst, uint8_t at, uint16_t v) {
+    static const char digits[] = "0123456789ABCDEF";
+    for (int8_t sh = 12; sh >= 0 && at < 16; sh -= 4) {
+        dst[at++] = digits[(v >> sh) & 0xF];
+    }
+    return at;
+}
+
+static void line(uint8_t row, const char *buf, uint8_t len) {
+    for (uint8_t i = 0; i < 16; i++) {
+        draw_glyph_1x((uint8_t)(i * 8), row, glyph_of(i < len ? buf[i] : ' '));
+    }
+}
+
+static void render_stats(void) {
+    const u_health_master_t m = u_health_master();
+    const u_health_slave_t  s = u_health_slave_seen();
+    char                    b[16];
+    uint8_t                 n;
+
+    // Which firmware, and whether the two halves agree on it. Halves running different
+    // builds can still share a transaction count and then fail every transaction, which
+    // looks exactly like a broken cable.
+    n = text(b, 0, "BLD ");
+    n = hex4(b, n, u_build_id());
+    n = text(b, n, u_health_have_reply() ? (s.build_id == u_build_id() ? " OK" : " !=") : " --");
+    line(0, b, n);
+
+    // Uptime, both halves. The other half's being far lower is the tell that it
+    // restarted while this one did not.
+    n = text(b, 0, "UP ");
+    n = num(b, n, m.uptime_s);
+    n = text(b, n, "/");
+    n = num(b, n, u_health_have_reply() ? s.uptime_s : 0);
+    line(1, b, n);
+
+    // Main loop rate: last full second, and the worst second since boot. This is the
+    // number that says whether any of the drawing is costing typing.
+    n = text(b, 0, "LOOP ");
+    n = num(b, n, m.loops_per_s);
+    n = text(b, n, "/");
+    n = num(b, n, m.worst_loops_per_s);
+    line(2, b, n);
+
+    n = text(b, 0, "FAIL ");
+    n = num(b, n, m.failed_sends);
+    n = text(b, n, "/");
+    n = num(b, n, m.worst_fail_streak);
+    line(3, b, n);
+
+    n = text(b, 0, "OUT ");
+    n = num(b, n, m.outages);
+    n = text(b, n, " MX");
+    n = num(b, n, m.longest_outage_ds / 10);
+    n = text(b, n, "S");
+    line(4, b, n);
+
+    n = text(b, 0, "LAST ");
+    if (m.outages) {
+        n = num(b, n, m.uptime_s - m.last_outage_start_s);
+        n = text(b, n, "S AGO");
+    } else {
+        n = text(b, n, "NONE");
+    }
+    line(5, b, n);
+
+    n = text(b, 0, "DROP ");
+    n = num(b, n, m.transport_drops);
+    n = text(b, n, " SLP");
+    n = num(b, n, m.suspends);
+    line(6, b, n);
+
+    n = text(b, 0, "STALE ");
+    n = num(b, n, u_health_have_reply() ? s.stale_episodes : 0);
+    n = text(b, n, " RST");
+    n = num(b, n, u_health_have_reply() ? s.resets : 0);
+    line(7, b, n);
+}
+
 // --- entry points -----------------------------------------------------------
 
 void oled_master_task(void) {
@@ -332,6 +434,13 @@ void oled_master_task(void) {
 }
 
 void oled_render_master(void) {
+    // Asked for by holding SYS, and the only thing that ever replaces the zones.
+    if (u_stats_page_open()) {
+        render_stats();
+        u_canvas_commit();
+        return;
+    }
+
     render_status();
     render_mods();
     render_layer();

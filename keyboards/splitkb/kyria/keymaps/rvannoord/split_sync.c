@@ -2,6 +2,7 @@
 
 #include "quantum.h"
 #include "split_sync.h"
+#include "split_health.h"
 
 #ifdef SPLIT_KEYBOARD
 
@@ -37,6 +38,11 @@ static void u_sync_slave_cb(uint8_t m2s_size, const void *m2s, uint8_t s2m_size,
     memcpy((void *)&slots[next], m2s, sizeof(u_split_state_t));
     __atomic_signal_fence(__ATOMIC_RELEASE);     // never publish a half-written slot
     slot_live = next;
+
+    // The reply rides the transaction the master already makes. GET_RPC_RESP_DATA runs
+    // on every send anyway, with zero bytes until now, so this costs wire time and no
+    // new failure point.
+    if (s2m_size == sizeof(u_health_slave_t)) u_health_fill_reply(s2m);
 }
 
 void u_sync_init(void) {
@@ -86,12 +92,17 @@ static void u_sync_master_task(void) {
     // the same number rather than burning one.
     next.seq = (uint8_t)(last_sent.seq + 1);
 
-    if (!transaction_rpc_send(U_SYNC_STATE, sizeof(next), &next)) {
-        // There is no retry inside transaction_rpc_send, so leaving the timestamp and the
+    u_health_slave_t reply = {0};
+    const bool       ok     = transaction_rpc_exec(U_SYNC_STATE, sizeof(next), &next,
+                                                   sizeof(reply), &reply);
+    u_health_note_send(ok);
+    if (!ok) {
+        // There is no retry inside the transaction, so leaving the timestamp and the
         // payload untouched is the retry: the next main loop is microseconds away. Waiting
         // for the heartbeat window would turn one noisy moment into a 250 ms gap.
         return;
     }
+    u_health_note_reply(&reply, sizeof(reply));
     last_sent    = next;
     last_sent_at = timer_read32();
     primed       = true;

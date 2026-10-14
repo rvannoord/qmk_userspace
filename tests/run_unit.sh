@@ -20,10 +20,10 @@ cc_flags=(-std=c11 -Wall -Wextra -Werror -I "$here/unit" -I "$here/unit/stub" -I
 # -Wno-unused-parameter only for the transport: QMK's RPC callback signature has two
 # parameters a master-to-slave transaction never uses, and that is QMK's shape, not ours.
 cc "${cc_flags[@]}" -Wno-unused-parameter -o "$out/split_sync" \
-   "$here/unit/test_split_sync.c" "$keymap/split_sync.c"
+   "$here/unit/test_split_sync.c" "$keymap/split_sync.c" "$keymap/split_health.c"
 cc "${cc_flags[@]}" -DOLED_MASTER_PANEL_ZONES -o "$out/panel" \
    "$here/unit/test_panel.c" "$keymap/panel_font.c" "$keymap/panel_glyphs.c" \
-   "$keymap/oled_canvas.c"
+   "$keymap/oled_canvas.c" "$keymap/split_health.c"
 
 cc "${cc_flags[@]}" -DOLED_SLAVE_ANIMATION_BJORN -o "$out/bjorn" \
    "$here/unit/test_bjorn.c" "$keymap/bjorn_art.c" "$keymap/oled_canvas.c"

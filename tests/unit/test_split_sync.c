@@ -7,6 +7,7 @@
 #include "transactions.h"
 #include "split_state.h"
 #include "split_sync.h"
+#include "split_health.h"
 
 // Private to split_sync.c, mirrored here. Drift shows up as a failure rather than as a
 // test that quietly asserts nothing: the first check is tight against the floor.
@@ -37,16 +38,25 @@ u_split_state_t u_sync_build(void) {
 }
 void            u_sync_note_record(uint16_t keycode, keyrecord_t *record) { (void)keycode; (void)record; }
 
-bool transaction_rpc_send(uint8_t id, uint8_t size, const void *data) {
+bool transaction_rpc_exec(uint8_t id, uint8_t m2s_size, const void *m2s,
+                          uint8_t s2m_size, void *s2m) {
     (void)id;
     if (!send_ok) return false;
-    if (size == sizeof(u_split_state_t) && sent_n < sizeof(sent_seq)) {
-        sent_seq[sent_n++] = ((const u_split_state_t *)data)->seq;
+    if (m2s_size == sizeof(u_split_state_t) && sent_n < sizeof(sent_seq)) {
+        sent_seq[sent_n++] = ((const u_split_state_t *)m2s)->seq;
+    }
+    // Hand back a plausible reply, so the health path is exercised rather than skipped.
+    if (s2m_size == sizeof(u_health_slave_t)) {
+        const u_health_slave_t r = {.uptime_s = 42, .build_id = 0x1234};
+        memcpy(s2m, &r, sizeof(r));
     }
     sends++;
     last_ok = fake_now;
     return true;
 }
+
+static bool fake_connected = true;
+bool is_transport_connected(void) { return fake_connected; }
 
 void transaction_register_rpc(uint8_t id, void (*cb)(uint8_t, const void *, uint8_t, void *)) {
     (void)id; (void)cb;
@@ -55,6 +65,7 @@ void transaction_register_rpc(uint8_t id, void (*cb)(uint8_t, const void *, uint
 static void run_ms(uint32_t ms) {
     for (uint32_t i = 0; i < ms; i++) {
         fake_now++;
+        u_health_task();
         u_sync_task();
     }
 }
@@ -133,6 +144,51 @@ int main(void) {
     run_ms(U_SYNC_MIN_MS + 1);
     check("a failed send does not burn a sequence number",
           (uint8_t)(sent_seq[sent_n - 1] - last_good) == 1);
+
+    // --- the health counters ------------------------------------------------
+    // These exist because the link went down for twenty minutes on 2026-10-13 and the
+    // keyboard recorded nothing. What they count has to be right, or the next outage
+    // is another memory test.
+    {
+        const u_health_master_t before = u_health_master();
+
+        send_ok = false;
+        const uint32_t t0 = fake_now;
+        while (!u_sync_link_down()) run_ms(1);      // 1.25 s of failing
+        run_ms(2000);                               // then two seconds down
+        send_ok = true;
+        run_ms(U_SYNC_MIN_MS + 1);                  // and back
+
+        const u_health_master_t after = u_health_master();
+        check("an outage is counted once", after.outages == before.outages + 1);
+        check("its length is remembered", after.longest_outage_ds >= 20);
+        check("the failed sends are counted", after.failed_sends > before.failed_sends);
+        check("and the worst streak with them", after.worst_fail_streak > 0);
+        check("when it began is remembered",
+              after.last_outage_start_s >= (t0 / 1000) && after.last_outage_start_s <= after.uptime_s);
+        check("the link is up again", !u_sync_link_down());
+    }
+
+    // The transport dropping is a different and louder event than our own sends
+    // failing: it is what kills the other half's keys.
+    {
+        const uint16_t before = u_health_master().transport_drops;
+        fake_connected = false;
+        run_ms(50);
+        fake_connected = true;
+        run_ms(50);
+        check("a transport drop is counted", u_health_master().transport_drops == before + 1);
+    }
+
+    // The loop counter is what answers "is any of this costing me typing".
+    run_ms(2500);
+    check("the loop rate is measured", u_health_master().loops_per_s > 0);
+
+    check("the build id is stable and non-zero", u_build_id() != 0 && u_build_id() == u_build_id());
+
+    // The reply the other half sends back rides the transaction the master already makes.
+    check("the other half's reply arrived", u_health_have_reply());
+    check("and carries its uptime", u_health_slave_seen().uptime_s == 42);
 
     return unit_done("split_sync");
 }
