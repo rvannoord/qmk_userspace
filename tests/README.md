@@ -44,10 +44,17 @@ exist for the two things the scenario tests cannot reach:
 | File | What |
 |------|------|
 | `unit/test_split_sync.c` | the master send path. The scenario tests build `split_sync.c`'s non-`SPLIT_KEYBOARD` branch, where every function is a stub, so nothing there covers it — and a regression is silent and total: no sends at all, which on the keyboard looks like the other half's mascot going inert for no reason. Boot, the heartbeat, the hard window and recovery, on a clock that is a variable |
+| `unit/test_bjorn.c` | the mascot. Compiles the real `oled_slave_bjorn.c` and `bjorn_art.c` on a fake clock. Two things with teeth: that he keeps blinking after a doze and after a dead link — a figure that moves but never blinks is this design's way of saying the link died, so losing the blink reports a fault that is not there — and that whenever two consecutive composed frames are identical, the commit writes no block at all |
 | `unit/test_panel.c` | the master panel's zones. Compiles the real `oled_master_zones.c` against a buffer laid out like the driver's, then measures what was drawn: that the panel is dark at rest below the badge, that a held finger draws its cell while an idle one draws nothing, which side the handedness bar takes, that each zone's content is centred, and that the alarm row is the only thing that inverts. `--dump` prints the frames and `--raw` the buffers, which is how the zones get looked at without a flash |
 
 `unit/stub/manna-harbour_miryoku.h` copies Miryoku's layer list rather than including the
 real header, which would drag in all of QMK. The firmware build still uses the real one.
+
+`unit/stub/driver.h` mirrors the driver's `oled_write_raw_byte` exactly: it returns early on a
+byte that already matches, and otherwise marks the 64-byte block dirty. That is what makes "an
+unchanged frame writes nothing" checkable on the host, and it is the check that would have caught
+the panels never sleeping. The fake buffer is one byte longer than the panel, as a canary for the
+driver's one-past-the-end write.
 
 The panel test asserts the mod row as built: **dark at rest**, a cell drawing its glyph
 only while that finger holds something, and nothing on that row inverting. Inversion is

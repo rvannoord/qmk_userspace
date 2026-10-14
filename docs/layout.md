@@ -220,6 +220,13 @@ are captured in `process_record_user`, thresholds evaluated in `housekeeping_tas
 `oled_task_user` only draws. The render tick is 20 Hz, so any transient flag must be sticky for at
 least 100 ms or it can be missed entirely.
 
+**The sequence number counts delivered states, not builds.** `u_sync_build()` is pure: two builds
+with nothing in between are equal. The sender stamps `seq` just before the transaction and only
+advances it on success. It used to advance per build, and the master builds twice per main loop —
+once to decide whether anything changed, once for its own panel — so a heartbeat landing 128 loops
+after the last one carried an unchanged number and the other half aged itself into hard staleness
+while every send was succeeding.
+
 ### Settings this needs
 
 | Setting | From | To | Why |
@@ -270,6 +277,15 @@ they share page 4. Three blink variants — rest, half, full — cost 64 bytes e
 the composition correct by construction. The host-side blitter harness caught this; it is
 invisible in a pixel-level comparison. Stored as block-aligned patches rather than whole
 frames, so a frame can be smaller than the column and the budget means something.
+
+**Drawing: compose, then commit.** Both renderers draw into `u_canvas`, a 1 KB frame buffer in
+RAM, and call `u_canvas_commit()` once at the end, which writes only the bytes that differ from
+what the panel already holds. Zones and layers may still clear themselves and redraw — they must,
+since drawing text leaves whatever was to the right of it in place — but that now happens in RAM.
+Writing an intermediate value straight into the driver's buffer marks its block dirty even when
+the final value is identical, and a dirty block re-arms the display timeout, which is how both
+panels came to stay lit for ever. An unchanged frame must write nothing, and the host tests fail
+if it writes anything.
 
 ### Motion rules
 
@@ -344,13 +360,12 @@ settles. Beyond the original spec, `docs/oled-v2.md` adds the idle director, wea
 the doze extras, and a place for every one of Bjorn's seventeen sprite sets.
 
 **Known defects, found 2026-10-14.** Each line goes when the commit that fixes it lands.
+Bug A (neither panel could sleep), D-1 (he stopped blinking after a doze), D-2 (the slave
+rewrote its overlay blocks every frame) and D-3 (the sequence number counted builds rather
+than sends) were fixed on 2026-10-14 and their rows are gone.
 
 | # | Defect | Fixed in |
 |---|--------|----------|
-| Bug A | Every zone clears itself and redraws, so an unchanged frame still dirties its blocks; a dirty block calls `oled_on()`, which re-arms the timeout. The panels therefore never sleep and the badge burns in, and one block goes over I²C every main loop for ever. The slave has the same flaw through its base-then-patch blit. Reproduced on the Mac: at rest the badge's block, Nav blocks 0/6/7/8/9, a held Ctrl 0/3/5, LINK DOWN 0/10/11 | Stage 1 |
-| D-1 | Bjorn stops blinking after every doze and after any stale period, for up to ~55 minutes, because the reschedule is an exact equality test on a 16-bit tick difference that the doze and stale paths return before reaching. Reproduced: 1 blink in 120 s after a doze, 0 after a stale period, against the ~15-20 expected. This shows the design's "link is dead" signal with nothing wrong on the link | Stage 1 |
-| D-2 | The slave writes the blocks an overlay covers twice every frame: 6.0 blocks a frame typing at tier 3, 2.7 settled, 8.0 dozing | Stage 1 |
-| D-3 | The sequence number advances per *build*, not per send, and the master builds twice a loop. Between heartbeats `L` loops apart the sent `seq` changes by `2L mod 256`, so a heartbeat `L = 128` loops after the last one carries an unchanged `seq` and the slave's staleness clock keeps ageing while every send succeeds | Stage 1 |
 | D-4 | A misfire that happened during an outage replays when the link returns, because soft staleness blanks the fingers and flags but not the misfire count | Stage 2 |
 | D-5 | The slave's idle clock lags by up to ~5 s: it takes the smaller of "time since WPM changed" and the input clock, and WPM keeps changing while it decays over its 5 s window | Stage 4 |
 | D-6 | A dead link leaves the slave's panel lit with a frozen frame, because the slave applies the last OLED state it received. A slave whose code has stopped does the same, since the SSD1306 holds its picture by itself | Stage 2 |
