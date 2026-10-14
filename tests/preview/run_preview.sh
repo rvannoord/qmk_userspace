@@ -23,7 +23,7 @@ trap 'rm -rf "$(dirname "$bin")"' EXIT
 cc -std=c11 -Wall -Wextra -Werror \
    -I "$repo/tests/unit" -I "$repo/tests/unit/stub" -I "$keymap" \
    -DQMK_KEYBOARD_H='"qmk_keyboard.h"' -DOLED_ENABLE -DOLED_SLAVE_ANIMATION_BJORN \
-   -o "$bin" "$here/preview.c" "$keymap/bjorn_art.c" "$keymap/oled_canvas.c"
+   -o "$bin" "$here/preview.c" "$keymap/bjorn_art.c" "$keymap/bjorn_poses.c" "$keymap/oled_canvas.c"
 
 "$bin" "$scenario" "$out"
 python3 -I "$repo/tools/preview.py" "$out" $invert

@@ -13,6 +13,7 @@
 #include "split_state.h"
 #include "split_sync.h"
 #include "bjorn_art.h"
+#include "bjorn_poses.h"
 #include "oled_canvas.h"
 
 uint8_t  fake_oled[OLED_MATRIX_SIZE + 1];
@@ -59,6 +60,27 @@ static bool eyes_shut(void) {
         if (frame_present(ids[i])) return true;
     }
     return false;
+}
+
+// Is one of the authored drawings on screen? They are blitted as a whole 64-column
+// image, optionally lifted a pixel for the breath, so both are checked.
+static int pose_showing(void) {
+    for (uint8_t w = 0; w < U_POSE_COUNT; w++) {
+        for (uint8_t lift = 0; lift < 2; lift++) {
+            bool match = true;
+            for (uint8_t x = 0; x < 64 && match; x++) {
+                uint64_t col = 0;
+                for (uint8_t page = 0; page < 8; page++)
+                    col |= (uint64_t)u_poses[w][page * 64 + x] << (page * 8);
+                if (lift) col >>= 1;
+                for (uint8_t page = 0; page < 8; page++)
+                    if (fake_oled[page * 128 + x] != (uint8_t)((col >> (page * 8)) & 0xFF))
+                        match = false;
+            }
+            if (match) return w;
+        }
+    }
+    return -1;
 }
 
 static uint8_t  prev_canvas[OLED_MATRIX_SIZE];
@@ -149,6 +171,32 @@ int main(void) {
     check("he blinks again once the link returns", blinks_in(120000, 40, true) >= 10);
     check("and that first one is within about ten seconds too",
           first_blink_at != 0 && first_blink_at - back <= 10500);
+
+    // --- the authored poses -------------------------------------------------
+    // Infinition's own drawings, shown only in deep idle. The rule that matters is the
+    // boundary: a key event must end a pose at once, because that is what keeps an
+    // authored prop from being read as a signal — a drawn sword and the axe are twenty
+    // seconds apart by construction, and this closes the one instant between them.
+    {
+        drive.flags = 0; drive.fingers = 0;
+        run(10000, 40, true);
+        check("no authored pose while typing", pose_showing() < 0);
+
+        run(15000, 0, false);                 // past settle, not yet deep idle
+        check("none before deep idle", pose_showing() < 0);
+
+        run(10000, 0, false);                 // past 20 s
+        const int first = pose_showing();
+        check("a pose appears in deep idle", first >= 0);
+
+        run(50, 40, true);                    // one key
+        check("and a keypress ends it at once", pose_showing() < 0);
+
+        // The cursor advances rather than re-rolling, so the whole cast is seen.
+        run(25000, 0, false);
+        const int second = pose_showing();
+        check("the next one is a different drawing", second >= 0 && second != first);
+    }
 
     // --- nothing stale replays ---------------------------------------------
     // A misfire during an outage is over by the time the link returns. Raising the axe

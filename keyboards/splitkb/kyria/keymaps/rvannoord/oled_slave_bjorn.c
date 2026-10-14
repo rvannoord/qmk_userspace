@@ -13,6 +13,7 @@
 #ifdef OLED_SLAVE_ANIMATION_BJORN
 
 #include "bjorn_art.h"
+#include "bjorn_poses.h"
 #include "split_sync.h"
 #include "oled_canvas.h"
 
@@ -183,6 +184,46 @@ static uint8_t bjorn_mask(uint8_t block) {
 // twice a frame; in the driver that marked them dirty every frame and kept this half's
 // I2C busy for ever. In RAM it costs nothing, and u_canvas_commit decides what is
 // actually different.
+// --- authored poses ---------------------------------------------------------
+// Infinition's own frames, reduced whole and never recombined. They are shown only in
+// deep idle, and only as a cut: a pose change repaints the whole column, which is the
+// entire per-step block budget, so it may happen when nothing else wants to move.
+//
+// They do not blink. The shipped blink and breath are patches aimed at the four tier
+// drawings and would land on the wrong pixels over a different figure. What a pose does
+// instead is breathe, by lifting the whole drawing one pixel — which is the dominant
+// half of the shipped breath anyway, the body leading and the head following. That is
+// enough to stay out of the fault vocabulary: the signal for a dead link is a figure
+// where *nothing* changes, and this one is still moving.
+
+#define BJORN_VIG_START_MS 20000     // deep idle; the settle at 8 s is long past
+#define BJORN_VIG_HOLD       360     // 18 s a pose, off a clock that is not the breath's
+
+static uint8_t  bjorn_vig = U_POSE_COUNT;    // U_POSE_COUNT means "none, show the tier"
+static uint16_t bjorn_vig_at;
+// The cursor is separate from what is showing, and survives the pose being cleared.
+// Folded together, every idle period would restart at the same drawing and the rest of
+// the cast would be seen about never.
+static uint8_t  bjorn_vig_next;
+
+// Lift the whole column one row. A byte is eight vertical pixels with bit 0 at the top,
+// so a column is a 64-bit value with bit n at row n, and lifting is a shift right.
+static void bjorn_blit_pose(uint8_t which, bool lifted) {
+    const uint8_t *src = u_poses[which];
+    for (uint8_t x = 0; x < 64; x++) {
+        uint64_t col = 0;
+        for (uint8_t page = 0; page < 8; page++) {
+            col |= (uint64_t)pgm_read_byte(&src[page * 64 + x]) << (page * 8);
+        }
+        if (lifted) col >>= 1;
+        const uint8_t m = bjorn_mask(0);          // the inversion mask, if Caps Word is on
+        for (uint8_t page = 0; page < 8; page++) {
+            u_canvas[page * 128 + x] = (uint8_t)((col >> (page * 8)) & 0xFF) ^
+                                       (page == 7 ? bjorn_mask(14) : m);
+        }
+    }
+}
+
 static void bjorn_blit(const bjorn_frame_t *f) {
     for (uint8_t p = 0; p < f->count; p++) {
         // block * 64 IS the absolute buffer index, and the & 0x0F keeps us inside the
@@ -272,6 +313,22 @@ static void bjorn_compose(void) {
     }
     if (panel_woke && bjorn_state == 0) bjorn_wake_at = bjorn_ticks;
 
+    // A pose runs only in deep idle. Typing ends it at once — the cut on a key event is
+    // the shipped wake behaviour, and it is also what keeps an authored prop from being
+    // read as a signal: a sword and the axe are twenty seconds apart by construction,
+    // and this closes the one instant where they could overlap.
+    if (in.idle_ms < BJORN_VIG_START_MS || bjorn_state != 0) {
+        bjorn_vig = U_POSE_COUNT;
+    } else if (bjorn_vig == U_POSE_COUNT ||
+               (uint16_t)(bjorn_ticks - bjorn_vig_at) >= BJORN_VIG_HOLD) {
+        // A cursor, not a shuffle. Random selection repeats a drawing back to back and
+        // takes a dozen idle periods to work through the set; a cursor guarantees the
+        // whole cast is seen and lets the order mean something later.
+        bjorn_vig      = bjorn_vig_next;
+        bjorn_vig_next = (uint8_t)((bjorn_vig_next + 1u) % U_POSE_COUNT);
+        bjorn_vig_at   = bjorn_ticks;
+    }
+
     // He blinks again after anywhere he has been where the blink code below does not
     // run. Without this he comes back from a doze and never blinks — and a figure that
     // moves but never blinks is this design's signal that the link is dead, so it would
@@ -300,6 +357,14 @@ static void bjorn_compose(void) {
     if (caps && !bjorn_caps_was) bjorn_caps_at = bjorn_ticks;
     bjorn_caps_was = caps;
     bjorn_invert   = caps && (uint16_t)(bjorn_ticks - bjorn_caps_at) >= BJORN_CAPS_FLIP;
+
+    if (bjorn_vig != U_POSE_COUNT) {
+        // One authored drawing, whole. It breathes by lifting; it does not blink,
+        // because the blink patches belong to the four tier drawings.
+        bjorn_blit_pose(bjorn_vig, breath >= 1 && breath <= 2);
+        bjorn_blit(&bjorn_frames[BJORN_F_FLOOR_RIGHT]);
+        return;
+    }
 
     bjorn_blit_base();
     const uint8_t draw_tier = bjorn_mf_live ? 0 : tier;   // drooped for the misfire

@@ -26,7 +26,7 @@ cc "${cc_flags[@]}" -DOLED_MASTER_PANEL_ZONES -o "$out/panel" \
    "$keymap/oled_canvas.c" "$keymap/split_health.c"
 
 cc "${cc_flags[@]}" -DOLED_SLAVE_ANIMATION_BJORN -o "$out/bjorn" \
-   "$here/unit/test_bjorn.c" "$keymap/bjorn_art.c" "$keymap/oled_canvas.c"
+   "$here/unit/test_bjorn.c" "$keymap/bjorn_art.c" "$keymap/bjorn_poses.c" "$keymap/oled_canvas.c"
 
 case "${1:-}" in
     --dump) exec "$out/panel" --dump ;;   # the frames as text
