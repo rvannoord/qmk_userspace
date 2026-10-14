@@ -365,8 +365,28 @@ for something wrong, a prop is for something true, and idle is for everything el
 mistake would be the opposite one, inventing a meaning for a costume so that it looks
 like a signal. Decoration must not read as information.
 
-A set whose frames cannot be made to read at 64x64 may land as its 28x28 icon instead,
-provided the icon appears as something real in the scene rather than as a badge.
+**Bjorn is taken as he was drawn. Nothing is recombined.** The seventeen folders hold 89
+frames that reduce to **32 unique images**; the folders are packaging, the images are the
+work. Each of those 32 is one authored drawing — a costume, a prop, a horn posture and an
+expression that appear together stay together — and each is traced whole into its own
+64x64 grid. They are never decomposed into a parts matrix of bodies and overlays and
+recombined, even though that would be far cheaper: composition would let a smile that
+belongs to one drawing appear on a pose that never wore it, which is inventing Bjorns the
+original artist did not make.
+
+Drawing all 32 is also what makes "every set lands" true, without any per-set scheme:
+every set's frames are among the 32, so every set is represented by being drawn. Nine of
+the seventeen own no unique frame at all — one hood-and-laptop image is shared by
+thirteen of them — and under this approach that simply does not matter.
+
+**The life comes from motion on an authored pose, not from assembly.** The model is the
+breath: one pixel of travel on the whole figure, the easing carried by the dwell, body
+leading and head following. Blink, breath, small lifts, and cuts between authored states.
+
+Of the eleven unique icons, seven are typeset words (`FTP`, `SSH`, `SMB`, `SQL`, `RDP`,
+`Telnet`, `TEST`) and are not usable here — they would be illegible shrunk and would
+clash with DUNGEON.mode. Four are pictorial and are worth drawing: a longship with shields
+along the hull, a longhouse, a horned mask, and a bandit mask he can wear.
 
 What constrains this is unchanged: about 23% lit, the block budget, the motion rules,
 and every frame drawn by hand, because the mechanical reduction is not usable
