@@ -88,9 +88,20 @@ lives on a Raspberry Pi e-paper display. Not an imitation: his own 78x78 sprites
 - **Dither each 64-wide column separately.** FS diffuses error rightward, and a moving object sits
   outside the lock by definition, so with one 128-wide pass a move in one half dirties blocks in
   the other. Two passes, error never crossing x=63.
-- **Lit on black**, not inverted. Inverted is more faithful to the e-paper original and measures
-  77% lit against 24% — a lamp beside the keyboard — and the FS dots render worse inverted, since
-  dark single pixels get eaten by bloom from the lit field. Inversion is reserved for alarms.
+- **Inverted: dark ink on a lit field.** `U_OLED_INVERT` in `custom_config.h`, applied with the
+  SSD1306's own invert-display command rather than in the buffer, so the art is authored exactly
+  as before — **a set bit is ink** — and only the panel's reading of it changes. Bjorn's source is
+  dark ink on a white page, an e-paper original, so this is the medium he was drawn for, and it is
+  what makes the hooded poses legible: a solid cowl instead of a 33% blob.
+
+  This reverses what this file said until 2026-10-15, and the old reasoning is worth keeping
+  because it is still true as far as it goes: inversion measures about 77% lit against 24%, which
+  is a lamp beside the keyboard, and single FS dots render worse inverted because dark pixels get
+  eaten by bloom from the lit field. What changed is that the panels now sleep after 120 s and at
+  host suspend, which is what makes the wear tolerable, and that fidelity to the source art won
+  the trade. The failure mode inverts with it: the thing to avoid is now a **dark hairline in a
+  lit field**, which is why the lock glyphs must never be inverted in place and why reduced line
+  art is thresholded rather than dithered.
 - Row 63 of his sprite is a grey rule. Kept as a floor and run across both halves, so the two
   columns read as one scene. Static, therefore free.
 
