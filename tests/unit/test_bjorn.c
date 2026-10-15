@@ -68,11 +68,18 @@ static int pose_showing(void) {
     for (uint8_t w = 0; w < U_POSE_COUNT; w++) {
         for (uint8_t lift = 0; lift < 2; lift++) {
             bool match = true;
+            const uint8_t seam = u_pose_seam[w], gx0 = u_pose_still_x0[w];
+            const uint8_t gx1 = u_pose_still_x1[w], gy0 = u_pose_still_y0[w];
             for (uint8_t x = 0; x < 64 && match; x++) {
                 uint64_t col = 0;
                 for (uint8_t page = 0; page < 8; page++)
                     col |= (uint64_t)u_poses[w][page * 64 + x] << (page * 8);
-                if (lift) col >>= 1;
+                if (lift) {
+                    uint8_t top = seam;
+                    if (x >= gx0 && x <= gx1 && gy0 < top) top = gy0;
+                    const uint64_t fixed = (top >= 64) ? 0 : ~((((uint64_t)1) << top) - 1);
+                    col = ((col >> 1) & ~fixed) | (col & fixed);
+                }
                 for (uint8_t page = 0; page < 8; page++)
                     if (fake_oled[page * 128 + x] != (uint8_t)((col >> (page * 8)) & 0xFF))
                         match = false;
@@ -196,6 +203,39 @@ int main(void) {
         run(25000, 0, false);
         const int second = pose_showing();
         check("the next one is a different drawing", second >= 0 && second != first);
+    }
+
+    // --- the breath moves him, not the picture ------------------------------
+    // Lifting a whole drawing makes it bob, feet and shadow and all, and it reads as
+    // the picture being moved rather than as somebody breathing. Only the head and the
+    // helmet move — and in the frames with a goat, the goat is a separate animal on the
+    // same ground, so it must not rise with his chest. Anything else in a frame is
+    // something he carries, and that does ride with him.
+    {
+        bool below_seam_moved = false, goat_moved = false, nothing_moved = false;
+        for (uint8_t w = 0; w < U_POSE_COUNT; w++) {
+            const uint8_t seam = u_pose_seam[w], gx0 = u_pose_still_x0[w];
+            const uint8_t gx1 = u_pose_still_x1[w], gy0 = u_pose_still_y0[w];
+            bool any = false;
+            for (uint8_t x = 0; x < 64; x++) {
+                uint64_t col = 0;
+                for (uint8_t page = 0; page < 8; page++)
+                    col |= (uint64_t)u_poses[w][page * 64 + x] << (page * 8);
+                uint8_t top = seam;
+                if (x >= gx0 && x <= gx1 && gy0 < top) top = gy0;
+                const uint64_t fixed = (top >= 64) ? 0 : ~((((uint64_t)1) << top) - 1);
+                const uint64_t lifted = ((col >> 1) & ~fixed) | (col & fixed);
+                const uint64_t moved  = col ^ lifted;
+                if (moved) any = true;
+                if (moved & fixed) below_seam_moved = true;
+                if (gx0 != 255 && x >= gx0 && x <= gx1 &&
+                    (moved >> gy0)) goat_moved = true;
+            }
+            if (!any) nothing_moved = true;
+        }
+        check("the breath moves nothing below the chin", !below_seam_moved);
+        check("and never moves the goat", !goat_moved);
+        check("but every pose does move something", !nothing_moved);
     }
 
     // --- nothing stale replays ---------------------------------------------

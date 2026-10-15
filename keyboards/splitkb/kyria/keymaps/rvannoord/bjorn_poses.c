@@ -221,3 +221,8 @@ const char *const u_pose_names[U_POSE_COUNT] = {
     "NetworkScanner1",
     "SMBBruteforce2",
 };
+
+const uint8_t PROGMEM u_pose_seam[U_POSE_COUNT] = {33, 31, 31, 30, 32, 31};
+const uint8_t PROGMEM u_pose_still_x0[U_POSE_COUNT] = {255, 3, 48, 255, 255, 255};
+const uint8_t PROGMEM u_pose_still_x1[U_POSE_COUNT] = {255, 15, 61, 255, 255, 255};
+const uint8_t PROGMEM u_pose_still_y0[U_POSE_COUNT] = {255, 45, 45, 255, 255, 255};

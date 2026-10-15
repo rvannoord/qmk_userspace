@@ -206,16 +206,38 @@ static uint16_t bjorn_vig_at;
 // the cast would be seen about never.
 static uint8_t  bjorn_vig_next;
 
-// Lift the whole column one row. A byte is eight vertical pixels with bit 0 at the top,
-// so a column is a 64-bit value with bit n at row n, and lifting is a shift right.
+// Lift him one row, from the seam up. A byte is eight vertical pixels with bit 0 at the
+// top, so a column is a 64-bit value with bit n at row n and lifting is a shift right —
+// but shifting the whole column lifts his feet and his shadow with him, and the picture
+// bobs instead of him breathing. The shipped breath never did that: it raises the head
+// and swells the beard while the feet stay on the ground.
+//
+// So only the bits above the seam move. The row at the seam is then drawn twice, one
+// pixel of thickening, which is why the generator puts the seam where there is least of
+// him — five to a dozen pixels, inside the dither, where it does not read as a join.
 static void bjorn_blit_pose(uint8_t which, bool lifted) {
-    const uint8_t *src = u_poses[which];
+    const uint8_t *src  = u_poses[which];
+    const uint8_t  seam = pgm_read_byte(&u_pose_seam[which]);
+    const uint8_t  gx0  = pgm_read_byte(&u_pose_still_x0[which]);
+    const uint8_t  gx1  = pgm_read_byte(&u_pose_still_x1[which]);
+    const uint8_t  gy0  = pgm_read_byte(&u_pose_still_y0[which]);
+
     for (uint8_t x = 0; x < 64; x++) {
         uint64_t col = 0;
         for (uint8_t page = 0; page < 8; page++) {
             col |= (uint64_t)pgm_read_byte(&src[page * 64 + x]) << (page * 8);
         }
-        if (lifted) col >>= 1;
+        if (lifted) {
+            // Everything above the top line moves; everything at or below it stays. The
+            // line is the seam, except in the columns where a goat is standing, where it
+            // comes up to the goat's own top — he is a separate animal on the same
+            // ground, and Bjorn's chest is not the world. Anything else in the frame is
+            // something Bjorn carries, so it rides with him.
+            uint8_t top = seam;
+            if (x >= gx0 && x <= gx1 && gy0 < top) top = gy0;
+            const uint64_t fixed = (top >= 64) ? 0 : ~((((uint64_t)1) << top) - 1);
+            col = ((col >> 1) & ~fixed) | (col & fixed);
+        }
         const uint8_t m = bjorn_mask(0);          // the inversion mask, if Caps Word is on
         for (uint8_t page = 0; page < 8; page++) {
             u_canvas[page * 128 + x] = (uint8_t)((col >> (page * 8)) & 0xFF) ^

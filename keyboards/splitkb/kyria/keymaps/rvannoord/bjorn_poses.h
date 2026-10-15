@@ -23,3 +23,13 @@ enum u_pose {
 
 extern const uint8_t PROGMEM u_poses[U_POSE_COUNT][U_POSE_BYTES];
 extern const char *const u_pose_names[U_POSE_COUNT];
+
+// The row the breath lifts from. Rows above it move, rows below stay put, so
+// his feet and his shadow keep still while he breathes.
+extern const uint8_t PROGMEM u_pose_seam[U_POSE_COUNT];
+
+// Columns the breath leaves alone: a goat standing beside him is not part of
+// his chest. 255 means there is nothing but Bjorn in the frame.
+extern const uint8_t PROGMEM u_pose_still_x0[U_POSE_COUNT];
+extern const uint8_t PROGMEM u_pose_still_x1[U_POSE_COUNT];
+extern const uint8_t PROGMEM u_pose_still_y0[U_POSE_COUNT];
