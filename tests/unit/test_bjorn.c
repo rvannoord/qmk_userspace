@@ -62,30 +62,21 @@ static bool eyes_shut(void) {
     return false;
 }
 
-// Is one of the authored drawings on screen? They are blitted as a whole 64-column
-// image, optionally lifted a pixel for the breath, so both are checked.
+// Is one of the authored drawings on screen? Compared loosely on purpose: the breath
+// changes a few dozen pixels of it, and a test that re-implemented the breath exactly
+// would be checking its own copy of the code rather than the code.
 static int pose_showing(void) {
+    // Rows 53 and below are untouched by the breath — the lift stops at the seam and
+    // the swell at row 52 — so they identify a drawing no matter where in the cycle it
+    // is caught. Pages 7 and the top half of 6 are exactly those rows.
     for (uint8_t w = 0; w < U_POSE_COUNT; w++) {
-        for (uint8_t lift = 0; lift < 2; lift++) {
-            bool match = true;
-            const uint8_t seam = u_pose_seam[w], gx0 = u_pose_still_x0[w];
-            const uint8_t gx1 = u_pose_still_x1[w], gy0 = u_pose_still_y0[w];
-            for (uint8_t x = 0; x < 64 && match; x++) {
-                uint64_t col = 0;
-                for (uint8_t page = 0; page < 8; page++)
-                    col |= (uint64_t)u_poses[w][page * 64 + x] << (page * 8);
-                if (lift) {
-                    uint8_t top = seam;
-                    if (x >= gx0 && x <= gx1 && gy0 < top) top = gy0;
-                    const uint64_t fixed = (top >= 64) ? 0 : ~((((uint64_t)1) << top) - 1);
-                    col = ((col >> 1) & ~fixed) | (col & fixed);
-                }
-                for (uint8_t page = 0; page < 8; page++)
-                    if (fake_oled[page * 128 + x] != (uint8_t)((col >> (page * 8)) & 0xFF))
-                        match = false;
-            }
-            if (match) return w;
+        bool match = true;
+        for (uint8_t x = 0; x < 64 && match; x++) {
+            if (fake_oled[7 * 128 + x] != u_poses[w][7 * 64 + x]) match = false;
+            const uint8_t hi = 0xE0;                 // rows 53-55 of page 6
+            if ((fake_oled[6 * 128 + x] & hi) != (u_poses[w][6 * 64 + x] & hi)) match = false;
         }
+        if (match) return w;
     }
     return -1;
 }
@@ -206,36 +197,55 @@ int main(void) {
     }
 
     // --- the breath moves him, not the picture ------------------------------
-    // Lifting a whole drawing makes it bob, feet and shadow and all, and it reads as
-    // the picture being moved rather than as somebody breathing. Only the head and the
-    // helmet move — and in the frames with a goat, the goat is a separate animal on the
-    // same ground, so it must not rise with his chest. Anything else in a frame is
-    // something he carries, and that does ride with him.
+    // Watched through the real renderer rather than by re-deriving the transform. Over
+    // a full breath cycle on a pose that has a goat in it: his head and beard move, the
+    // body and the floor do not, and the goat never does — he is a separate animal on
+    // the same ground, not part of Bjorn's chest.
     {
-        bool below_seam_moved = false, goat_moved = false, nothing_moved = false;
-        for (uint8_t w = 0; w < U_POSE_COUNT; w++) {
-            const uint8_t seam = u_pose_seam[w], gx0 = u_pose_still_x0[w];
-            const uint8_t gx1 = u_pose_still_x1[w], gy0 = u_pose_still_y0[w];
-            bool any = false;
-            for (uint8_t x = 0; x < 64; x++) {
-                uint64_t col = 0;
-                for (uint8_t page = 0; page < 8; page++)
-                    col |= (uint64_t)u_poses[w][page * 64 + x] << (page * 8);
-                uint8_t top = seam;
-                if (x >= gx0 && x <= gx1 && gy0 < top) top = gy0;
-                const uint64_t fixed = (top >= 64) ? 0 : ~((((uint64_t)1) << top) - 1);
-                const uint64_t lifted = ((col >> 1) & ~fixed) | (col & fixed);
-                const uint64_t moved  = col ^ lifted;
-                if (moved) any = true;
-                if (moved & fixed) below_seam_moved = true;
-                if (gx0 != 255 && x >= gx0 && x <= gx1 &&
-                    (moved >> gy0)) goat_moved = true;
-            }
-            if (!any) nothing_moved = true;
+        uint8_t seen[8][128];
+        bool    have = false;
+        bool    low_moved = false, goat_moved = false, any_moved = false;
+        int     which = -1;
+
+        drive.flags = 0; drive.fingers = 0;
+        run(30000, 0, false);                       // settle, then into deep idle
+
+        // Find a goat pose by walking the cursor; each hold is 18 s.
+        for (int tries = 0; tries < U_POSE_COUNT + 1 && which < 0; tries++) {
+            const int w = pose_showing();
+            if (w >= 0 && u_pose_still_x0[w] != 255) which = w;
+            else run(19000, 0, false);
         }
-        check("the breath moves nothing below the chin", !below_seam_moved);
-        check("and never moves the goat", !goat_moved);
-        check("but every pose does move something", !nothing_moved);
+        check("a pose with a goat in it comes round", which >= 0);
+
+        if (which >= 0) {
+            const uint8_t gx0 = u_pose_still_x0[which], gx1 = u_pose_still_x1[which];
+            const uint8_t gy0 = u_pose_still_y0[which];
+            for (int i = 0; i < 80; i++) {          // four seconds, a full breath
+                run(50, 0, false);
+                if (pose_showing() != which) break;
+                if (have) {
+                    for (uint8_t page = 0; page < 8; page++)
+                        for (uint8_t x = 0; x < 64; x++) {
+                            const uint8_t diff = seen[page][x] ^ fake_oled[page * 128 + x];
+                            if (!diff) continue;
+                            any_moved = true;
+                            for (uint8_t k = 0; k < 8; k++) {
+                                if (!((diff >> k) & 1u)) continue;
+                                const uint8_t y = page * 8 + k;
+                                if (y > 52) low_moved = true;
+                                if (x >= gx0 && x <= gx1 && y >= gy0) goat_moved = true;
+                            }
+                        }
+                }
+                for (uint8_t page = 0; page < 8; page++)
+                    for (uint8_t x = 0; x < 128; x++) seen[page][x] = fake_oled[page * 128 + x];
+                have = true;
+            }
+            check("the breath moves something", any_moved);
+            check("nothing below the beard moves", !low_moved);
+            check("and the goat never moves", !goat_moved);
+        }
     }
 
     // --- nothing stale replays ---------------------------------------------
