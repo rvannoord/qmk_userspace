@@ -228,7 +228,75 @@ static uint8_t  bjorn_vig_next;
 
 #define BJORN_POSE_SWELL_END 52     // docs/layout.md: the beard pushes over rows 41-52
 
-static void bjorn_blit_pose(uint8_t which, bool breathing) {
+// The blink, as a state rather than as a frame: 0 open, 1 shut, 2 half lid. Same
+// arithmetic and the same schedule as the tier path — 150 ms shut, 100 ms half, 6 to 10
+// seconds apart with about one in five doubled — because it is the same blink. The
+// poses need it as a state because they cannot use the tier's eyes-shut frames: those
+// are drawn over the tier figure's face and would paste its pixels onto another
+// drawing.
+// Six to ten seconds from now. Called when a blink finishes, and whenever he comes
+// back from somewhere the blink code does not run — the doze, the waking lids, a dead
+// link — so the length of that gap can never matter.
+static void bjorn_schedule_blink(void) {
+    bjorn_rng        = bjorn_rng * 1664525u + 1013904223u;
+    bjorn_blink_at   = bjorn_ticks + BJORN_BLINK_MIN + (bjorn_rng >> 24) % BJORN_BLINK_SPREAD;
+    bjorn_blink_pair = false;
+}
+
+// It also advances the schedule, because it is the only place that does. Exactly one
+// of the two draw paths runs per frame, so it is called exactly once per tick.
+static uint8_t bjorn_blink_state(void) {
+    const int16_t d = (int16_t)(bjorn_ticks - bjorn_blink_at);
+    if (d < 0) return 0;
+    if (d < BJORN_BLINK_SHUT) return 1;
+    if (d < BJORN_BLINK_OPEN) return 2;
+
+    if (d == BJORN_BLINK_OPEN) {
+        bjorn_rng = bjorn_rng * 1664525u + 1013904223u;
+        if (bjorn_blink_pair) {               // that was the second of the pair
+            bjorn_schedule_blink();
+        } else if ((bjorn_rng >> 24) < BJORN_BLINK_PAIR_P) {
+            // Real blinks cluster. Keep the beat exact by counting from the last start.
+            bjorn_blink_pair = true;
+            bjorn_blink_at += BJORN_BLINK_GAP;
+        } else {
+            // A fresh word for the interval, or "long gap" and "was a double" end up
+            // perfectly correlated and the pattern becomes legible within a minute.
+            bjorn_schedule_blink();
+        }
+    } else {
+        // The schedule went by while he was asleep, waking or stale. Start again from
+        // now rather than waiting out the counter.
+        bjorn_schedule_blink();
+    }
+    return 0;
+}
+
+// Lids where the shipped blink puts them. Measured: in every one of these drawings the
+// eyes sit in rows 31-36, left around x21-27 and right around x37-43, which is where
+// the hand-drawn lids already are — the framing is constant across the corpus, so the
+// same bars land on the same eyes.
+//
+// Unlike the breath, this is drawn rather than taken from the source: there is no
+// eyes-shut version of these frames upstream. It is the one gesture here that is
+// authored, and it is authored to match the blink that already ships.
+static void bjorn_pose_lids(uint64_t *row, uint8_t state) {
+    static const uint8_t shut_x[2] = {21, 37}, shut_w = 7;
+    static const uint8_t half_x[2] = {22, 38}, half_w = 5;
+    const uint8_t *bx = (state == 1) ? shut_x : half_x;
+    const uint8_t  bw = (state == 1) ? shut_w : half_w;
+    const uint8_t  y0 = (state == 1) ? 34 : 33;
+
+    for (uint8_t e = 0; e < 2; e++) {
+        const uint64_t clear = (((uint64_t)1 << 7) - 1) << shut_x[e];
+        for (uint8_t y = 31; y <= 35; y++) row[y] &= ~clear;
+        const uint64_t bar = (((uint64_t)1 << bw) - 1) << bx[e];
+        row[y0] |= bar;
+        row[y0 + 1] |= bar;
+    }
+}
+
+static void bjorn_blit_pose(uint8_t which, bool breathing, uint8_t lids) {
     const uint8_t *src  = u_poses[which];
     const uint8_t  seam = pgm_read_byte(&u_pose_seam[which]);
     const uint8_t  gx0  = pgm_read_byte(&u_pose_still_x0[which]);
@@ -276,6 +344,8 @@ static void bjorn_blit_pose(uint8_t which, bool breathing) {
         }
     }
 
+    if (lids) bjorn_pose_lids(row, lids);
+
     for (uint8_t page = 0; page < 8; page++) {
         const uint8_t m = bjorn_mask((uint8_t)(page * 2));
         for (uint8_t x = 0; x < 64; x++) {
@@ -308,15 +378,6 @@ static void bjorn_blit_base(void) {
             u_canvas[page * 128 + x] = (uint8_t)(pgm_read_byte(bjorn_base + page * 64 + x) ^ m);
         }
     }
-}
-
-// Six to ten seconds from now. Called when a blink finishes, and whenever he comes
-// back from somewhere the blink code does not run — the doze, the waking lids, a dead
-// link — so the length of that gap can never matter.
-static void bjorn_schedule_blink(void) {
-    bjorn_rng        = bjorn_rng * 1664525u + 1013904223u;
-    bjorn_blink_at   = bjorn_ticks + BJORN_BLINK_MIN + (bjorn_rng >> 24) % BJORN_BLINK_SPREAD;
-    bjorn_blink_pair = false;
 }
 
 static void bjorn_compose(void) {
@@ -425,7 +486,21 @@ static void bjorn_compose(void) {
     if (bjorn_vig != U_POSE_COUNT) {
         // One authored drawing, whole. It breathes by lifting; it does not blink,
         // because the blink patches belong to the four tier drawings.
-        bjorn_blit_pose(bjorn_vig, breath >= 1 && breath <= 2);
+        // A drawing with a goat in it does not breathe. Roel's call, after watching
+        // both on the board: holding the goat out of the gesture is not enough to stop
+        // the result looking wrong on those two, so they are shown still.
+        //
+        // The cost is real and is recorded in docs/layout.md: these poses do not blink
+        // either, and a figure where nothing moves is this design's way of saying the
+        // link is dead. Two of six, for eighteen seconds each, against a goat that
+        // looks right.
+        // A drawing with a goat in it does not breathe — holding the goat out of the
+        // gesture was not enough to make it look right on those two, so they are still.
+        // They blink instead, which is where their liveness comes from: a figure that
+        // neither blinks nor breathes is this design's way of saying the link is dead.
+        const bool has_goat = pgm_read_byte(&u_pose_still_x0[bjorn_vig]) != 255;
+        bjorn_blit_pose(bjorn_vig, !has_goat && breath >= 1 && breath <= 2,
+                        bjorn_blink_state());
         bjorn_blit(&bjorn_frames[BJORN_F_FLOOR_RIGHT]);
         return;
     }
@@ -521,34 +596,11 @@ static void bjorn_compose(void) {
     // the error message. Nothing else changes, so a dead link is unmistakable but quiet.
     if (u_sync_hard_stale()) return;
 
-    // Signed, so a schedule in the past is recognisable as past rather than as an
-    // enormous positive number. It used to test d == BJORN_BLINK_OPEN exactly: step
-    // over that one tick and the test only came true again when the 16-bit counter
-    // wrapped, about 55 minutes of panel-on time later.
-    const int16_t d = (int16_t)(bjorn_ticks - bjorn_blink_at);
-    if (d < 0) {
-        // not due yet
-    } else if (d < BJORN_BLINK_SHUT) {
+    const uint8_t blink = bjorn_blink_state();
+    if (blink == 1) {
         bjorn_blit(&bjorn_frames[shut]);
-    } else if (d < BJORN_BLINK_OPEN) {
+    } else if (blink == 2) {
         bjorn_blit(&bjorn_frames[half]);
-    } else if (d == BJORN_BLINK_OPEN) {
-        bjorn_rng = bjorn_rng * 1664525u + 1013904223u;
-        if (bjorn_blink_pair) {               // that was the second of the pair
-            bjorn_schedule_blink();
-        } else if ((bjorn_rng >> 24) < BJORN_BLINK_PAIR_P) {
-            // Real blinks cluster. Keep the beat exact by counting from the last start.
-            bjorn_blink_pair = true;
-            bjorn_blink_at  += BJORN_BLINK_GAP;
-        } else {
-            // A fresh word for the interval, or "long gap" and "was a double" end up
-            // perfectly correlated and the pattern becomes legible within a minute.
-            bjorn_schedule_blink();
-        }
-    } else {
-        // The schedule went by while he was asleep, waking or stale. Start again from
-        // now rather than waiting out the counter.
-        bjorn_schedule_blink();
     }
 }
 

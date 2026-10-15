@@ -132,6 +132,15 @@ static void run(uint32_t ms, uint8_t wpm, bool typing) {
     }
 }
 
+// Type briefly, then idle past 20 s, which starts the next drawing in the cursor.
+// Searching by idling alone does not work: at 75 s he dozes and vignettes stop, so a
+// long search finds nothing however finely it steps.
+static int next_pose(void) {
+    run(1000, 40, true);
+    run(21000, 0, false);
+    return pose_showing();
+}
+
 static int blinks_in(uint32_t ms, uint8_t wpm, bool typing) {
     const int before = blinks;
     run(ms, wpm, typing);
@@ -204,24 +213,24 @@ int main(void) {
     {
         uint8_t seen[8][128];
         bool    have = false;
-        bool    low_moved = false, goat_moved = false, any_moved = false;
         int     which = -1;
 
         drive.flags = 0; drive.fingers = 0;
-        run(30000, 0, false);                       // settle, then into deep idle
 
         // Find a goat pose by walking the cursor; each hold is 18 s.
-        for (int tries = 0; tries < U_POSE_COUNT + 1 && which < 0; tries++) {
-            const int w = pose_showing();
+        for (int tries = 0; tries < U_POSE_COUNT * 2 && which < 0; tries++) {
+            const int w = next_pose();
             if (w >= 0 && u_pose_still_x0[w] != 255) which = w;
-            else run(19000, 0, false);
         }
         check("a pose with a goat in it comes round", which >= 0);
 
         if (which >= 0) {
             const uint8_t gx0 = u_pose_still_x0[which], gx1 = u_pose_still_x1[which];
             const uint8_t gy0 = u_pose_still_y0[which];
-            for (int i = 0; i < 80; i++) {          // four seconds, a full breath
+            bool beard_moved = false, eyes_moved = false, goat_moved = false;
+
+            // Long enough to contain a blink, which is six to ten seconds apart.
+            for (int i = 0; i < 260; i++) {
                 run(50, 0, false);
                 if (pose_showing() != which) break;
                 if (have) {
@@ -229,11 +238,11 @@ int main(void) {
                         for (uint8_t x = 0; x < 64; x++) {
                             const uint8_t diff = seen[page][x] ^ fake_oled[page * 128 + x];
                             if (!diff) continue;
-                            any_moved = true;
                             for (uint8_t k = 0; k < 8; k++) {
                                 if (!((diff >> k) & 1u)) continue;
                                 const uint8_t y = page * 8 + k;
-                                if (y > 52) low_moved = true;
+                                if (y >= 31 && y <= 35) eyes_moved = true;
+                                else beard_moved = true;
                                 if (x >= gx0 && x <= gx1 && y >= gy0) goat_moved = true;
                             }
                         }
@@ -242,10 +251,36 @@ int main(void) {
                     for (uint8_t x = 0; x < 128; x++) seen[page][x] = fake_oled[page * 128 + x];
                 have = true;
             }
-            check("the breath moves something", any_moved);
-            check("nothing below the beard moves", !low_moved);
+            check("a drawing with a goat does not breathe", !beard_moved);
+            check("but it does blink, so it is not frozen", eyes_moved);
             check("and the goat never moves", !goat_moved);
         }
+    }
+
+    // A drawing without a goat still breathes, and must: these poses do not blink, so
+    // a figure where nothing moves is this panel's signal that the link has died.
+    {
+        uint8_t prev[8][64];
+        bool    have = false, moved = false;
+        int     which = -1;
+        for (int tries = 0; tries < U_POSE_COUNT * 2 && which < 0; tries++) {
+            const int w = next_pose();
+            if (w >= 0 && u_pose_still_x0[w] == 255) which = w;
+        }
+        check("a drawing without a goat comes round", which >= 0);
+        for (int i = 0; i < 80 && which >= 0; i++) {
+            run(50, 0, false);
+            if (pose_showing() != which) break;
+            if (have) {
+                for (uint8_t page = 0; page < 8; page++)
+                    for (uint8_t x = 0; x < 64; x++)
+                        if (prev[page][x] != fake_oled[page * 128 + x]) moved = true;
+            }
+            for (uint8_t page = 0; page < 8; page++)
+                for (uint8_t x = 0; x < 64; x++) prev[page][x] = fake_oled[page * 128 + x];
+            have = true;
+        }
+        check("and it breathes", moved);
     }
 
     // --- nothing stale replays ---------------------------------------------

@@ -379,6 +379,22 @@ every set's frames are among the 32, so every set is represented by being drawn.
 the seventeen own no unique frame at all — one hood-and-laptop image is shared by
 thirteen of them — and under this approach that simply does not matter.
 
+**What each pose does, decided on the board 2026-10-15.** A drawing without a goat
+**breathes**: the head lifts a pixel and the beard's outer contour pushes one pixel out
+on each side, which is the shipped gesture and both halves of it — a lift alone was
+tried and reads as the picture being moved rather than as somebody breathing. A drawing
+*with* a goat does **not** breathe: holding the goat out of the gesture was not enough
+to make those two look right. They **blink** instead, with the lids the shipped blink
+uses, so they are not frozen — a figure where nothing moves is how this panel says the
+link is dead, and these poses cannot show that by accident.
+
+The blink is the one gesture here that is drawn rather than taken from the source, since
+there is no eyes-shut version of these frames upstream. It is drawn to match the blink
+that already ships: 7x2 lids at rows 34-35, the half lid 5x2 at rows 33-34, on the same
+6 to 10 second schedule with about one in five doubled. It lands correctly on every pose
+because the framing is constant across the corpus — the eyes sit in rows 31-36 in all of
+them.
+
 **The life comes from motion on an authored pose, not from assembly.** The model is the
 breath: one pixel of travel on the whole figure, the easing carried by the dwell, body
 leading and head following. Blink, breath, small lifts, and cuts between authored states.
