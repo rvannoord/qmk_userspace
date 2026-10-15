@@ -45,7 +45,7 @@ exist for the two things the scenario tests cannot reach:
 |------|------|
 | `unit/test_split_sync.c` | the master send path. The scenario tests build `split_sync.c`'s non-`SPLIT_KEYBOARD` branch, where every function is a stub, so nothing there covers it — and a regression is silent and total: no sends at all, which on the keyboard looks like the other half's mascot going inert for no reason. Boot, the heartbeat, the hard window and recovery, on a clock that is a variable |
 | `unit/test_bjorn.c` | the mascot. Compiles the real `oled_slave_bjorn.c` and `bjorn_art.c` on a fake clock. Two things with teeth: that he keeps blinking after a doze and after a dead link — a figure that moves but never blinks is this design's way of saying the link died, so losing the blink reports a fault that is not there — and that whenever two consecutive composed frames are identical, the commit writes no block at all |
-| `unit/test_panel.c` | the master panel's zones. Compiles the real `oled_master_zones.c` against a buffer laid out like the driver's, then measures what was drawn: that the panel is dark at rest below the badge, that a held finger draws its cell while an idle one draws nothing, which side the handedness bar takes, that each zone's content is centred, and that the alarm row is the only thing that inverts. `--dump` prints the frames and `--raw` the buffers, which is how the zones get looked at without a flash |
+| `unit/test_panel.c` | the master panel's three bands. Compiles the real `oled_master_zones.c` against a buffer laid out like the driver's, then measures what was drawn: that the band carries the layer's picture and the mod row every finger's glyph, that a held finger fills its cell while a misfire chips only the glyph box, which side the handedness bar takes and whether it is drawn or cut out, that the alarm inverts the whole band and the chain is knocked out of it, and that the default-layer rule appears in exactly the two cases it should. `--dump` prints the frames and `--raw` the buffers, which is how the bands get looked at without a flash |
 
 `unit/stub/manna-harbour_miryoku.h` copies Miryoku's layer list rather than including the
 real header, which would drag in all of QMK. The firmware build still uses the real one.
@@ -56,7 +56,11 @@ unchanged frame writes nothing" checkable on the host, and it is the check that 
 the panels never sleeping. The fake buffer is one byte longer than the panel, as a canary for the
 driver's one-past-the-end write.
 
-The panel test asserts the mod row as built: **dark at rest**, a cell drawing its glyph
-only while that finger holds something, and nothing on that row inverting. Inversion is
-reserved for the alarm row, which is what keeps a routine held modifier from spending the
-alarm's own register. If that changes, the test and `docs/layout.md` change with it.
+The panel test asserts the **ladder**, not the layout: whatever the alarm is, nothing
+routine may light more of the panel than it does. That phrasing is deliberate, and it has
+already earned itself. The mod row was once dark at rest with nothing on it inverting,
+because the alarm was a 128x8 row and two held modifiers matched it exactly. The alarm is
+now the whole 128x40 band, so a filled cell no longer comes near it and the row went back
+to showing every glyph. The rule did not change; the measurement did. A test written
+against "dark at rest" would have had to be deleted, and would have taken the reasoning
+with it — one asserting the ratio survives the move and still fails if the rung is spent.

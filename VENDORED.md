@@ -18,9 +18,13 @@ When a QMK update breaks Miryoku, fix it here and add a line below. Checking whe
 
 ## `keyboards/splitkb/kyria/keymaps/rvannoord/panel_font.c`
 
-Glyphs extracted from **DUNGEON.mode** by datagoblin ([datagoblin.itch.io/dungeonmode](https://datagoblin.itch.io/dungeonmode)), an 8x8 1-bit bitmap font released **CC0 1.0 Universal** — public domain, so no attribution is required and none is imposed on anything built with it. Credited by choice.
+**QMK's own 6x8 OLED font**, `drivers/oled/glcdfont.c` — the face `oled_write()` draws with. GPL-2.0-or-later WITH BSD-2-Clause, derived from the Adafruit GFX library's font. It is already in the toolchain, so this is a vendored dependency the repo does **not** have to carry: `tools/panel/gen_font.py` reads it out of the QMK checkout at generation time.
 
-Taken from the pack's `bitmap/dungeon-mode.png`, a 16x16 grid of 8x8 cells, with `playscii/charsets/dungeon-mode.char` as the character map. Only the printable ASCII range and four symbol cells were extracted; the pack itself is not in this repo. The table in `panel_font.c` is generated and never hand-edited — to change which characters it carries, extract again from the pack.
+The transform is a transpose. QMK's is column-major, 6 bytes a character, bit 0 the top row; this panel's drawing code is row-major, 8 bytes a character, bit 7 the leftmost column. The 6 columns sit flush left in the 8 px cell, because `docs/layout.md` rests its "no 1 px edge frame" argument on the badge lighting x=0.
+
+Previously this was **DUNGEON.mode** by datagoblin ([datagoblin.itch.io/dungeonmode](https://datagoblin.itch.io/dungeonmode)), an 8x8 CC0 pack. Dropped on 2026-10-15 for QMK's own font, which is lighter and needs no pack. `tools/panel/gen_font_dungeon.py` still reads that pack if it is ever wanted back; the pack itself was never in this repo.
+
+Worth recording, since the question will come up again: all 45 `glcdfont*.c` in the QMK tree were compared over 0x20-0x7e, and every one is within **0.6%** of the default except `rubi` (5.3%) and `sendyyeah/pix` (12.6%). They are the same Adafruit face with a glyph or two changed, so "pick a nicer one from QMK" is not an option that exists. `gen_font.py --font <path>` takes any of them.
 
 ## `keyboards/splitkb/kyria/keymaps/rvannoord/bjorn_art.c`
 
@@ -39,3 +43,24 @@ git checkout 61a4758e5ee3d37d43c10eb690340626139912c0
 ```
 
 The art is **regenerable**: `tools/` holds the generator and the text grids it reads (`STAGE1.txt`), verified on 2026-10-14 to reproduce `bjorn_art.c` and `bjorn_art.h` byte for byte. Edit the grids, never the generated file.
+
+## `keyboards/splitkb/kyria/keymaps/rvannoord/panel_layer_icons.c`
+
+The master panel's ten layer bands. Two separate sources, neither drawn here.
+
+**Nine of the ten** are splitkb's Halcyon TFT icons, from **[antontanderup/qmk_userspace](https://github.com/antontanderup/qmk_userspace)**, pinned at commit **`fa9eaed52212232d10f49d3e0e608aa877ad547d`**, path `users/halcyon_modules/splitkb/hlc_tft_display/graphics/icons/`.
+
+Licensing is in two layers, and the icon files say so themselves: *"generated source code only, image retains original copyright"*. The generated `.qgf.c` wrappers and that repo are **GPL-2.0** (`hlc_tft_display.c` itself is "Copyright 2024 splitkb.com", GPL-2.0-or-later), which is what this repo is. The **images** inside them keep their own copyright — `calculate`, `data_object`, `functions`, `settings`, `mouse`, `open_with`, `keyboard` and `trackpad_input` are Google **Material Symbols** (Apache-2.0), and `splitkb` is splitkb's own mark, used here on splitkb hardware.
+
+**The tenth**, Base, is the Kyria logo out of QMK's own `keyboards/splitkb/kyria/keymaps/default/keymap.c` — splitkb's art, drawn for this exact 128x64 panel. The 56x14 "kyria" wordmark is used at its native size and never scaled; only the 65x64 emblem is reduced.
+
+Nothing of either source is copied into this repo. `tools/panel/qgf.py` reads the QGF files back to pixels and `tools/panel/gen_layer_icons.py` reduces them — box filter to 40x40 at the least-fringing sub-pixel phase, then a threshold cut, emitted as one 128x40 band per layer. Floyd-Steinberg (`--method fs`) was tried first and rejected: the sources are 1-bit, so the dither has no tone to resolve and only stipples the stroke edges it created itself — see `tools/README.md`. Fetch the originals with:
+
+```sh
+git clone --filter=blob:none --no-checkout https://github.com/antontanderup/qmk_userspace ~/halcyon-src
+cd ~/halcyon-src && git sparse-checkout init --cone
+git sparse-checkout set users/halcyon_modules/splitkb/hlc_tft_display
+git checkout fa9eaed52212232d10f49d3e0e608aa877ad547d
+```
+
+One trap worth keeping. QMK's `docs/quantum_painter_qgf.md` says a non-repeating RLE run has `length = marker - 128`. The decoder that actually runs on the keyboard, `qp_drawimage_byte_rle_decoder` in `quantum/painter/qp_draw_codec.c`, uses `c - 127`. The doc is off by one; following it drops a byte per literal run and everything after the first run decodes as noise. `tools/panel/qgf.py` follows the decoder.

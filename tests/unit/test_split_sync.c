@@ -16,6 +16,7 @@
 
 uint32_t fake_now       = 0;
 bool     fake_is_master = true;
+bool     fake_is_left   = true;
 
 static bool     send_ok   = true;
 static uint32_t sends     = 0;

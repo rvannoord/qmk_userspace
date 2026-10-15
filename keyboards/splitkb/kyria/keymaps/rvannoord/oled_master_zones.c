@@ -1,22 +1,29 @@
-// The master-side panel, in zones rather than lines of text. Dark at rest, so any
-// light means something happened — and that is now literally true: at rest this draws
-// the host badge and nothing else. See docs/layout.md, "Master half".
+// The master-side panel: three bands of pictures, no text. Modelled on splitkb's own
+// Halcyon TFT panel (hlc_tft_display.c) and adapted to 128x64 monochrome, which is why
+// the layer is an icon rather than its name. See docs/layout.md, "Master half".
 //
 //   page 0    status bar   WIN/MAC badge, underlined when SYS set it by hand, plus
 //                          the latched locks as 8x8 glyphs in the dead right end
-//   pages 1-2 mod row      four 32 px cells, one per finger. A cell draws only while
-//                          that finger holds something; nothing here ever inverts
-//   pages 3-4 layer band   the layer name at 2x, centred, blank on base. A rule under
-//                          it when the default layer is not base
-//   page 5    alarm row    rung 2 of the ladder: an inverted banner, blinking three
-//                          times on entry. Dark otherwise, which is also what keeps
-//                          the row below from reading as a fifth line of the band
-//   pages 6-7 trace strip  the panel's only past tense: which finger just misfired
+//   pages 1-5 layer band   one 128x40 picture per layer, from panel_layer_icons.c.
+//                          A rule under it while a held layer hides a non-base
+//                          default. This band is also the alarm
+//   pages 6-7 mod row      four 32 px cells, one per finger, each showing its glyph
+//                          always. A held finger fills its cell; a finger that just
+//                          misfired fills only its glyph box
 //
-// Inversion is spent only by the alarm row. That is the ladder's own rule — nothing
-// routine may light more of the panel than the panel's own alarm — and it is why the
-// mod row went dark at rest rather than inverting a cell per held modifier: two held
-// modifiers used to invert exactly as many pixels as rung 2 does.
+// Two things moved when the bands did, and both had to, because the band that used to
+// hold them is now 40 px of picture:
+//
+// The alarm is no longer a banner. A 128x8 inverted row is about 850 dark pixels and a
+// held mod cell is 405, so against the new mod row a banner reads as two modifiers —
+// the exact collision docs/layout.md records from when the mod row last inverted. So
+// the alarm now takes the whole band, which nothing routine can reach.
+//
+// The misfire trace is no longer a strip across the bottom. watch_edges() fires on the
+// bit that just dropped, so the next 1.5 s is precisely when the shortcut is retried;
+// covering the row would hide live modifiers at that moment. It is now a chip inside
+// the offending finger's own cell — the same drawing as a hold, at half the area, so
+// pressing again visibly grows it to fill the cell.
 
 #include QMK_KEYBOARD_H
 #include "manna-harbour_miryoku.h"
@@ -26,18 +33,11 @@
 #include "split_sync.h"
 #include "panel_font.h"
 #include "panel_glyphs.h"
+#include "panel_layer_icons.h"
 #include "oled_canvas.h"
 #include "split_health.h"
 
 #ifdef OLED_MASTER_PANEL_ZONES
-
-// Miryoku's own layer list, so the order lives in one place. Overriding
-// MIRYOKU_LAYER_LIST in custom_config.h changes these.
-static const char *const layer_names[] = {
-#    define MIRYOKU_X(LAYER, STRING) [U_##LAYER] = STRING,
-    MIRYOKU_LAYER_LIST
-#    undef MIRYOKU_X
-};
 
 // Rebuilt every main loop by oled_master_task. That is a resampling, not a capture:
 // u_sync_build() reports only what is held at the instant it is called, and each build
@@ -60,20 +60,17 @@ static void fill(uint8_t page, uint8_t x, uint8_t w, uint8_t byte) {
     }
 }
 
+static void fill_or(uint8_t page, uint8_t x, uint8_t w, uint8_t byte) {
+    for (uint8_t i = 0; i < w; i++) {
+        u_canvas[(uint16_t)page * OLED_DISPLAY_WIDTH + x + i] |= byte;
+    }
+}
+
 // One column of an 8x8 glyph, as the page byte that holds it.
 static uint8_t col_1x(const uint8_t *g, uint8_t sx) {
     uint8_t out = 0;
     for (uint8_t r = 0; r < 8; r++) {
         if (pgm_read_byte(&g[r]) & (0x80u >> sx)) out |= 1u << r;
-    }
-    return out;
-}
-
-// The same column doubled: half q of the 16 rows, so each source row lights two.
-static uint8_t col_2x(const uint8_t *g, uint8_t sx, uint8_t q) {
-    uint8_t out = 0;
-    for (uint8_t k = 0; k < 8; k++) {
-        if (pgm_read_byte(&g[q * 4 + (k >> 1)]) & (0x80u >> sx)) out |= 1u << k;
     }
     return out;
 }
@@ -89,17 +86,6 @@ static void draw_glyph_1x(uint8_t x, uint8_t page, const uint8_t *g) {
     }
 }
 
-static void draw_glyph_2x(uint8_t x, uint8_t page, const uint8_t *g) {
-    for (uint8_t q = 0; q < 2; q++) {
-        for (uint8_t sx = 0; sx < 8; sx++) {
-            const uint8_t  b  = col_2x(g, sx, q);
-            const uint16_t at = (uint16_t)(page + q) * OLED_DISPLAY_WIDTH + x + sx * 2;
-            u_canvas[at]     = b;
-            u_canvas[at + 1] = b;
-        }
-    }
-}
-
 // A 16x16 drawn glyph: already in page format, so it is a straight copy.
 static void draw_glyph_16(uint8_t x, uint8_t page, uint8_t which) {
     const uint8_t *src = u_glyph16[which];
@@ -111,29 +97,42 @@ static void draw_glyph_16(uint8_t x, uint8_t page, uint8_t which) {
     }
 }
 
-static void draw_text_1x(uint8_t x, uint8_t page, const char *s) {
-    for (; *s; s++, x += 8) draw_glyph_1x(x, page, glyph_of(*s));
+// Chamfer the four corners of a filled 2-page block, so a lit cell reads as a keycap
+// rather than as a black rectangle. Three pixels off each corner, which is the same
+// 2 px chamfer splitkb's own Halcyon panel uses (`filled_rounded_rect` in
+// hlc_tft_display.c) — ported rather than invented so the two panels agree.
+//
+// A real rounded corner needs more than 16 rows to read as a curve; at this size the
+// chamfer is the whole effect, and taking a fourth pixel starts to look bitten rather
+// than rounded.
+static void chamfer(uint8_t page, uint8_t x, uint8_t w) {
+    const uint16_t top = (uint16_t)page * OLED_DISPLAY_WIDTH + x;
+    const uint16_t bot = (uint16_t)(page + 1) * OLED_DISPLAY_WIDTH + x;
+    const uint8_t  r   = (uint8_t)(w - 1);
+    u_canvas[top]         &= (uint8_t)~0x03u;     // rows 0-1 of the block
+    u_canvas[top + 1]     &= (uint8_t)~0x01u;
+    u_canvas[top + r]     &= (uint8_t)~0x03u;
+    u_canvas[top + r - 1] &= (uint8_t)~0x01u;
+    u_canvas[bot]         &= (uint8_t)~0xc0u;     // rows 14-15
+    u_canvas[bot + 1]     &= (uint8_t)~0x80u;
+    u_canvas[bot + r]     &= (uint8_t)~0xc0u;
+    u_canvas[bot + r - 1] &= (uint8_t)~0x80u;
 }
 
-static void draw_text_2x(uint8_t x, uint8_t page, const char *s) {
-    for (; *s; s++, x += 16) draw_glyph_2x(x, page, glyph_of(*s));
-}
-
-static uint8_t text_len(const char *s) {
-    uint8_t n = 0;
-    while (*s++) n++;
-    return n;
-}
-
-// Dark on lit, composed rather than drawn and then flipped: the row is filled solid
-// first and the glyphs are written through it inverted.
-static void draw_text_1x_inverse(uint8_t x, uint8_t page, const char *s) {
-    for (; *s; s++, x += 8) {
-        const uint8_t *g = glyph_of(*s);
-        for (uint8_t sx = 0; sx < 8; sx++) {
-            u_canvas[(uint16_t)page * OLED_DISPLAY_WIDTH + x + sx] = (uint8_t)~col_1x(g, sx);
+// A 16x16 glyph knocked out of a filled cell: the cell is already solid, so writing
+// the glyph's complement cuts it out rather than drawing it.
+static void draw_glyph_16_knockout(uint8_t x, uint8_t page, uint8_t which) {
+    const uint8_t *src = u_glyph16[which];
+    for (uint8_t q = 0; q < 2; q++) {
+        for (uint8_t i = 0; i < 16; i++) {
+            u_canvas[(uint16_t)(page + q) * OLED_DISPLAY_WIDTH + x + i] &=
+                (uint8_t)~pgm_read_byte(&src[q * 16 + i]);
         }
     }
+}
+
+static void draw_text_1x(uint8_t x, uint8_t page, const char *s) {
+    for (; *s; s++, x += 8) draw_glyph_1x(x, page, glyph_of(*s));
 }
 
 // --- edges, watched every main loop -----------------------------------------
@@ -215,11 +214,127 @@ static void render_status(void) {
     }
 }
 
+// --- layer band -------------------------------------------------------------
+// Pages 1-5, and the only zone that ever inverts. One picture per layer; the picture
+// is the whole band, so nothing here decides a position — tools/panel/gen_layer_icons.py
+// does, and it is also where the art comes from.
+
+#    define U_BAND_PAGE 1     // canvas page the band starts on
+
+static void blit_band(uint8_t which) {
+    const uint8_t *src = u_layer_band[which];
+    for (uint8_t q = 0; q < U_BAND_PAGES; q++) {
+        for (uint8_t i = 0; i < U_BAND_W; i++) {
+            u_canvas[(uint16_t)(U_BAND_PAGE + q) * OLED_DISPLAY_WIDTH + i] =
+                pgm_read_byte(&src[(uint16_t)q * U_BAND_W + i]);
+        }
+    }
+}
+
+static void invert_band(void) {
+    for (uint8_t q = 0; q < U_BAND_PAGES; q++) {
+        for (uint8_t i = 0; i < U_BAND_W; i++) {
+            u_canvas[(uint16_t)(U_BAND_PAGE + q) * OLED_DISPLAY_WIDTH + i] ^= 0xffu;
+        }
+    }
+}
+
+// The chain is cut out of the inverted band rather than drawn on it, so it reads lit
+// against the dark — the same knockout the mod row uses for a held glyph.
+static void knock_chain(uint8_t x) {
+    for (uint8_t q = 0; q < U_CHAIN_PAGES; q++) {
+        for (uint8_t i = 0; i < U_CHAIN_W; i++) {
+            u_canvas[(uint16_t)(U_BAND_PAGE + 1 + q) * OLED_DISPLAY_WIDTH + x + i] &=
+                (uint8_t)~pgm_read_byte(&u_chain[(uint16_t)q * U_CHAIN_W + i]);
+        }
+    }
+}
+
+static void render_band(void) {
+    const uint8_t active = panel.layers & 0x0F;
+    const uint8_t deflt  = panel.layers >> 4;
+
+    // Holding a thumb shows the held layer; at rest the band shows whatever the default
+    // is, which on a stock setup is base and its Kyria logo.
+    const uint8_t shown = (active == U_BASE && deflt != U_BASE) ? deflt : active;
+    blit_band(shown);
+
+    // A default that is not base is a standing fact, and a held layer used to hide it.
+    // Both halves of the condition earn their place: a base default has nothing to
+    // report, and when the active layer *is* the default the icon on screen already is
+    // the statement, so a rule under it would only repeat itself.
+    //
+    // The second half is also what makes the rule safe at the band's last three rows.
+    // It can only draw while a layer is held, every held layer is momentary, and the
+    // one icon that reaches row 39 — Extra, splitkb's disc, which fills the cell edge
+    // to edge — is a default-layer alternative that can never be held. So the collision
+    // cannot arise rather than merely being avoided.
+    // Phrased against `shown` rather than `active` on purpose. Today they differ only
+    // in a state the encoding cannot produce — `layers` takes its low nibble from
+    // get_highest_layer(layer_state | default_layer_state), so resting on an Extra
+    // default reads as Extra, not as base — but this way the rule stays correct if that
+    // ever changes, and the two guarantees below are then true by construction rather
+    // than by argument.
+    if (deflt != U_BASE && shown != deflt) {
+        const uint8_t x0 = pgm_read_byte(&u_band_x0[shown]);
+        const uint8_t x1 = pgm_read_byte(&u_band_x1[shown]);
+        fill_or(5, x0, (uint8_t)(x1 - x0 + 1), 0xe0);     // rows 45-47
+    }
+
+    if (!u_sync_link_down()) return;
+
+    // Three blinks over 600 ms on entry, which no routine change ever does. After that
+    // it is steady: a fault that stayed is not news any more, but it is still true.
+    const uint32_t since = timer_elapsed32(alarm_at);
+    if (since < U_BLINK_MS && ((since / U_BLINK_HALF) & 1u) != 0) return;
+
+    if (shown == U_BASE) {
+        // The resting band is the one place the icon is not kept. It carries no
+        // information to lose — base is where you already are — and the Kyria wordmark
+        // is 81 px wide, so there is no gutter to put the chain in beside it.
+        fill(1, 0, OLED_DISPLAY_WIDTH, 0xff);
+        fill(2, 0, OLED_DISPLAY_WIDTH, 0xff);
+        fill(3, 0, OLED_DISPLAY_WIDTH, 0xff);
+        fill(4, 0, OLED_DISPLAY_WIDTH, 0xff);
+        fill(5, 0, OLED_DISPLAY_WIDTH, 0xff);
+        knock_chain(44);
+    } else {
+        // Escalation by scope, not replacement: the layer icon survives, lit on dark,
+        // so nothing needed while typing is hidden by the alarm.
+        invert_band();
+        knock_chain(2);
+    }
+}
+
 // --- mod row ----------------------------------------------------------------
-// A cell is a finger, outer to inner: pinky, ring, middle, index. Not a modifier —
-// the slot never moves, only the glyph follows the OS, which is why this used to light
-// the wrong cell on the Mac where Ctrl and GUI swap. Ctrl's caret is the same drawing
-// in both sets and simply changes cell, so the swap is visible as a hop.
+// A cell is a finger. Not a modifier — the slot never moves, only the glyph follows the
+// OS, which is why this used to light the wrong cell on the Mac where Ctrl and GUI swap.
+// Ctrl's caret is the same drawing in both sets and simply changes cell, so the swap is
+// visible as a hop.
+//
+// **The order follows the half the panel is on.** Outer to inner is pinky, ring, middle,
+// index, and on the left half that runs left to right across the keys — so cell 0 is at
+// x=0. On the right half the same fingers run the other way: the index finger is the
+// innermost key, which is the *leftmost* one on that half. Drawing pinky-first there put
+// every glyph above the wrong finger, mirrored. `is_keyboard_left()` is the master's own
+// handedness, so the row simply reverses with it and each glyph sits over its key.
+//
+// Three states per cell, and they are one drawing at three sizes rather than three
+// drawings: idle is the glyph alone, a misfire fills the glyph's own 16 px box, a hold
+// fills the whole 32 px cell. So a finger that misfires and is pressed again does not
+// change vocabulary, it grows.
+//
+// Both filled states are chamfered, so a lit cell reads as a key being pressed rather
+// than as a black rectangle dropped on the row.
+//
+// **Handedness is no longer drawn.** A 3x16 bar used to fill the padding on the side of
+// the hand that held the key. It was removed because at four cells plus two bars plus a
+// chamfer the row had more marks than meaning, and the bars were the least of them: the
+// cell already says which finger, and the hand is the one thing you can feel without
+// looking. What is given up is honest to record — Chordal Hold resolves on the *pair* of
+// hands, so a same-hand hold and a cross-hand hold are now drawn identically. The misfire
+// chip is what actually reports a bad hold, and it still names the finger.
+// `U_FIN_LEFT`/`U_FIN_RIGHT` stay on the wire; nothing on screen reads them.
 
 static void render_mods(void) {
     static const uint8_t win[4] = {U_GLYPH_WINDOW, U_GLYPH_OPTION, U_GLYPH_CARET, U_GLYPH_SHIFT};
@@ -227,101 +342,30 @@ static void render_mods(void) {
     const uint8_t *set   = (panel.flags & U_FLAG_IS_MAC) ? mac : win;
     const uint8_t  cells = U_FIN_CELLS(panel.fingers);
 
-    fill(1, 0, OLED_DISPLAY_WIDTH, 0x00);
-    fill(2, 0, OLED_DISPLAY_WIDTH, 0x00);
-
-    for (uint8_t i = 0; i < 4; i++) {
-        if (!(cells & (1u << i))) continue;          // dark unless this finger holds
-        const uint8_t x = (uint8_t)(i * 32);
-        draw_glyph_16(x + 8, 1, set[i]);
-
-        // Handedness is a bar filling the padding on that hand's side, not a dot: a
-        // long coherent edge survives at this distance where texture does not. Both
-        // bars for both hands, neither when the tracker missed the press — so a bare
-        // glyph honestly means "held, hand unknown".
-        if (U_FIN_LEFT(panel.fingers) & (1u << i)) {
-            fill(1, x + 1, 3, 0xff);
-            fill(2, x + 1, 3, 0xff);
-        }
-        if (U_FIN_RIGHT(panel.fingers) & (1u << i)) {
-            fill(1, x + 28, 3, 0xff);
-            fill(2, x + 28, 3, 0xff);
-        }
-    }
-}
-
-// --- layer band -------------------------------------------------------------
-
-static void render_layer(void) {
-    const uint8_t active  = panel.layers & 0x0F;
-    const uint8_t deflt   = panel.layers >> 4;
-
-    fill(3, 0, OLED_DISPLAY_WIDTH, 0x00);
-    fill(4, 0, OLED_DISPLAY_WIDTH, 0x00);
-    if (active == U_BASE && deflt == U_BASE) return;     // the resting state: dark
-
-    const char   *name = layer_names[active];
-    const uint8_t w    = (uint8_t)(text_len(name) * 16);
-    const uint8_t x    = (uint8_t)((OLED_DISPLAY_WIDTH - w) / 2);
-    if (active != U_BASE) draw_text_2x(x, 3, name);
-
-    // A default that is not base is a standing fact, and holding a thumb used to hide
-    // it: the band showed the held layer and the base underneath vanished. Two rows
-    // under the name, drawn whichever layer is active.
-    if (deflt != U_BASE) {
-        const char   *dn = layer_names[deflt];
-        const uint8_t dw = (uint8_t)(text_len(dn) * 16);
-        const uint8_t dx = (uint8_t)((OLED_DISPLAY_WIDTH - (active == U_BASE ? dw : w)) / 2);
-        if (active == U_BASE) draw_text_2x(dx, 3, dn);
-        fill(4, dx, (uint8_t)(active == U_BASE ? dw : w), 0xc0);     // rows 38-39
-    }
-}
-
-// --- alarm row --------------------------------------------------------------
-// Rung 2, and the only thing on this panel that inverts. It is here rather than in the
-// status bar because an alarm in page 0 erases the badge, and hiding the host OS at
-// the one moment something is wrong is replacement, not escalation by scope.
-
-static void render_alarm(void) {
-    fill(5, 0, OLED_DISPLAY_WIDTH, 0x00);
-    if (!u_sync_link_down()) return;
-
-    const uint32_t since = timer_elapsed32(alarm_at);
-    // Three blinks over 600 ms on entry, which no routine change ever does. After that
-    // it is steady: a fault that stayed is not news any more, but it is still true.
-    const bool lit = since >= U_BLINK_MS || ((since / U_BLINK_HALF) & 1u) == 0;
-    if (!lit) return;
-
-    fill(5, 0, OLED_DISPLAY_WIDTH, 0xff);
-    draw_text_1x_inverse(28, 5, "LINK DOWN");
-}
-
-// --- trace strip ------------------------------------------------------------
-// The panel's only past tense. A home-row mod that resolved as a hold, was held past
-// U_ANOMALY_MS and had nothing typed during the hold: the shortcut you meant did not
-// happen, and by the time you look down it is over. Which finger is the actionable
-// part, because the tap-hold thresholds are per modifier.
-
-static void render_trace(void) {
     fill(6, 0, OLED_DISPLAY_WIDTH, 0x00);
     fill(7, 0, OLED_DISPLAY_WIDTH, 0x00);
-    if (!trace_live) return;
 
-    static const char win[4] = {'G', 'A', 'C', 'S'};
-    static const char mac[4] = {'C', 'O', 'M', 'S'};
-    const char *label = (panel.flags & U_FLAG_IS_MAC) ? mac : win;
+    const bool left_half = is_keyboard_left();
 
-    // Two releases in one loop give two dropped bits and one count; show both.
-    uint8_t n = 0;
-    for (uint8_t i = 0; i < 4; i++) if (trace_cells & (1u << i)) n++;
-
-    const uint8_t w = (uint8_t)(n * 32 + (n - 1) * 8);
-    uint8_t       x = (uint8_t)((OLED_DISPLAY_WIDTH - w) / 2);
     for (uint8_t i = 0; i < 4; i++) {
-        if (!(trace_cells & (1u << i))) continue;
-        const char pair[3] = {label[i], (trace_left & (1u << i)) ? 'L' : 'R', '\0'};
-        draw_text_2x(x, 6, pair);
-        x = (uint8_t)(x + 40);
+        const uint8_t slot = left_half ? i : (uint8_t)(3 - i);
+        const uint8_t x    = (uint8_t)(slot * 32);
+        const bool    held = cells & (1u << i);
+        const bool    miss = trace_live && (trace_cells & (1u << i));
+
+        if (held) {
+            fill(6, x, 32, 0xff);
+            fill(7, x, 32, 0xff);
+            chamfer(6, x, 32);
+            draw_glyph_16_knockout((uint8_t)(x + 8), 6, set[i]);
+        } else if (miss) {
+            fill(6, (uint8_t)(x + 8), 16, 0xff);
+            fill(7, (uint8_t)(x + 8), 16, 0xff);
+            chamfer(6, (uint8_t)(x + 8), 16);
+            draw_glyph_16_knockout((uint8_t)(x + 8), 6, set[i]);
+        } else {
+            draw_glyph_16((uint8_t)(x + 8), 6, set[i]);
+        }
     }
 }
 
@@ -442,10 +486,8 @@ void oled_render_master(void) {
     }
 
     render_status();
+    render_band();
     render_mods();
-    render_layer();
-    render_alarm();
-    render_trace();
     u_canvas_commit();     // the only point that touches the driver's buffer
 }
 

@@ -64,8 +64,10 @@ and a permanently dirty frame means permanent I²C traffic on that half.
 ## Which half shows what
 
 The master is the half with the USB cable (VBUS on GP19, decided once at boot). It draws the
-zones panel, `oled_master_zones.c`; `oled_master_text.c` is the alternative. The other half draws
-Bjorn, `oled_slave_bjorn.c`; the spaceship and the logos are the alternatives. Chosen in
+three-band panel, `oled_master_zones.c` — status bar on page 0, a 128x40 layer picture on pages
+1-5 (which is also the alarm), the mod row on pages 6-7; `oled_master_text.c` is the alternative.
+The other half draws Bjorn, `oled_slave_bjorn.c`; the spaceship and the logos are the
+alternatives. Chosen in
 `users/manna-harbour_miryoku/custom_config.h` and enforced by `oled_panel.h`, which refuses a
 build with none or more than one of each.
 
@@ -92,8 +94,11 @@ build with none or more than one of each.
   `housekeeping_task_user` in `keymap.c`). `oled_render_*` only draws. A transient flag has to stay
   set for at least 100 ms or the 20 Hz render can miss it.
 - New source files go into `SRC` in the keymap's `rules.mk`, never into `keymap.c`.
-- Generated files — `bjorn_art.*`, `panel_font.*`, `panel_glyphs.*`, and the art files added later
-  — are never edited by hand. Their generators live under `tools/`.
+- Generated files — `bjorn_art.*`, `panel_font.*`, `panel_glyphs.*`, `panel_layer_icons.*`, and
+  the art files added later — are never edited by hand. Their generators live under `tools/`.
+  `panel_layer_icons.c` is the layer pictures: hand corrections to them go in
+  `tools/panel/icon_overrides.txt`, which the generator applies after reducing, never into the
+  `.c` itself.
 - Run `tests/run_unit.sh` after touching any OLED or split file. `--dump` prints the frames as
   text; `--raw` emits the raw buffers for a renderer.
 

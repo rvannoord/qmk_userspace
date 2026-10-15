@@ -140,27 +140,57 @@ for something wrong, a prop is for something true, idle is for everything else.
 
 ### Master half
 
-Dark at rest, so any light means something happened. Zones, all page-aligned:
+Three bands of pictures and no text, modelled on splitkb's own Halcyon TFT panel
+(`hlc_tft_display.c`) and adapted to 128x64 monochrome. All page-aligned:
 
 | Zone | Origin | Size | Content |
 |------|--------|------|---------|
 | Status bar | (0,0) | 128x8 | `WIN`/`MAC` badge, underlined when SYS set it by hand. The right end is permanently dark, so the latched locks live there at x=100, 109, 118 — one row, so they cannot drift off a shared baseline |
-| Mod row | (0,8) | 128x16 | four 32 px cells, one per finger, outer to inner. **Dark at rest**: a cell draws its 16x16 glyph only while that finger holds something, and nothing here ever inverts. Handedness is a 3x16 bar filling the padding on that hand's side |
-| Layer band | (0,24) | 128x16 | layer name in DUNGEON.mode at 2x, so 16x16 a character, centred. Blank on base. Two rows under the name whenever the default layer — the high nibble of `layers` — is not base |
-| Alarm row | (0,40) | 128x8 | rung 2 of the ladder, and the only thing on this panel that inverts. Dark otherwise, which is also what keeps the row below from reading as a fifth line of the layer band. The split link being down is its only occupant today |
-| Trace strip | (0,48) | 128x16 | dark at rest. On a misfire, the offending finger's letter and hand at 2x for 1.5 s, then dark. The panel's only past tense |
+| Layer band | (0,8) | 128x40 | one picture per layer, from `panel_layer_icons.c`. Three rows under the icon when a held layer is hiding a non-base default. **This band is also the alarm**: the link being down inverts the whole of it and cuts a broken chain out of it |
+| Mod row | (0,48) | 128x16 | four 32 px cells, one per finger, each showing its 16x16 glyph **always**. A held finger fills its whole cell and the glyph is knocked out of it; a finger that just misfired fills only the glyph's own 16 px box. Both fills are chamfered, 3 px off each corner, so a lit cell reads as a key rather than a black rectangle. **The order reverses with the half the panel is on** |
 
-**The font is DUNGEON.mode**, an 8x8 1-bit bitmap font, not QMK's built-in 6x8. It is the same
-pack the rest of the panel's art is cut from, so the text and the glyphs share one hand. The sheet
-is a 16x16 grid of 8x8 cells with its own character map; the build extracts only the characters
-the panel actually draws. 8x8 gives 16 columns instead of 21, which is why the layer name is the
-only text long enough to care and gets the whole width.
+**Why the layer is a picture now.** The name was text because text was what a 16 px band
+could hold. Forty pixels holds a drawing, and a drawing is read without being parsed —
+which is the whole point of a layer indicator you glance at mid-word. The icons are
+splitkb's own, lifted out of the Halcyon module's QGF files and reduced; base is the
+Kyria logo out of QMK's default keymap for this board. Nothing is drawn from scratch.
+See `VENDORED.md` for the sources and `tools/panel/` for the reduction.
+
+**The font is QMK's own 6x8**, the face `oled_write()` draws with, transposed into this panel's
+row-major form by `tools/panel/gen_font.py`. It replaced DUNGEON.mode on 2026-10-15. Since the
+layer band became a picture the font draws only two things — the badge and the stats page — so the
+heavier 8x8 face was carrying a pack that nothing else needed; the 2x and inverse-text paths went
+with the layer name that used them.
+
+Glyphs sit **flush left** in an 8 px cell, not centred. That is load-bearing: the "no 1 px edge
+frame" argument below depends on the badge lighting x=0, and a centred glyph would make it quietly
+false. QMK's face is 5 columns of ink plus a spacing column, so the cell carries 3 px of tracking
+rather than its native 1. Cell width stays 8 because the stats page is 16 characters across 128 px.
+
+There is no better font to be had for free: all 45 `glcdfont*.c` in the QMK tree are within 0.6% of
+the default over printable ASCII, bar two. Anything genuinely different would have to be vendored,
+and at 8 px tall the choice matters less than the tracking does.
 
 **There is no layer map.** The first design had one at (30,40), 60x24, one 6x8 legend a key,
 erasing itself per layer once that layer had been used enough. Cut before it was built: it only
 repeats what the finger already knows by the time it can read it, and it was the one zone whose
 size forced the 6x8 font on everything else. The 24 px it held went to the event strip, which
 shows the things the layer name cannot.
+
+**The row reverses with the half.** Outer to inner is pinky, ring, middle, index, and on the
+left half that runs left to right across the keys. On the right half the same fingers run the
+other way — the index finger is on the *innermost* key, which is the leftmost one on that half —
+so a row drawn pinky-first there sits mirrored over the keys and every glyph is above the wrong
+finger. `is_keyboard_left()` on the master decides it. The cable moves between halves often
+enough on this keyboard that this is a real case, not a hypothetical one.
+
+**Handedness is not drawn.** A 3x16 bar used to fill the padding on the side of the hand that
+held the key, cut out of a filled cell and drawn beside a chip. It went because four cells plus
+two bars plus a chamfer is more marks than meaning in 16 px, and the bar was the least of them:
+the cell already names the finger, and which hand is the one thing you can feel without looking
+up. What is given up should be recorded honestly — Chordal Hold resolves on the *pair* of hands,
+so a same-hand and a cross-hand hold are now drawn identically, and only the misfire chip reports
+a bad one. `U_FIN_LEFT`/`U_FIN_RIGHT` stay on the wire; nothing on screen reads them.
 
 **Mod slots are fingers, not modifiers.** Outer to inner: pinky, ring, middle, index. On Windows
 those keys give GUI, Alt, Ctrl, Shift; on macOS the Ctrl/GUI swap means the same fingers give
@@ -172,14 +202,23 @@ checked against the bit the key actually registered — recorded when it was pre
 `mod_config()` is applied at press time and an OS change while a key is held must not
 re-attribute it to another finger.
 
-**Why the mod row is dark at rest.** The first build drew all four glyphs always and
-inverted a cell to mark a held modifier. Measured, that put the most routine event on
-the keyboard into the alarm's own register: rung 2 inverts 128x8 = 1024 px, and two
-held modifiers inverted 2 x 512 = exactly 1024. Ctrl+Shift, many times a minute, spent
-the whole rung — and three held modifiers outlit it. Drawing a cell only while its
-finger holds something costs nothing in legibility, because the order never moves and
-the signal was never the letter but the cell lighting up. It also makes "dark at rest"
-literally true and leaves inversion entirely to the alarm row.
+**The mod row filled, went dark, and filled again — and the measurement is the reason
+all three times.** The first build drew all four glyphs and filled a cell per held
+modifier. Measured, that put the most routine event on the keyboard into the alarm's own
+register: the alarm row inverted 128x8 = 1024 px, and two held modifiers filled 2 x 512 =
+exactly 1024. Ctrl+Shift, many times a minute, spent the whole rung. So the row went dark
+at rest, and inversion was left entirely to the alarm row.
+
+The bands reopened it from the other end. The alarm is no longer a 128x8 row but the
+whole 128x40 band, so the ceiling it sets is about five times what it was, and a filled
+cell at 405 px no longer comes near it — four fingers of both hands at once is roughly
+1600 against the band's 4200. The constraint that forced "dark at rest" is simply gone,
+and with it the reason to hide a legend that is useful to read. So the row is a legend
+again: all four glyphs always, a hold filling its cell.
+
+What did **not** change is the rule. Nothing routine may light more of the panel than the
+panel's own alarm, and `tests/unit/test_panel.c` asserts the ratio rather than the layout,
+so the next person to move a band finds out immediately if they have spent the rung.
 
 **The lock glyphs are 1 px and must never be inverted in place.** They are 7x7 inside an
 8x8 cell — column 7 is a gutter so the 1 px channel between neighbours cannot close under
@@ -204,8 +243,11 @@ hit by accident, and it then silently changes what the arrow keys do in a spread
 
 Alarms escalate by **scope**, not by brightness, so routine events never spend the loudest
 register. The rungs are per panel, and the test is ordering inside one panel: nothing routine may
-light more pixels than that panel's own alarm. On the master: normal, then the inverted banner on
-the alarm row, then full-panel inversion. The master has no 1 px edge frame — the frame needs
+light more pixels than that panel's own alarm. On the master: normal, then the inverted layer
+band, then full-panel inversion. The band keeps its layer icon while inverted — lit on dark — so
+the alarm adds to what is on screen rather than replacing it; the one exception is base, whose
+band is given over to the chain entirely, because base is where you already are and the Kyria
+wordmark leaves no gutter to put a chain beside. The master has no 1 px edge frame — the frame needs
 x=0, x=127, y=0 and y=63 kept clear and a status panel cannot promise that, since the badge itself
 lights x=0. Entry blinks three times over 600 ms, which routine changes never do.
 

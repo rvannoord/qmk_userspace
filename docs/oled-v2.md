@@ -15,6 +15,7 @@ Keep the Progress table below current, in the same commit that finishes a stage.
 | 2. Bug B: link health, stats page, self-heal | **done 2026-10-14**, cause still unknown; §2.5 skipped for want of evidence |
 | 3. Survey of all 17 sprite sets | fetched and sheets rendered 2026-10-14; tools committed. Mapping with the animator |
 | 4. Director, layered compositor, preview harness | preview harness and one idle clock done 2026-10-14; compositor and director open |
+| 4a. Master panel reworked into three bands (unplanned) | **done 2026-10-15**, not flashed. Layer icons from splitkb's Halcyon module, QMK's own font replaces DUNGEON.mode. See the note below |
 | 5. The goat | open |
 | 6. Weather by season | open |
 | 7. Doze extras and the heart | open |
@@ -22,6 +23,27 @@ Keep the Progress table below current, in the same commit that finishes a stage.
 | 9. Remaining spec items, the leaf on the helmet | open |
 | 10. Tuning, the inverted look | open |
 | 11. Migration leftovers | open |
+
+### Note: stage 4a reworked the master panel, 2026-10-15
+
+Not in this plan — Roel asked for the master half to look like splitkb's Halcyon TFT
+panel. It replaced the five zones with three bands, so parts of this document written
+against the old map are now history rather than instructions. **Diagnosis and commit
+records stay as they are** (they were true when written); what is stale is the
+forward-looking text:
+
+- §12 item 4's description of what `test_panel.c` asserts — done, differently: the test
+  now asserts the alarm ladder as a ratio rather than "dark at rest".
+- The stats page is still 16 characters wide but is drawn in **QMK's own 6x8 font**, not
+  DUNGEON.mode, which is no longer used anywhere.
+- "the master already draws a rule under the layer name" — under the layer *icon* now,
+  and only while a held layer hides a non-base default.
+- Anything below that plans new art "in DUNGEON.mode's weight language" should read
+  `tools/panel/glyphs.py`'s language instead, which is where the panel's hand-drawn
+  glyphs actually live.
+
+The alarm's move is the one with a reason worth carrying forward: a 128x8 inverted banner
+had fallen to about two held mod cells, so it could no longer outshine a routine frame.
 
 ---
 

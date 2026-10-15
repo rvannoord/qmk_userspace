@@ -21,6 +21,7 @@ void oled_write_raw_byte(const char data, uint16_t index) { u_fake_write(data, i
 // split_health.c is linked in because the panel draws the stats page from it; these
 // are the few things it expects from the world around it.
 bool     fake_is_master = true;
+bool     fake_is_left   = true;
 bool     fake_connected = true;
 bool     is_transport_connected(void) { return fake_connected; }
 
@@ -97,32 +98,68 @@ static bool centred(uint8_t y0, uint8_t y1, int slop) {
     return (off < 0 ? -off : off) <= slop;
 }
 
-// The whole 32-column cell solid on its own top row: what full-cell inversion used to
-// look like, and what must never come back — two cells of it light exactly as many
-// pixels as the alarm row, which is the rung it would be stealing.
-static bool cell_inverted(uint8_t cell) {
-    for (uint8_t x = cell * 32; x < (cell + 1) * 32; x++)
-        if (!lit(x, 8)) return false;
-    return true;
+// The three bands. Everything below addresses rows, so the map lives here once.
+#define BAND_Y0 8
+#define BAND_Y1 47
+#define MOD_Y0  48
+#define MOD_Y1  63
+#define RULE_Y0 45     // the default-layer rule, the band's last three rows
+
+// Which of the three cell states is on screen, read off the cell's top row — padding
+// that no glyph reaches, so it says how far the fill got and nothing else.
+//
+// Columns 5 and 26 are the probes rather than the whole row, because a held cell is
+// not solid: the hand bars at +1..+3 and +28..+30 are cut out of it, so "every column
+// lit" is false for a legitimate hold. 5 and 26 are clear of both bars and of the
+// glyph's own box at +8..+23.
+#define CELL_PAD_L 5
+#define CELL_PAD_R 26
+#define CELL_GLYPH 12
+
+static bool cell_filled(uint8_t cell) {
+    return lit((uint8_t)(cell * 32 + CELL_PAD_L), MOD_Y0)
+        && lit((uint8_t)(cell * 32 + CELL_PAD_R), MOD_Y0);
+}
+
+// A misfire chip fills only the glyph's own 16 px box, so the padding stays clear.
+static bool cell_chipped(uint8_t cell) {
+    return lit((uint8_t)(cell * 32 + CELL_GLYPH), MOD_Y0)
+        && !lit((uint8_t)(cell * 32 + CELL_PAD_L), MOD_Y0);
 }
 
 static bool cell_drawn(uint8_t cell) {
-    return any_lit_in((uint8_t)(cell * 32 + 8), (uint8_t)(cell * 32 + 23), 8, 23);
+    return any_lit_in((uint8_t)(cell * 32 + 8), (uint8_t)(cell * 32 + 23), MOD_Y0, MOD_Y1);
 }
 
-// The banner is lit with dark text through it, so "inverted" is the background being
-// solid on a row the font never reaches, not the row being entirely lit.
+// The default-layer rule is the one thing on the band that is a solid block: three
+// whole rows spanning the icon's ink box. No reduced icon is solid across its own full
+// width for three rows, so this identifies the rule and nothing else.
+static bool solid_block(uint8_t x0, uint8_t x1, uint8_t y0, uint8_t y1) {
+    for (uint8_t y = y0; y <= y1; y++)
+        for (uint8_t x = x0; x <= x1; x++)
+            if (!lit(x, y)) return false;
+    return true;
+}
+
+static bool any_dark_in(uint8_t x0, uint8_t x1, uint8_t y0, uint8_t y1) {
+    for (uint8_t y = y0; y <= y1; y++)
+        for (uint8_t x = x0; x <= x1; x++)
+            if (!lit(x, y)) return true;
+    return false;
+}
+
 static bool row_solid(uint8_t y) {
     for (uint8_t x = 0; x < OLED_DISPLAY_WIDTH; x++)
         if (!lit(x, y)) return false;
     return true;
 }
 
-static bool hand_bar(uint8_t cell, bool right) {
-    const uint8_t x = (uint8_t)(cell * 32 + (right ? 28 : 1));
-    for (uint8_t y = 8; y <= 23; y++)
-        if (!lit(x, y)) return false;
-    return true;
+// The chamfer itself: the outermost pixel of each corner of a filled cell is off.
+static bool cell_chamfered(uint8_t cell) {
+    const uint8_t x0 = (uint8_t)(cell * 32), x1 = (uint8_t)(cell * 32 + 31);
+    return !lit(x0, MOD_Y0) && !lit(x1, MOD_Y0)
+        && !lit(x0, MOD_Y1) && !lit(x1, MOD_Y1)
+        && lit((uint8_t)(x0 + CELL_PAD_L), MOD_Y0);   // but not a whole bite out of it
 }
 
 // --- driving ----------------------------------------------------------------
@@ -220,15 +257,23 @@ int main(int argc, char **argv) {
         return 0;
     }
 
-    // Dark at rest, and this time literally: the badge and nothing else. It is the
-    // premise the layer band, the alarm row and the trace all rest on.
+    // At rest the band is not dark any more: it carries the Kyria logo, and the mod
+    // row shows all four glyphs whether or not anything is held. That is the Halcyon
+    // panel's grammar — the row is a legend you read, and a hold fills a cell in it.
     frame(at_rest, false);
-    check("at rest, everything below the status bar is dark", !any_lit(8, 63));
+    check("at rest the band shows the base layer's logo", any_lit(BAND_Y0, BAND_Y1));
+    check("and the mod row shows every finger's glyph",
+          cell_drawn(0) && cell_drawn(1) && cell_drawn(2) && cell_drawn(3));
+    check("with nothing held, no cell is filled",
+          !cell_filled(0) && !cell_filled(1) && !cell_filled(2) && !cell_filled(3));
     {
         int left, right;
         margins(0, 7, &left, &right);
+        // x=0 specifically: docs/layout.md rests the "no 1 px edge frame" argument on
+        // the badge lighting the first column, so this is the assertion that keeps the
+        // font swappable without that going quietly false.
         check("the badge starts at the left edge", left == 0);
-        check("and takes only its own three characters", right == OLED_DISPLAY_WIDTH - 24);
+        check("and stays inside its own three cells", right >= OLED_DISPLAY_WIDTH - 24);
     }
     check("no underline while detection is trusted", !lit(0, 7) && !lit(23, 7));
 
@@ -243,43 +288,57 @@ int main(int argc, char **argv) {
 
     // Cells are fingers, outer to inner, and they do not move with the OS: this frame
     // is on the Mac, where Ctrl and GUI swap, holding left index and right ring.
-    check("a held finger draws its cell", cell_drawn(1) && cell_drawn(3));
-    check("an idle finger draws nothing", !cell_drawn(0) && !cell_drawn(2));
-    check("nothing on the mod row inverts",
-          !cell_inverted(0) && !cell_inverted(1) && !cell_inverted(2) && !cell_inverted(3));
-    check("the right hand bars on the right", hand_bar(1, true) && !hand_bar(1, false));
-    check("the left hand bars on the left", hand_bar(3, false) && !hand_bar(3, true));
+    check("a held finger fills its cell", cell_filled(1) && cell_filled(3));
+    check("and the fill has rounded corners", cell_chamfered(1) && cell_chamfered(3));
+    check("an idle finger is drawn but not filled", !cell_filled(0) && !cell_filled(2));
+    check("an idle finger still shows its glyph", cell_drawn(0) && cell_drawn(2));
+    // Handedness is no longer drawn: a held cell is solid padding to its chamfered
+    // corners, with nothing cut out of it but the glyph.
+    check("a held cell has no hand bar cut out of it",
+          lit((uint8_t)(1 * 32 + 1), MOD_Y0 + 4) && lit((uint8_t)(1 * 32 + 30), MOD_Y0 + 4));
 
-    check("the layer name is centred", centred(24, 39, 4));
-    check("the alarm row is dark with no alarm", !any_lit(40, 47));
+    check("the layer icon is centred", centred(BAND_Y0, BAND_Y1, 4));
     check("caps word shows in the status bar's right end", any_lit_in(100, 127, 0, 7));
-    check("and nothing is left in the old event strip", !any_lit(48, 63));
 
-    // The mod row must stay under the alarm row it is not allowed to outshine. All
-    // four fingers of both hands at once is the worst case; the alarm row is 128x8.
+    // The ladder: nothing routine may light more of the panel than the alarm. The
+    // worst routine frame is four fingers of both hands held at once; the alarm is the
+    // whole 128x40 band. This is the measurement that retired the old banner, which at
+    // 128x8 had fallen to roughly two held cells.
     {
         u_split_state_t all = on_nav;
         all.fingers = 0xff;
         frame(all, false);
-        const int mods = count(8, 23);
-        check("four mods on both hands stay under the alarm row's 1024 px", mods < 1024);
+        const int mods = count(MOD_Y0, MOD_Y1);
+        frame(latched, true);
+        const int alarm = count(BAND_Y0, BAND_Y1);
+        check("the alarm outshines the worst routine frame", alarm > mods * 2);
+        // Put the link back up before leaving: the entry blink is measured from the
+        // edge, so an alarm left latched here would make the next block's first frame
+        // land in the steady state instead.
+        frame(at_rest, false);
     }
 
     // The alarm. Three blinks over 600 ms on entry, then steady — and it inverts,
     // which nothing else on this panel is allowed to do.
     fake_now = 10000;
     frame(latched, true);
-    check("the alarm row inverts on entry", row_solid(40) && count(40, 47) > 700);
+    check("the whole band inverts on entry", row_solid(BAND_Y0) && count(BAND_Y0, BAND_Y1) > 3500);
     fake_now += 100;
     step();
-    check("and is dark a blink later", !any_lit(40, 47));
+    check("and returns to normal a blink later", !row_solid(BAND_Y0));
     fake_now += 100;
     step();
-    check("and lit again", any_lit(40, 47));
+    check("and inverts again", row_solid(BAND_Y0));
     fake_now += 1000;
     step();
-    check("steady once the blinking is over", row_solid(40) && count(40, 47) > 700);
-    check("the layer name survives under the alarm", any_lit(24, 39));
+    check("steady once the blinking is over", row_solid(BAND_Y0) && count(BAND_Y0, BAND_Y1) > 3500);
+    // Escalation by scope, not replacement. The chain is cut out of the inverted band
+    // rather than drawn on it, so its own 40x24 box holds dark pixels while a patch of
+    // band well clear of it stays solid — which is also what proves the band really is
+    // inverted underneath and not merely blanked.
+    check("the chain is knocked out of the inverted band", any_dark_in(2, 41, 16, 39));
+    check("and the band around it is still solid", !any_dark_in(90, 125, 16, 39));
+    check("the layer icon survives under the alarm", any_dark_in(48, 79, 16, 39));
 
     // Locks: two of three on, and Num Lock can never be, so its slot is never drawn.
     check("both latched locks show", any_lit_in(100, 108, 0, 7) && any_lit_in(118, 126, 0, 7));
@@ -290,16 +349,24 @@ int main(int argc, char **argv) {
     {
         u_split_state_t held = {.layers = U_BASE, .fingers = U_FIN_L_PINKY, .anomaly = 3};
         frame(held, false);
-        check("no trace while the finger is still down", !any_lit(48, 63));
+        check("a finger still down is a hold, not a chip", cell_filled(0) && !cell_chipped(0));
 
         u_split_state_t gone = {.layers = U_BASE, .fingers = 0, .anomaly = 4};
         frame(gone, false);
-        check("the misfire shows once the finger lifts", any_lit(48, 63));
-        check("and it is centred", centred(48, 63, 4));
+        check("the misfire chips that finger's own cell", cell_chipped(0));
+        check("and leaves the other three alone",
+              !cell_chipped(1) && !cell_chipped(2) && !cell_chipped(3));
 
+        // Pressing again while the chip is up grows it to a full hold rather than
+        // changing vocabulary — the whole reason the two share one drawing.
+        u_split_state_t again = {.layers = U_BASE, .fingers = U_FIN_L_PINKY, .anomaly = 4};
+        frame(again, false);
+        check("pressing again grows the chip to a hold", cell_filled(0));
+
+        frame(gone, false);
         fake_now += U_TRACE_MS + 1;
         step();
-        check("and clears itself", !any_lit(48, 63));
+        check("and it clears itself", !cell_chipped(0) && !cell_filled(0));
     }
 
     // Shift is excluded the way the mascot's axe excludes it: held constantly as part
@@ -309,7 +376,7 @@ int main(int argc, char **argv) {
         frame(held, false);
         u_split_state_t gone = {.layers = U_BASE, .fingers = 0, .anomaly = 8};
         frame(gone, false);
-        check("a shift misfire is not traced", !any_lit(48, 63));
+        check("a shift misfire is not traced", !cell_chipped(3));
     }
 
     // A default layer that is not base has to survive a thumb hold — it used to
@@ -317,16 +384,41 @@ int main(int argc, char **argv) {
     {
         u_split_state_t quirk = {.layers = (uint8_t)(U_NAV | (U_EXTRA << 4))};
         frame(quirk, false);
-        check("a non-base default rules the layer band", any_lit(38, 39));
-        check("while the held layer still names itself", any_lit(24, 37));
+        check("a non-base default rules the layer band", solid_block(48, 78, RULE_Y0, BAND_Y1));
+        check("while the held layer still shows its own icon", any_lit(BAND_Y0, 44));
+
+        // Resting on that default: the band shows Extra itself, so a rule under it
+        // would only repeat what the icon already says. Probed inside Extra's own ink
+        // box — its disc spans x45..83, so columns outside that say nothing either way
+        // and a check there would pass whether or not the rule was drawn.
+        u_split_state_t resting = {.layers = (uint8_t)(U_EXTRA | (U_EXTRA << 4))};
+        frame(resting, false);
+        check("resting on it needs no rule", !solid_block(45, 83, RULE_Y0, BAND_Y1));
 
         u_split_state_t plain = {.layers = U_NAV};
         frame(plain, false);
-        check("and a base default does not", !any_lit(38, 39));
+        check("and a base default never draws one", !any_lit(RULE_Y0, BAND_Y1));
+    }
+
+    // The mod row follows the half the panel is on. Outer-to-inner runs left to right
+    // on the left half and the other way on the right, so drawing pinky-first on a
+    // right-hand master puts every glyph above the wrong finger.
+    {
+        u_split_state_t pinky = {.layers = U_BASE, .fingers = U_FIN_L_PINKY};
+        fake_is_left = true;
+        frame(pinky, false);
+        check("on a left master the pinky is the outermost cell on the left",
+              cell_filled(0) && !cell_filled(3));
+
+        fake_is_left = false;
+        frame(pinky, false);
+        check("on a right master it is the outermost cell on the right",
+              cell_filled(3) && !cell_filled(0));
+        fake_is_left = true;
     }
 
     frame(at_rest, false);
-    check("returning to rest clears everything again", !any_lit(8, 63));
+    check("returning to rest shows the base logo again", any_lit(BAND_Y0, BAND_Y1));
 
     // --- the stats page -----------------------------------------------------
     // Dark at rest is kept by only ever showing it on demand.
@@ -351,7 +443,7 @@ int main(int argc, char **argv) {
         u_stats_note_key();
         step();
         check("any other key closes it", !u_stats_page_open());
-        check("and the zones come back", !any_lit(24, 63));
+        check("and the bands come back", any_lit(BAND_Y0, BAND_Y1) && cell_drawn(0));
 
         // A short press is still the OS toggle, which is the behaviour being traded.
         u_stats_note_sys(true);

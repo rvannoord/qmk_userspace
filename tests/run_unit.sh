@@ -22,7 +22,7 @@ cc_flags=(-std=c11 -Wall -Wextra -Werror -I "$here/unit" -I "$here/unit/stub" -I
 cc "${cc_flags[@]}" -Wno-unused-parameter -o "$out/split_sync" \
    "$here/unit/test_split_sync.c" "$keymap/split_sync.c" "$keymap/split_health.c"
 cc "${cc_flags[@]}" -DOLED_MASTER_PANEL_ZONES -o "$out/panel" \
-   "$here/unit/test_panel.c" "$keymap/panel_font.c" "$keymap/panel_glyphs.c" \
+   "$here/unit/test_panel.c" "$keymap/panel_font.c" "$keymap/panel_glyphs.c" "$keymap/panel_layer_icons.c" \
    "$keymap/oled_canvas.c" "$keymap/split_health.c"
 
 cc "${cc_flags[@]}" -DOLED_SLAVE_ANIMATION_BJORN -o "$out/bjorn" \

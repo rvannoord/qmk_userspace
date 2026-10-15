@@ -34,6 +34,11 @@ static inline oled_buffer_reader_t oled_read_raw(uint16_t start_index) {
 }
 
 // The panel latches edges against the clock, so a test has to be able to move it.
+// Which half this panel is on. The mod row reverses with it, because outer-to-inner
+// runs left-to-right on the left half and right-to-left on the right one.
+extern bool fake_is_left;
+static inline bool is_keyboard_left(void) { return fake_is_left; }
+
 extern uint32_t fake_now;
 static inline uint32_t timer_read32(void) { return fake_now; }
 static inline uint32_t timer_elapsed32(uint32_t then) { return fake_now - then; }

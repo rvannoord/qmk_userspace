@@ -27,11 +27,16 @@ WINDOW = knock(mk({
     13: S((1,5),(10,14)), 14: S((1,5),(10,14)),
 }), [(1,1),(1,14),(14,1),(14,14)])
 
+# The Option mark, and its slope is not a free choice. Apple's U+2325 descends from the
+# upper left to the lower right, with the short bar at top left and the long one at
+# bottom right. This was drawn the other way round and read as the mirror image of the
+# symbol on the keycap. Checked against splitkb's own keyboard_option_key.qgf, which is
+# Apple's shape: it descends left to right, same as this.
 OPTION = mk({
-    3: S((0,6),(11,15)), 4: S((0,6),(11,15)),
-    5: S((10,12)), 6: S((9,11)), 7: S((8,10)), 8: S((7,9)),
-    9: S((6,8)), 10: S((5,7)), 11: S((4,6)),
-    12: S((0,6)), 13: S((0,6)),
+    3: S((0,4),(9,15)), 4: S((0,4),(9,15)),
+    5: S((3,5)), 6: S((4,6)), 7: S((5,7)), 8: S((6,8)),
+    9: S((7,9)), 10: S((8,10)), 11: S((9,11)),
+    12: S((9,15)), 13: S((9,15)),
 })
 
 CARET = mk({
