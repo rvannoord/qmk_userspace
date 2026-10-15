@@ -42,6 +42,15 @@ import sys
 FIRST, LAST = 0x20, 0x7e
 SRC_W, CELL_W, X_OFF = 6, 8, 0
 
+# The QMK logo is not a bitmap: it is 63 characters of this same font, at 0x80,
+# 0xa0 and 0xc0, three rows of 21, which the stock keymaps draw by writing a
+# string of those bytes. Lifted here into a plain 126x24 image in page format,
+# because this panel composes into a canvas rather than writing characters at a
+# cursor - and because a splash that depends on the font's upper range still
+# being where it is today is a trap for whoever next changes fonts.
+LOGO_ROWS = (0x80, 0xa0, 0xc0)
+LOGO_COLS = 21
+
 
 def read_glcdfont(path):
     text = pathlib.Path(path).read_text(errors='ignore')
@@ -68,6 +77,19 @@ def transpose(cols):
     return rows
 
 
+def logo_pages(vals):
+    """126x24 in page format: 3 pages of 126 columns, bit 0 at the top."""
+    w = LOGO_COLS * SRC_W
+    out = bytearray()
+    for base in LOGO_ROWS:
+        for i in range(LOGO_COLS):
+            for c in range(SRC_W):
+                out.append(vals[(base + i) * SRC_W + c])
+    if len(out) != 3 * w:
+        raise SystemExit('gen_font: logo is not 126x24')
+    return bytes(out), w
+
+
 def main(qmk, outdir, font):
     font = pathlib.Path(font or pathlib.Path(qmk) / 'drivers/oled/glcdfont.c')
     outdir = pathlib.Path(outdir)
@@ -81,12 +103,18 @@ def main(qmk, outdir, font):
               "// QMK's own 6x8 OLED font, transposed into this panel's row-major form and\n"
               "// placed at offset 1 in an 8 px cell. See VENDORED.md.\n")
 
+    logo, logo_w = logo_pages(vals)
+
     with open(outdir / 'panel_font.h', 'w') as f:
         f.write(banner)
         f.write('\n#pragma once\n\n#include <stdint.h>\n#include "progmem.h"\n\n')
         f.write(f'#define U_FONT_FIRST 0x{FIRST:02x}\n#define U_FONT_LAST  0x{LAST:02x}\n\n')
         f.write('// One byte a row, bit 7 leftmost.\n')
-        f.write(f'extern const uint8_t PROGMEM u_font8[{len(glyphs)}][8];\n')
+        f.write(f'extern const uint8_t PROGMEM u_font8[{len(glyphs)}][8];\n\n')
+        f.write('// The QMK logo, assembled from the font\'s own upper range. Page format,\n'
+                '// bit 0 at the top, so it blits like any other art.\n')
+        f.write(f'#define U_LOGO_W {logo_w}\n#define U_LOGO_PAGES 3\n')
+        f.write('extern const uint8_t PROGMEM u_qmk_logo[U_LOGO_PAGES * U_LOGO_W];\n')
 
     with open(outdir / 'panel_font.c', 'w') as f:
         f.write(banner)
@@ -99,6 +127,12 @@ def main(qmk, outdir, font):
             label = 'space' if ch == 0x20 else f"'{chr(ch)}'" 
             f.write(f'    {{{", ".join(f"0x{b:02x}" for b in rows)}}},'
                     f'    // 0x{ch:02x} {label}\n')
+        f.write('};\n')
+
+    with open(outdir / 'panel_font.c', 'a') as f:
+        f.write(f'\nconst uint8_t PROGMEM u_qmk_logo[U_LOGO_PAGES * U_LOGO_W] = {{\n')
+        for i in range(0, len(logo), 16):
+            f.write('    ' + ', '.join(f'0x{b:02x}' for b in logo[i:i + 16]) + ',\n')
         f.write('};\n')
 
     ink = sum(bin(b).count('1') for _, rows in glyphs for b in rows)

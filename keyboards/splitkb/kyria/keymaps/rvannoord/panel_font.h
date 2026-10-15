@@ -14,3 +14,9 @@
 
 // One byte a row, bit 7 leftmost.
 extern const uint8_t PROGMEM u_font8[95][8];
+
+// The QMK logo, assembled from the font's own upper range. Page format,
+// bit 0 at the top, so it blits like any other art.
+#define U_LOGO_W 126
+#define U_LOGO_PAGES 3
+extern const uint8_t PROGMEM u_qmk_logo[U_LOGO_PAGES * U_LOGO_W];
