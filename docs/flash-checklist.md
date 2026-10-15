@@ -15,6 +15,7 @@ while the reason for it is still obvious.
 
 | Build | Commit | Flashed | Notes |
 |-------|--------|---------|-------|
+| `2026-10-15-994a874.uf2` | `994a874` | 2026-10-15 | Both halves. The world layer, and the panel reverted to lit-on-black at brightness 255 |
 | `2026-10-15-1008480.uf2` | `1008480` | 2026-10-15 | Both halves. Read-backs taken first, kept as `readback-{left,right}-2026-10-15c.uf2` |
 
 Before it: `a8dc5e6`, `934e27c`, `91477af`, `c95356d`, and before those an unrecorded
@@ -67,7 +68,17 @@ that was not flashed simply stops typing.
 | A held cell looks like a key | Hold any home-row mod | Filled with 3 px chamfered corners, glyph knocked out. No hand bar any more — that was removed deliberately | `panel` |
 | Both panels go dark when the PC sleeps | Sleep the host and watch | They used to stay lit for the full 120 s. The non-USB half should follow the master | `panel` |
 | Bjorn does not blink in his glasses | Idle until the spectacled pose comes round | The lids are fixed patches and were closing over the lenses. He should still breathe, which is what keeps him out of the "link is dead" vocabulary | `panel` |
+| Lit on black at brightness 255 | Comfortable to look at, and the lock glyphs still read | The inversion was tried and reverted. 255 is affordable now only because lit-on-black lights about a quarter of the pixels where inverted lit three quarters | `994a874` |
+| 1 px rain still reads | Needs a season override to see at all — see below | It was measured as 95% hairline ink, which was the *inverted* panel's failure mode. Lit-on-black eats isolated lit pixels instead, so the risk moved rather than went away | `994a874` |
 | `BLD` ends in `OK` | Hold SYS two seconds | Both halves agreeing on the build id. `!=` means the flash did not take on one of them, which otherwise looks exactly like a broken cable | `01174ee` |
+
+### Only one season can be seen at a time
+
+The world layer takes its season from `__DATE__`, so a build made in October shows
+leaves and nothing else. Snow, rain and the star field cannot be looked at on the board
+without either rebuilding with a faked date or adding a way to force the state. That is
+a real gap in what can be checked, and it is an argument for the host daemon doing more
+than supplying weather: a forced state is also how these get tested.
 
 ### If the inversion is not wanted
 
@@ -81,6 +92,7 @@ bits and the inversion is a hardware command.
 
 | Check | Verdict | Date | From |
 |-------|---------|------|------|
+| Falling leaves on the slave half | Works, first look 2026-10-15. Six leaves, independent speed and tumble, passing behind Bjorn and reappearing | 2026-10-15 | `994a874` |
 | A misfire chips one cell | Works, and reads correctly once known. Reported first as a fault — "the black outline doesn't disappear, but becomes narrower around the actual icon and stays there" — which is an exact description of the 32 px hold being replaced by the 16 px chip. Kept as drawn; see `docs/layout.md` | 2026-10-15 | `1008480` |
 | Both panels go dark at about 120 s | Works. They had never done this | 2026-10-14 | `0dcfa5b`, `93a2210` |
 | Bjorn blinks within ~10 s of waking, and keeps blinking after a doze | Works. Previously he stopped for up to 55 minutes, which is this design's "link is dead" signal | 2026-10-14 | `422f3d9` |
