@@ -80,8 +80,18 @@ def seam_row(data):
     The row at the seam is drawn twice when lifted, one pixel of thickening, which is
     another reason to put it where there is least of him.
     """
-    best, best_lit = 32, 999
-    for y in range(30, 37):
+    # Row 41 is the documented top of the beard: docs/layout.md records the shipped
+    # breath as the head and helmet lifting while the beard swells over rows 41-52. The
+    # chin, at about row 31, is too high — it leaves the face and moustache behind with
+    # the body, so only the helmet and horns move. Searching the beard for a narrow row
+    # does not work either: it is dense all the way down and the minima are scattered
+    # across rows 36 to 44 with nothing to choose between them. The framing is constant
+    # across the corpus, so a constant is the honest answer.
+    #
+    # The search below still runs, over a narrow window, so a pose whose beard genuinely
+    # starts a pixel or two off is followed rather than forced.
+    best, best_lit = 41, 999
+    for y in range(40, 43):
         page, bit = y // 8, y % 8
         lit = sum((data[page * 64 + x] >> bit) & 1 for x in range(64))
         if lit < best_lit:
