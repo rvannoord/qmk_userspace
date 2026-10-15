@@ -272,6 +272,14 @@ void suspend_power_down_user(void) {
         suspended       = true;
         master.suspends = bump16(master.suspends);
     }
+#ifdef OLED_ENABLE
+    // The host has gone; nothing is going to be read off these panels. Without this they
+    // stay lit until the 120 s idle timeout runs down on its own, which is two minutes of
+    // a bright panel lighting an empty desk every time the machine sleeps - the exact wear
+    // the inversion already made more expensive. Waking is left alone: the first keypress
+    // re-arms the timeout and the render path turns them back on.
+    oled_off();
+#endif
 }
 
 void suspend_wakeup_init_user(void) {
