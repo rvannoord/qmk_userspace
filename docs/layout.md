@@ -390,8 +390,8 @@ the goat later.
 | `oled_panel.h` | the only place that decides which panel and which art compile in, with an `#error` on picking two |
 | `oled.c` | dispatcher: sleep check, master/slave branch, nothing else |
 | `oled_master_zones.c` | the panel. Four zones, raw page bytes rather than `oled_write`, because a zone has to clear exactly its own area. 1x and 2x glyph blitters; the 2x one doubles each source row, so a 16x16 is two page bytes a column |
-| `panel_glyphs.c` | generated. The five mod-row glyphs — four-pane, option mark, caret, command, shift — hand-drawn at 16x16 in DUNGEON.mode's weight language, in page format. Eight slots are five drawings: shift is one drawing in both sets, and the caret is one drawing that changes cell when the OS does, so the Ctrl/GUI swap is visible as a hop from the middle finger to the pinky |
-| `panel_font.c` | generated. Printable ASCII cut out of the DUNGEON.mode sheet, one byte a row, plus the symbol cells the event strip draws. Neither the sheet nor the generator is in the repo — the table is, and the table is what builds. Regenerating means fetching the pack again (see Attribution) |
+| `panel_glyphs.c` | generated. The five mod-row glyphs — four-pane, option mark, caret, command, shift — hand-drawn at 16x16 in page format, in the weight language of DUNGEON.mode, which the panel no longer uses for text but which these were drawn against. Eight slots are five drawings: shift is one drawing in both sets, and the caret is one drawing that changes cell when the OS does, so the Ctrl/GUI swap is visible as a hop from the middle finger to the pinky |
+| `panel_font.c` | generated. Printable ASCII transposed out of QMK's own 6x8 `glcdfont.c`, one byte a row, flush left in an 8 px cell. Both the generator and its source are available — `tools/panel/gen_font.py` reads the QMK checkout — so this regenerates without fetching anything |
 | `oled_master_text.c` | the text panel. Layer names now come from Miryoku's `MIRYOKU_LAYER_LIST` X-macro instead of a second copy of the layer order, so they are the short forms (`Base`, `Nav`, `Sym`). Override `MIRYOKU_LAYER_LIST` to change them |
 | `oled_slave_bjorn.c` | the mascot: tier hysteresis, idle ladder, ambient clocks, blitter |
 | `split_state.c` / `.h` | the 5-byte payload the master gathers: modifiers in finger order, the active and default layers, locks and Caps Word, the host OS, and a misfire count. Built fresh every main loop; a modifier it reports is one that is held at that instant |
@@ -472,13 +472,24 @@ affected. Inverting the panel would restore it exactly, which is a second reason
 at the inversion experiment.
 
 Of the eleven unique icons, seven are typeset words (`FTP`, `SSH`, `SMB`, `SQL`, `RDP`,
-`Telnet`, `TEST`) and are not usable here — they would be illegible shrunk and would
-clash with DUNGEON.mode. Four are pictorial and are worth drawing: a longship with shields
-along the hull, a longhouse, a horned mask, and a bandit mask he can wear.
+`Telnet`, `TEST`) and are not usable here — they would be illegible shrunk, and the panel
+now carries almost no text at all. Four are pictorial: a longship with shields along the
+hull, a longhouse, a horned mask, and a bandit mask he can wear.
 
-What constrains this is unchanged: about 23% lit, the block budget, the motion rules,
-and every frame drawn by hand, because the mechanical reduction is not usable
-(`tools/README.md`).
+**Assessed and decided on 2026-10-15.** All four were reduced and measured. Only the
+longhouse survives: it re-dithers to 992 ink, which is Bjorn's own register, because it
+is simple line art. The longship goes noisy at 1123 and loses its rigging; the bandit
+mask lands at 1580, nearly twice Bjorn, and would swamp him. These are 28x28 sources, so
+anything above that is an upscale — it buys a smoother dither and no new detail, which
+simple shapes survive and detailed ones do not. The three are dropped. The longhouse is
+being drawn fresh at 64 px through the greyscale-first pipeline instead, so the world
+column's one permanent object is authored for the size it is shown at.
+
+What constrains this: about 23% ink, the block budget, and the motion rules. The old
+version of this paragraph also said "every frame drawn by hand, because the mechanical
+reduction is not usable" — that was the 76%-ink error, where the white page was counted
+as ink. It is corrected in `tools/README.md` and the rule is now **dither tone, threshold
+line art**: reduction is the default, and hand work is finishing on top of it.
 
 ### Built and still to do
 
@@ -536,9 +547,11 @@ the point of preferring it: it does not depend on guessing right.
 Bjorn's sprites are MIT licensed. The art files carry infinition's copyright notice and
 `VENDORED.md` records where they came from.
 
-The panel's font is **DUNGEON.mode** by datagoblin, released CC0 — public domain, no attribution
-required. Credited anyway, and recorded in `VENDORED.md`. Only the extracted glyph table is in the
-repo, not the pack.
+The panel's font is **QMK's own 6x8**, `drivers/oled/glcdfont.c`, transposed into this panel's
+row-major form by `tools/panel/gen_font.py` and read out of the QMK checkout at generation time,
+so it is not vendored here at all. It replaced **DUNGEON.mode** by datagoblin (CC0) on
+2026-10-15, once the layer band became a picture and the font was left drawing only the badge and
+the stats page. `VENDORED.md` records both.
 
 These two are the only parts of this repo that are not my own work.
 
