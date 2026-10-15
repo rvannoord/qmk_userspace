@@ -143,9 +143,16 @@ static void bjorn_hull(uint64_t *hull) {
 // would not close; that is a property of a GIF and not of a keyboard, and
 // inheriting it here would quietly re-impose the regularity we just removed.
 
-#    define U_LEAVES 6
-#    define U_LEAF_FALL_MIN 24      // 1/256 px per tick
-#    define U_LEAF_FALL_SPAN 40
+// Nine, which is the ceiling: above that a 13 px leaf stops reading as weather
+// and starts reading as confetti. Six was the density of the design study's
+// 63-wide field preserved at double width; on the board it looked sparse,
+// because a third of them are behind him at any moment.
+#    define U_LEAVES 9
+
+// 1/256 px per step, and a step is U_WORLD_STEP_MS. The spread matters more than
+// the floor: leaves at the same speed read as a curtain however fast it falls.
+#    define U_LEAF_FALL_MIN 32
+#    define U_LEAF_FALL_SPAN 48
 
 typedef struct {
     int16_t  x16, y16;      // 1/256 px
