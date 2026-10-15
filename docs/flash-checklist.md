@@ -15,11 +15,27 @@ while the reason for it is still obvious.
 
 | Build | Commit | Flashed | Notes |
 |-------|--------|---------|-------|
-| `2026-10-14-91477af.uf2` | `91477af` | 2026-10-14 | Both halves. Read-backs taken first and kept as `readback-{left,right}-2026-10-14b.uf2` |
+| `2026-10-15-1008480.uf2` | `1008480` | 2026-10-15 | Both halves. Read-backs taken first, kept as `readback-{left,right}-2026-10-15c.uf2` |
 
-Before it, `c95356d` (stage 1) and, before that, an unrecorded build — the read-backs of
-2026-10-14 matched none of the kept `.uf2` files. From `91477af` on the build date and
-the userspace commit are compiled in, so `strings` on a read-back identifies it.
+Before it: `a8dc5e6`, `934e27c`, `91477af`, `c95356d`, and before those an unrecorded
+build — the read-backs of 2026-10-14 matched none of the kept `.uf2` files.
+
+**This table was wrong for a day, and the fix is the point of the method.** It still read
+`91477af` on 2026-10-15 while the board had been reflashed four times since, 21 commits
+of drift. The read-back settled it without guessing: both halves carried the build date
+`2026-10-15-10:43:35`, an exact match to `2026-10-15-a8dc5e6.uf2` and to nothing else.
+That is what the compiled-in build date is *for*, and it is worth noting that the entry
+it replaced was written by hand and was simply never updated — so prefer a read-back over
+this table whenever the two could disagree.
+
+From `91477af` on, the build date and the userspace commit are compiled in:
+
+```sh
+strings <file>.uf2 | grep -oE "20[0-9]{2}-[0-9]{2}-[0-9]{2}-[0-9]{2}:[0-9]{2}:[0-9]{2}" | sort -u
+```
+
+matches a read-back against the kept builds. `c95356d` and the migration build predate
+that and carry no date, so a read-back of either is identifiable only by byte comparison.
 
 ---
 
