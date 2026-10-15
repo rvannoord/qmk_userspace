@@ -195,6 +195,16 @@ so a row drawn pinky-first there sits mirrored over the keys and every glyph is 
 finger. `is_keyboard_left()` on the master decides it. The cable moves between halves often
 enough on this keyboard that this is a real case, not a hypothetical one.
 
+**The misfire chip looks like a bug until you know it.** Verified on the board 2026-10-15 and
+reported as a fault: *"the black outline doesn't disappear, but becomes narrower around the actual
+icon and stays there."* That is an exact description of what it does — a 32 px hold replaced by a
+16 px chip for 1.5 s — and the shrink reads as the held state failing to clear rather than as a
+new statement. It is kept anyway, deliberately: the chip is half a hold so that pressing the same
+finger again *grows* it back to a full cell instead of switching vocabulary, and that is worth
+more than first-glance legibility for something seen a few times a day. A hollow outline and a
+single blink on arrival were both considered and rejected — the blink because blinking belongs to
+the alarm alone. If this is revisited, those are the two candidates.
+
 **Handedness is not drawn.** A 3x16 bar used to fill the padding on the side of the hand that
 held the key, cut out of a filled cell and drawn beside a chip. It went because four cells plus
 two bars plus a chamfer is more marks than meaning in 16 px, and the bar was the least of them:

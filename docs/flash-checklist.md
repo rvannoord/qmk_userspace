@@ -61,7 +61,6 @@ that was not flashed simply stops typing.
 | Base shows the Kyria logo | Rest on base | splitkb's own art out of QMK's default keymap for this board, and the only art here native to this panel | `panel` |
 | Every layer has its own icon | Hold each thumb key in turn | Nine of them are splitkb's Halcyon icons reduced 120->40. If one is unreadable at arm's length that is a reduction artefact, and `tools/panel/icon_overrides.txt` is where it gets fixed | `panel` |
 | A held mod fills its cell | Hold each home-row mod | The glyph is knocked out of the fill and the hand bar is cut out of it. All four glyphs are now drawn at rest, which they were not before | `panel` |
-| A misfire chips one cell | Provoke a tap-hold misfire | Half the area of a hold, in that finger's own cell. Press the same finger again while it shows and it should **grow** into a full hold rather than change shape | `panel` |
 | `LINK DOWN` inverts the whole band | Unplug the TRRS for two seconds | It is no longer a banner: a 128x8 row had fallen to about two held cells. The layer icon should stay visible, lit on dark, with a broken chain beside it. On base the chain takes the band alone | `panel` |
 | The default-layer rule still shows | Set a non-base default, then hold a thumb | Three rows under the icon. It must *not* appear when resting on that default, nor ever when the default is base | `panel` |
 | The mod row matches your fingers | Plug the cable into the **right** half and hold each home-row mod | The row reverses with the half. On a right-hand master, pinky must be the rightmost cell. This is the one check that needs the cable moved | `panel` |
@@ -82,6 +81,7 @@ bits and the inversion is a hardware command.
 
 | Check | Verdict | Date | From |
 |-------|---------|------|------|
+| A misfire chips one cell | Works, and reads correctly once known. Reported first as a fault — "the black outline doesn't disappear, but becomes narrower around the actual icon and stays there" — which is an exact description of the 32 px hold being replaced by the 16 px chip. Kept as drawn; see `docs/layout.md` | 2026-10-15 | `1008480` |
 | Both panels go dark at about 120 s | Works. They had never done this | 2026-10-14 | `0dcfa5b`, `93a2210` |
 | Bjorn blinks within ~10 s of waking, and keeps blinking after a doze | Works. Previously he stopped for up to 55 minutes, which is this design's "link is dead" signal | 2026-10-14 | `422f3d9` |
 | The master panel is unchanged by the canvas rework | Works | 2026-10-14 | `93a2210` |
