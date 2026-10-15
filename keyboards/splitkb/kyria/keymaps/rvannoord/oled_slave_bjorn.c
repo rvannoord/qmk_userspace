@@ -14,6 +14,7 @@
 
 #include "bjorn_art.h"
 #include "bjorn_poses.h"
+#include "oled_slave_world.h"
 #include "split_sync.h"
 #include "oled_canvas.h"
 
@@ -167,6 +168,9 @@ void oled_slave_task(void) {
     bjorn_in_t in;
     bjorn_gather(&in);
     bjorn_update_tier(in.wpm);
+#ifdef OLED_SLAVE_WORLD
+    u_world_task();
+#endif
 }
 
 // --- drawing ----------------------------------------------------------------
@@ -622,6 +626,12 @@ void oled_render_slave(void) {
     // still has to reach the panel, which is why the commit lives out here.
     memset(u_canvas, 0, OLED_MATRIX_SIZE);
     bjorn_compose();
+#ifdef OLED_SLAVE_WORLD
+    // After him, not before: bjorn_blit_base() assigns his column rather than
+    // OR-ing it, so weather drawn first would simply be erased where he stands.
+    // u_world_draw() reads his pixels back out of the canvas to find his outline.
+    u_world_draw();
+#endif
     u_canvas_commit();
 }
 

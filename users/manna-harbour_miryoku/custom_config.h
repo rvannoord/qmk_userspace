@@ -23,7 +23,10 @@
    superlinearly with drive current, so dropping 255 -> 128 buys back more life than
    doubling the on-time costs, and it matches the board's RGB cap. */
 #define OLED_TIMEOUT 120000
-#define OLED_BRIGHTNESS 128
+/* Full brightness, which is affordable again precisely because the inversion is
+   off: lit-on-black lights about a quarter of the pixels where inverted lit
+   about three quarters, so 255 here is a lighter load than 128 was inverted. */
+#define OLED_BRIGHTNESS 255
 
 #ifdef RGB_MATRIX_ENABLE
 #    define RGB_MATRIX_KEYPRESSES
@@ -90,7 +93,21 @@
 // full-panel inversion, which now means inverting *back* rather than forth; "dark at
 // rest" becomes "lit at rest"; and pixel wear goes from about a quarter lit to about
 // three quarters, which matters less now the panels actually sleep after two minutes.
+/* Reverted to lit-on-black on 2026-10-15. The inversion shipped in a6bd2f9
+   because Bjorn's source is dark ink on a white page and that is the medium he
+   was drawn for; it was tried on the board and the lit field is not wanted.
+   Define this to swap back - the art is unchanged either way, since the
+   inversion is a display command and not a change to the buffer.
+   The failure mode inverts with it: lit-on-black eats isolated LIT pixels
+   rather than dark hairlines, which is the regime the lock glyphs were
+   originally drawn for. See docs/layout.md.
 #define U_OLED_INVERT
+*/
+
+// The world layer: weather across the whole slave panel, behind Bjorn. Season
+// comes from __DATE__ until the host daemon exists, so the panel is never dead
+// and never wrong by more than a rebuild. See docs/layout.md.
+#define OLED_SLAVE_WORLD
 
 // Give the other half the master's activity timestamps, so last_input_activity_elapsed()
 // is the same clock on both. Without it the mascot derives idle from how long the WPM

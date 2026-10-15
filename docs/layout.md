@@ -88,20 +88,29 @@ lives on a Raspberry Pi e-paper display. Not an imitation: his own 78x78 sprites
 - **Dither each 64-wide column separately.** FS diffuses error rightward, and a moving object sits
   outside the lock by definition, so with one 128-wide pass a move in one half dirties blocks in
   the other. Two passes, error never crossing x=63.
-- **Inverted: dark ink on a lit field.** `U_OLED_INVERT` in `custom_config.h`, applied with the
-  SSD1306's own invert-display command rather than in the buffer, so the art is authored exactly
-  as before — **a set bit is ink** — and only the panel's reading of it changes. Bjorn's source is
-  dark ink on a white page, an e-paper original, so this is the medium he was drawn for, and it is
-  what makes the hooded poses legible: a solid cowl instead of a 33% blob.
+- **Lit on black.** The default, and where this ended up after trying the other way on the board.
 
-  This reverses what this file said until 2026-10-15, and the old reasoning is worth keeping
-  because it is still true as far as it goes: inversion measures about 77% lit against 24%, which
-  is a lamp beside the keyboard, and single FS dots render worse inverted because dark pixels get
-  eaten by bloom from the lit field. What changed is that the panels now sleep after 120 s and at
-  host suspend, which is what makes the wear tolerable, and that fidelity to the source art won
-  the trade. The failure mode inverts with it: the thing to avoid is now a **dark hairline in a
-  lit field**, which is why the lock glyphs must never be inverted in place and why reduced line
-  art is thresholded rather than dithered.
+  **A set bit is ink, always** — that never changed and is not what this setting is about.
+  `U_OLED_INVERT` sends the SSD1306's own invert-display command, so it changes how the panel
+  *reads* the buffer and nothing else. Every asset here works under either polarity with no
+  regeneration; swapping is one define.
+
+  The history, because the reasoning on both sides is still worth having. Inversion shipped in
+  `a6bd2f9` on the argument that Bjorn's source is dark ink on a white page — an e-paper original,
+  so dark-on-lit is the medium he was drawn for, and it is what makes the hooded poses legible as
+  a solid cowl instead of a 33% blob. Against it: inverted measures about 77% lit against 24%,
+  which is a lamp beside the keyboard. Looked at on the board on 2026-10-15, the lit field was not
+  wanted, and it reverted.
+
+  **The failure mode flips with the polarity, and that is the part that matters for new art.**
+  Lit-on-black eats isolated *lit* pixels; inverted it eats *dark hairlines* in a lit field. The
+  lock glyphs were drawn at 1 px for the lit-on-black regime and are correct again. Anything
+  authored while the panel was inverted should be re-read against this — the weather sprites in
+  particular were measured for hairline ink, which was the inverted-panel concern.
+
+  One useful consequence: `OLED_BRIGHTNESS` is back to **255**. Full brightness is affordable
+  precisely because lit-on-black lights about a quarter of the pixels, so 255 now is a lighter
+  load than 128 was inverted.
 - Row 63 of his sprite is a grey rule. Kept as a floor and run across both halves, so the two
   columns read as one scene. Static, therefore free.
 
