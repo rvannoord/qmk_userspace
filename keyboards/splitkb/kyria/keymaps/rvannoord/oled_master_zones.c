@@ -187,7 +187,7 @@ static void watch_edges(const u_split_state_t *now) {
 #    define U_LOCK_DX   9
 
 static void render_status(void) {
-    const char *badge = (panel.flags & U_FLAG_IS_MAC) ? "MAC" : "WIN";
+    const char *badge = (panel.flags & U_FLAG_IS_MAC) ? "Mac" : "Win";
 
     fill(0, 0, OLED_DISPLAY_WIDTH, 0x00);
     draw_text_1x(0, 0, badge);
@@ -195,7 +195,8 @@ static void render_status(void) {
         // Row 7 under the badge: detection was overridden by hand, so the badge is a
         // decision rather than a reading. Redrawing the glyph columns with bit 7 set
         // keeps it one pass, and none of the six letters the badge can hold reaches
-        // row 7 on its own.
+        // row 7 on its own - checked again when the badge went from MAC/WIN to
+        // Mac/Win, since a descender there would merge with the underline.
         for (uint8_t x = 0; x < 24; x++) {
             u_canvas[x] = (uint8_t)(0x80u | col_1x(glyph_of(badge[x / 8]), x % 8));
         }
