@@ -14,6 +14,7 @@ typedef struct {
     uint8_t layers;    // low nibble active, high nibble default
     uint8_t flags;     // see below
     uint8_t anomaly;   // misfire count, wraps; only ever tested for change
+    uint8_t world;     // see below
 } u_split_state_t;
 
 // fingers: outer to inner, the order the panel's cells are in.
@@ -37,6 +38,23 @@ typedef struct {
 #define U_FLAG_OS_MANUAL   0x20
 #define U_FLAG_ALTGR_L     0x40
 #define U_FLAG_ALTGR_R     0x80
+
+// `world` carries what the slave half needs to know but cannot see. Keypresses
+// are processed on the master, so the chosen animation has to cross the link -
+// the half that is told is not the half that draws.
+//
+// This widened the struct from 5 bytes to 6 rather than adding a transaction.
+// NUM_TOTAL_TRANSACTIONS is the last member of an enum in QMK's
+// transaction_id_define.h, so it counts transaction *ids*, not bytes: widening
+// a payload adds no enum member and the handshake constant is untouched. That
+// matters because the constant is XORed into every handshake, so changing it
+// makes a mismatched pair stop typing entirely. RPC_M2S_BUFFER_SIZE is 32, so
+// there is room to grow.
+//
+// The upper bits are deliberately spare: the weather and time-of-day the host
+// daemon will send belong here too, and this is the byte they go in.
+#define U_WORLD_ANIM_MASK  0x07     // which slave animation, 0-4
+#define U_WORLD_ANIM(w)    ((w) & U_WORLD_ANIM_MASK)
 
 // Call from process_record_user on the master. Tracks which finger holds which
 // modifier, and counts misfires.

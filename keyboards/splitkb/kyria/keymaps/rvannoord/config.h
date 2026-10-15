@@ -12,7 +12,10 @@
 #define SPLIT_TRANSACTION_IDS_USER U_SYNC_STATE
 
 // Custom keycodes (U_ prefix: QMK already uses short names like OS_TOGG)
-#define U_SYS QK_USER_0 // toggles the host OS between Win and Mac
+#define U_SYS  QK_USER_0 // toggles the host OS between Win and Mac
+// Mirrors SYS on the other outer column: the two system keys sit in the same
+// place on their own halves. Cycles the slave half's animation.
+#define U_ANIM QK_USER_1
 
 #if defined MIRYOKU_MAPPING_EXTENDED_THUMBS
 #define LAYOUT_miryoku( \
@@ -22,7 +25,7 @@
      N30, N31, K32, K33, K34,                          K35, K36, K37, N38, N39 \
 ) \
 LAYOUT( \
-U_SYS, K00, K01, K02, K03, K04,                        K05, K06, K07, K08, K09, XXX, \
+U_SYS, K00, K01, K02, K03, K04,                        K05, K06, K07, K08, K09, U_ANIM, \
 XXX, K10, K11, K12, K13, K14,                          K15, K16, K17, K18, K19, XXX, \
 XXX, K20, K21, K22, K23, K24, XXX, XXX,      XXX, XXX, K25, K26, K27, K28, K29, XXX, \
                XXX, XXX, K32, K33, K34,      K35, K36, K37, XXX, XXX \
@@ -35,7 +38,7 @@ XXX, K20, K21, K22, K23, K24, XXX, XXX,      XXX, XXX, K25, K26, K27, K28, K29, 
      N30, N31, K32, K33, K34,                          K35, K36, K37, N38, N39 \
 ) \
 LAYOUT( \
-U_SYS, K00, K01, K02, K03, K04,                        K05, K06, K07, K08, K09, XXX, \
+U_SYS, K00, K01, K02, K03, K04,                        K05, K06, K07, K08, K09, U_ANIM, \
 XXX, K10, K11, K12, K13, K14,                          K15, K16, K17, K18, K19, XXX, \
 XXX, K20, K21, K22, K23, K24, XXX, XXX,      XXX, XXX, K25, K26, K27, K28, K29, XXX, \
                XXX, K32, K33, K34, XXX,      XXX, K35, K36, K37, XXX \

@@ -3,6 +3,7 @@
 #include "quantum.h"
 #include "split_state.h"
 #include "host_os.h"
+#include "oled_panel.h"
 
 #define U_ANOMALY_MS 500         // a hold this long with nothing typed is a misfire
 #define U_HOLDS       4          // deepest chord worth tracking
@@ -167,5 +168,7 @@ u_split_state_t u_sync_build(void) {
                              (get_highest_layer(default_layer_state) << 4)),
         .flags   = flags,
         .anomaly = anomalies,
+        // The slave cannot see keypresses, so the chosen animation crosses here.
+        .world   = (uint8_t)u_anim_get(),
     };
 }

@@ -70,6 +70,9 @@ that was not flashed simply stops typing.
 | Bjorn does not blink in his glasses | Idle until the spectacled pose comes round | The lids are fixed patches and were closing over the lenses. He should still breathe, which is what keeps him out of the "link is dead" vocabulary | `panel` |
 | Lit on black at brightness 255 | Comfortable to look at, and the lock glyphs still read | The inversion was tried and reverted. 255 is affordable now only because lit-on-black lights about a quarter of the pixels where inverted lit three quarters | `994a874` |
 | 1 px rain still reads | Needs a season override to see at all — see below | It was measured as 95% hairline ink, which was the *inverted* panel's failure mode. Lit-on-black eats isolated lit pixels instead, so the risk moved rather than went away | `994a874` |
+| QMK Firmware splash at boot | Both panels, about a second, then the normal panels | It is 63 characters of the panel's own font rather than new art. Also the cheapest confirmation a flash took | `a86f9db` |
+| The animation key cycles | Right outer column top row, mirroring SYS. Bjorn, spaceship, Kyria, Monitor 1, Monitor 2, round again | Verified on a host harness including persistence and the slave taking it over the link, but never pressed on a board | `U_ANIM` |
+| And it survives a replug | Pick a non-default one, unplug, plug back in | Only the master persists it; the slave takes what it is told, so they cannot disagree | `U_ANIM` |
 | `BLD` ends in `OK` | Hold SYS two seconds | Both halves agreeing on the build id. `!=` means the flash did not take on one of them, which otherwise looks exactly like a broken cable | `01174ee` |
 
 ### Only one season can be seen at a time

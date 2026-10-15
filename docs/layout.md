@@ -574,6 +574,38 @@ the stats page. `VENDORED.md` records both.
 
 These two are the only parts of this repo that are not my own work.
 
+### Switching the slave's animation
+
+All five slave animations — Bjorn, the spaceship, the Kyria logo and the two Monitor logos —
+are compiled in and chosen at runtime. `OLED_SLAVE_ANIMATION_*` in `custom_config.h` now names
+only the **boot default**, the one you get on a fresh EEPROM, rather than the only one that
+exists. It costs about 11 KB of flash, which on 16 MB is not a consideration.
+
+**`U_ANIM`, right outer column, top row** — mirroring `U_SYS` on the left, so the two system
+keys sit in the same place on their own halves. It acts on release, like SYS: a key that acts
+on press fires while you are still deciding.
+
+Two things made this less trivial than it looks, and both are worth knowing before touching it.
+
+**The half that is told is not the half that draws.** Keypresses are processed on the master,
+so the choice has to cross the link. It rides in a new `world` byte on the existing per-loop
+state sync. Widening `u_split_state_t` from 5 bytes to 6 is safe where adding a transaction
+would not be: `NUM_TOTAL_TRANSACTIONS` is the last member of an enum in QMK's
+`transaction_id_define.h`, so it counts transaction *ids* and not bytes, and it is the thing
+XORed into every handshake — change it and a mismatched pair stops typing entirely. The upper
+bits of `world` are deliberately spare, because the weather and time-of-day a host daemon
+would send belong in the same byte.
+
+**It is persisted, and only the master persists it.** A setting you re-make every morning is
+not a setting. The slave has no opinion and takes what it is told, so the two halves cannot
+disagree after a replug. The stored word carries a tag, because `eeconfig_read_user()` returns
+zero on a fresh or cleared EEPROM and zero is a legitimate animation index — an untagged word
+means "never set" rather than "the first one".
+
+Bjorn's per-loop task runs only while Bjorn is the one drawn. Letting his idle clocks advance
+unseen would mean he came back mid-doze; this way he always returns awake, which is the honest
+reading — you just arrived.
+
 ## Open experiments
 
 | Idea | Why | Status |

@@ -10,7 +10,6 @@
 #include QMK_KEYBOARD_H
 #include "oled_panel.h"
 
-#ifdef OLED_SLAVE_ANIMATION_SPACESHIP
 
 #include "art/oled_spaceship.h"
 
@@ -82,10 +81,7 @@ static void render_space(void) {
 	state = (state + 1 + (wpm / WPM_SPEED_DIVISOR)) % OLED_SCROLL_MODULO;
 }
 
-void oled_render_slave(void) {
+void u_slave_spaceship_render(void) {
 	render_space();
 }
 
-void oled_slave_task(void) {}
-
-#endif     // OLED_SLAVE_ANIMATION_SPACESHIP

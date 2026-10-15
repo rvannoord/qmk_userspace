@@ -10,7 +10,6 @@
 #include QMK_KEYBOARD_H
 #include "oled_panel.h"
 
-#ifdef OLED_SLAVE_ANIMATION_BJORN
 
 #include "bjorn_art.h"
 #include "bjorn_poses.h"
@@ -164,7 +163,7 @@ static void bjorn_update_tier(uint8_t wpm) {
 }
 
 // Runs every main loop on this half, so it cannot miss an edge.
-void oled_slave_task(void) {
+void u_slave_bjorn_task(void) {
     bjorn_in_t in;
     bjorn_gather(&in);
     bjorn_update_tier(in.wpm);
@@ -621,7 +620,7 @@ static void bjorn_compose(void) {
     }
 }
 
-void oled_render_slave(void) {
+void u_slave_bjorn_render(void) {
     // Compose first, commit once. Every early return in bjorn_compose is a frame that
     // still has to reach the panel, which is why the commit lives out here.
     memset(u_canvas, 0, OLED_MATRIX_SIZE);
@@ -635,4 +634,3 @@ void oled_render_slave(void) {
     u_canvas_commit();
 }
 
-#endif     // OLED_SLAVE_ANIMATION_BJORN

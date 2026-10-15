@@ -93,8 +93,8 @@ static uint32_t first_blink_at;   // since the last arm_first(), so "how soon" i
 static void tick(void) {
     fake_now += 50;
     fake_dirty = 0;
-    oled_slave_task();
-    oled_render_slave();
+    u_slave_bjorn_task();
+    u_slave_bjorn_render();
 
     // The invariant: if the composed frame did not change, the commit must have
     // written nothing. This catches Bug A whatever pose he happens to be in, instead

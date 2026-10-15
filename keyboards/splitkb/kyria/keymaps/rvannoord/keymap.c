@@ -7,6 +7,7 @@
 #include "host_os.h"
 #include "split_state.h"
 #include "split_sync.h"
+#include "oled_panel.h"
 #include "split_health.h"
 #ifdef OLED_ENABLE
 #    include "oled_panel.h"   // only needed by housekeeping_task_user below
@@ -51,6 +52,12 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             if (!record->event.pressed && u_stats_sys_was_tap()) {
                 host_os_toggle();
             }
+            return false;
+        case U_ANIM:
+            // On release, like SYS: a key that acts on press fires while you are
+            // still deciding, and this one is cosmetic enough that a mis-tap
+            // should be cheap to undo by pressing it again.
+            if (!record->event.pressed) u_anim_next();
             return false;
         case U_RDO:
             if (host_is_mac()) {
