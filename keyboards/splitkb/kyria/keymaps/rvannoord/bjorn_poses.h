@@ -33,3 +33,7 @@ extern const uint8_t PROGMEM u_pose_seam[U_POSE_COUNT];
 extern const uint8_t PROGMEM u_pose_still_x0[U_POSE_COUNT];
 extern const uint8_t PROGMEM u_pose_still_x1[U_POSE_COUNT];
 extern const uint8_t PROGMEM u_pose_still_y0[U_POSE_COUNT];
+
+// Whether the shipped lids may be dropped on this pose. False where the
+// eyes are covered - behind spectacles the lids close over the lenses.
+extern const uint8_t PROGMEM u_pose_blinks[U_POSE_COUNT];

@@ -257,6 +257,39 @@ int main(void) {
         }
     }
 
+    // The spectacled pose must not blink: the lids are one pair of patches at fixed
+    // coordinates, so on that drawing they close over the lenses rather than under them.
+    //
+    // This is asserted on the data rather than on pixels, and the reason is worth
+    // keeping. The goat test above isolates a blink by watching rows 31-35, which works
+    // *because* those poses do not breathe. A pose that breathes lifts everything above
+    // its seam - row 40 here - so the eye rows move every breath cycle and the two
+    // causes cannot be told apart from outside. Watching pixels there would assert
+    // "something changed near his eyes", which is true either way and would pass if the
+    // blink came back.
+    {
+        bool found = false, flagged_breathes = true;
+        for (uint8_t i = 0; i < U_POSE_COUNT; i++) {
+            if (u_pose_blinks[i]) continue;
+            found = true;
+            if (u_pose_still_x0[i] != 255) flagged_breathes = false;   // it has a goat
+        }
+        check("a pose is marked as not blinking", found);
+        check("and it is one that breathes instead", flagged_breathes);
+    }
+
+    // The invariant behind both of the above: every pose moves somehow. A pose that
+    // neither breathes nor blinks is drawn but still, which is this panel's signal that
+    // the link is dead - so it would report a fault that is not there.
+    {
+        bool all_move = true;
+        for (uint8_t i = 0; i < U_POSE_COUNT; i++) {
+            const bool breathes = u_pose_still_x0[i] == 255;
+            if (!breathes && !u_pose_blinks[i]) all_move = false;
+        }
+        check("every pose either breathes or blinks", all_move);
+    }
+
     // A drawing without a goat still breathes, and must: these poses do not blink, so
     // a figure where nothing moves is this panel's signal that the link has died.
     {

@@ -226,3 +226,4 @@ const uint8_t PROGMEM u_pose_seam[U_POSE_COUNT] = {40, 42, 42, 40, 40, 40};
 const uint8_t PROGMEM u_pose_still_x0[U_POSE_COUNT] = {255, 3, 48, 255, 255, 255};
 const uint8_t PROGMEM u_pose_still_x1[U_POSE_COUNT] = {255, 15, 61, 255, 255, 255};
 const uint8_t PROGMEM u_pose_still_y0[U_POSE_COUNT] = {255, 45, 45, 255, 255, 255};
+const uint8_t PROGMEM u_pose_blinks[U_POSE_COUNT] = {1, 1, 1, 1, 0, 1};

@@ -499,8 +499,21 @@ static void bjorn_compose(void) {
         // They blink instead, which is where their liveness comes from: a figure that
         // neither blinks nor breathes is this design's way of saying the link is dead.
         const bool has_goat = pgm_read_byte(&u_pose_still_x0[bjorn_vig]) != 255;
+
+        // Some poses must not blink: the lids are one pair of patches at fixed
+        // coordinates, so on the spectacled pose they close over the lenses and he
+        // reads as blinking through his glasses.
+        //
+        // The state is still read even when it is thrown away, because
+        // bjorn_blink_state() is the only thing that advances the schedule. Skipping
+        // the call would leave the next blink due the instant a blinking pose came
+        // round, which is the bug that made him blink once and then stop for the rest
+        // of the idle period.
+        const uint8_t lids   = bjorn_blink_state();
+        const bool    blinks = pgm_read_byte(&u_pose_blinks[bjorn_vig]) != 0;
+
         bjorn_blit_pose(bjorn_vig, !has_goat && breath >= 1 && breath <= 2,
-                        bjorn_blink_state());
+                        blinks ? lids : 0);
         bjorn_blit(&bjorn_frames[BJORN_F_FLOOR_RIGHT]);
         return;
     }

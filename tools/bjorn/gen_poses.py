@@ -59,8 +59,34 @@ GOAT = {
 }
 
 
+# Poses whose eyes the shipped lids must not be dropped onto.
+#
+# The lids are one pair of patches drawn at fixed coordinates, taken from infinition's
+# own blink frames of the bare-faced poses. They land correctly on any pose whose eyes
+# are where IDLE's are and uncovered. NetworkScanner1's are behind spectacles, so the
+# lids close over the lenses instead of under them and he reads as blinking *through*
+# his glasses.
+#
+# This is only safe for a pose that moves some other way. A pose that neither breathes
+# nor blinks is frozen, and a figure that is drawn but never moves is this design's
+# signal that the link is dead - see docs/layout.md. The goat poses already give up
+# breathing, so they must keep their blink; NetworkScanner1 has no goat and breathes, so
+# it can give up the blink. gen_poses asserts that below rather than trusting the lists.
+NO_BLINK = {'NetworkScanner1'}
+
+
 def still_box(name):
     return GOAT.get(name, (255, 255, 255))
+
+
+def check_moves(names):
+    """Every pose has to move somehow: stillness means a dead link on this panel."""
+    for n in names:
+        breathes = n not in GOAT
+        blinks = n not in NO_BLINK
+        if not breathes and not blinks:
+            raise SystemExit(f'gen_poses: {n} would neither breathe nor blink, which is '
+                             'this panel\'s signal for a dead link')
 
 
 def seam_row(data):
@@ -117,6 +143,7 @@ def column(path):
 def main(src, outdir, names):
     outdir = pathlib.Path(outdir)
     paths = [find(src, n) for n in names]
+    check_moves(names)
     poses = [(n, column(p)) for n, p in zip(names, paths)]
     seams = [seam_row(d) for _, d in poses]
     still = [still_box(n) for n in names]
@@ -143,7 +170,10 @@ def main(src, outdir, names):
                 "// his chest. 255 means there is nothing but Bjorn in the frame.\n")
         f.write("extern const uint8_t PROGMEM u_pose_still_x0[U_POSE_COUNT];\n")
         f.write("extern const uint8_t PROGMEM u_pose_still_x1[U_POSE_COUNT];\n")
-        f.write("extern const uint8_t PROGMEM u_pose_still_y0[U_POSE_COUNT];\n")
+        f.write("extern const uint8_t PROGMEM u_pose_still_y0[U_POSE_COUNT];\n\n")
+        f.write("// Whether the shipped lids may be dropped on this pose. False where the\n"
+                "// eyes are covered - behind spectacles the lids close over the lenses.\n")
+        f.write("extern const uint8_t PROGMEM u_pose_blinks[U_POSE_COUNT];\n")
 
     with open(outdir / 'bjorn_poses.c', 'w') as f:
         f.write(banner)
@@ -167,11 +197,17 @@ def main(src, outdir, names):
             f.write(f"const uint8_t PROGMEM u_pose_still_{field}[U_POSE_COUNT] = {{")
             f.write(", ".join(str(s[i]) for s in still))
             f.write("};\n")
+        f.write("const uint8_t PROGMEM u_pose_blinks[U_POSE_COUNT] = {")
+        f.write(", ".join('0' if n in NO_BLINK else '1' for n, _ in poses))
+        f.write("};\n")
 
     for (n, data), s, (a, b, y) in zip(poses, seams, still):
         lit = sum(bin(c).count('1') for c in data)
         where = 'him only' if a == 255 else f'goat at x{a}-{b} from row {y}, held still'
+        moves = 'breathes' if a == 255 else 'goat, so no breath'
+        moves += ', no blink (spectacles)' if n in NO_BLINK else ', blinks'
         print(f'  {n:18} {lit * 100 // 4096}% lit, seam row {s}, {where}')
+        print(f'  {"":18} {moves}')
     print(f'{len(poses)} poses, {len(poses) * 512} bytes -> {outdir}')
 
 
