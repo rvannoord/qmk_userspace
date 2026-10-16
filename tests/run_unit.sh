@@ -28,6 +28,10 @@ cc "${cc_flags[@]}" -DOLED_MASTER_PANEL_ZONES -o "$out/panel" \
 cc "${cc_flags[@]}" -DOLED_SLAVE_ANIMATION_BJORN -o "$out/bjorn" \
    "$here/unit/test_bjorn.c" "$keymap/bjorn_art.c" "$keymap/bjorn_poses.c" "$keymap/oled_canvas.c"
 
+# -Wno-unused-parameter: the spaceship's oled_set_cursor stub takes QMK's (col, line).
+cc "${cc_flags[@]}" -Wno-unused-parameter -o "$out/space" \
+   "$here/unit/test_space.c" "$keymap/art/space_art.c"
+
 case "${1:-}" in
     --dump) exec "$out/panel" --dump ;;   # the frames as text
     --raw)  exec "$out/panel" --raw  ;;   # three 1024-byte frames, for a renderer
@@ -37,6 +41,8 @@ fails=0
 "$out/split_sync" || fails=1
 echo
 "$out/panel" || fails=1
+echo
+"$out/space" || fails=1
 echo
 "$out/bjorn" || fails=1
 exit $fails

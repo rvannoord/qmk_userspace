@@ -44,6 +44,14 @@ git checkout 61a4758e5ee3d37d43c10eb690340626139912c0
 
 The art is **regenerable**: `tools/` holds the generator and the text grids it reads (`STAGE1.txt`), verified on 2026-10-14 to reproduce `bjorn_art.c` and `bjorn_art.h` byte for byte. Edit the grids, never the generated file.
 
+## `keyboards/splitkb/kyria/keymaps/rvannoord/art/oled_spaceship.h`
+
+The spaceship animation — the ship, its mask, and the four-row space strip it flies through — is from **JBaguley's `retrograde` keymap for the Corne**, [`JBaguley/qmk_firmware`](https://github.com/JBaguley/qmk_firmware/tree/crkbd-retrograde-keymap/keyboards/crkbd/keymaps/retrograde), branch `crkbd-retrograde-keymap`, commit **`c653e0f22f`** (2022-10-20, "added retrograde keymap for corne"). GPL-2.0-or-later, under the keymap's foostan/drashna header.
+
+Checked against that commit on 2026-10-16: `space_row_1..4`, `ship_row_1..4` and `mask_row_1..4` are **byte-identical** to the upstream arrays. The scroll mechanism in `oled_slave_spaceship.c` — the 256-column loop, `wpm/4` for the ship's position and `wpm/15` for speed — is also JBaguley's, carried over unchanged.
+
+`space_top_row_1..2` and `space_bottom_row_1..2` were **not** upstream. They were my own attempt to extend the 32-row original to the full 64-row panel, and they never looked right — stray stars with the Earth and moon clipped at the old band's edge. All eight strip rows, his four and my four, were removed on 2026-10-16 and replaced by three parallax planes composed from my own objects (`tools/space/`). **The ship and the mechanism are still his**, byte-identical. His hand-drawn mask was retired the same day: the render now uses a mask derived from his ship rows by `tools/space/gen_space.py` — silhouette plus a 1 px rim — so it can never drift from the ship, and the margin went from up to 4 px to exactly one.
+
 ## `keyboards/splitkb/kyria/keymaps/rvannoord/panel_layer_icons.c`
 
 The master panel's ten layer bands. Two separate sources, neither drawn here.

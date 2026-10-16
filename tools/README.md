@@ -15,6 +15,7 @@ then regenerate.
 | `panel/gen_font_dungeon.py` | `panel_font.c` / `.h` | the DUNGEON.mode pack, which is not in this repo. Superseded 2026-10-15; kept in case that face is wanted back |
 | `bjorn/sprites.py` | contact sheets, for looking at | Bjorn's upstream sprite sets, not in this repo |
 | `panel/gen_layer_icons.py` | `panel_layer_icons.c` / `.h` | splitkb's Halcyon icons and QMK's Kyria logo, neither in this repo — see `VENDORED.md` |
+| `space/gen_space.py` | `art/space_art.c` / `.h` | `space/planes.txt`, the three parallax planes and two masks as grids. `space/authoring/` holds the objects and the placement script they were composed from; that script needs Pillow and is provenance, not part of the build |
 | `panel/qgf.py` | nothing on its own | a library: reads a QMK Graphics Format image back out of its generated `.qgf.c` |
 
 ```sh

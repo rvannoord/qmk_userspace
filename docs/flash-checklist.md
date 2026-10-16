@@ -73,6 +73,9 @@ that was not flashed simply stops typing.
 | QMK Firmware splash at boot | Both panels, about a second, then the normal panels | It is 63 characters of the panel's own font rather than new art. Also the cheapest confirmation a flash took | `a86f9db` |
 | The animation key cycles | Right outer column top row, mirroring SYS. Bjorn, spaceship, Kyria, Monitor 1, Monitor 2, round again | Verified on a host harness including persistence and the slave taking it over the link, but never pressed on a board | `U_ANIM` |
 | And it survives a replug | Pick a non-default one, unplug, plug back in | Only the master persists it; the slave takes what it is told, so they cannot disagree | `U_ANIM` |
+| The spaceship flies through new space | Cycle to the spaceship. Three parallax planes - far stars slow, Saturn and the Dipper mid, Earth, the giant and the comet near - and the ship untouched | Loop closure and ship integrity are asserted on the compiled bytes by `tests/unit/test_space.c`; what the host cannot see is bloom on the 2x2 stars and whether 15.9% lit area is comfortable | `space` |
+| The ship's outline is one dark pixel | Watch the ship cross Earth | Was up to 4 px. Zero made the ship vanish into the planet on the host; one is the floor. Bloom on glass could eat a one-pixel rim - if the ship loses its edge over Earth, the margin goes to 2 | `space` |
+| The loop is seamless on glass | Watch one full loop at rest, 25.6 s | Arithmetic says the seam cannot show. The test says it does not. The panel is the only thing that can disagree | `space` |
 | `BLD` ends in `OK` | Hold SYS two seconds | Both halves agreeing on the build id. `!=` means the flash did not take on one of them, which otherwise looks exactly like a broken cable | `01174ee` |
 
 ### Only one season can be seen at a time

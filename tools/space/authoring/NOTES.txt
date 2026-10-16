@@ -1,0 +1,86 @@
+SPACE BACKGROUND OBJECTS -- artist's note
+=========================================
+
+Files
+  OBJECTS.txt      every object as an ASCII grid with counts and a floor size
+  contact.png      all objects on one sheet, 5x, lit on black
+  scale_check.png  a trial placement on the 256x64 loop with the real ship masked
+                   over it, five scroll positions at 4x. Only to judge size against
+                   the ship; the layout is not a proposal.
+  _tools/          the scripts that measured and rendered; objects_src.py is the
+                   editable source of OBJECTS.txt
+
+What I took from JBaguley's hand (the middle 32 rows of the strip)
+  Measured first. His strip, 256x32, has 17 connected pieces. The smallest is
+  7 lit pixels (a 3x3 with two corners bitten), there are zero lit pixels without
+  a lit 4-neighbour, and nothing is drawn as an outline. So the hand is:
+  - solid chunky fills, no outlines, no dithering, no single pixels, ever
+  - features are dark shapes carved out of a lit mass: continents, craters, the
+    comet's nucleus; and a lit glint can sit inside such a hole
+  - discs are near-true circles with 1-2 px steps, slightly fat at the bottom
+  - stars are fat 3x3 dots with a corner or two bitten, and the odd 4x4
+  - lines (his constellation) are 2 px thick with 3x3 stars at the vertices
+  - the comet's tail flares outward away from the head, which is what makes it
+    a comet rather than a drop
+  - the crescent is thick-bodied, 7-8 px, horns up-right, a blunt lower horn
+  - the big planet is clipped by the panel edge. That bleed is what the current
+    strip lost when it completed the disc in the top rows; I kept it possible
+  Every one of those is in the new set. Nothing of his is copied pixel for
+  pixel; the Earth, comet, moon and crescent are redrawn in the same manner,
+  at the sizes 64 rows allow.
+
+The star floor: 2x2, and how I decided
+  I cannot see the glass. Three things decided it:
+  1. docs/layout.md: in this polarity the panel eats the isolated lit pixel.
+  2. JBaguley's floor on this exact panel is 7 px and his strip is known to read;
+     he never placed a 2x2 either, so 2x2 is my extrapolation, not his evidence.
+  3. A crude bloom simulation (each pixel a 6x6 dot in an 8x8 cell, gaussian
+     blurred): a lone pixel becomes a smudge dimmer than everything around it;
+     a 2x1 domino is barely better; a 2x2 keeps a bright core.
+  So: STAR_2 (2x2) is the far weight and the floor. STAR_3A/3B are the safe
+  weight, his. If STAR_2 turns out to vanish on the board, swap it for STAR_3B
+  and nothing else in the set changes. 1 px and 2x1 are rejected.
+  The whole set has 0 isolated lit pixels (no lit pixel without a lit
+  4-neighbour). Diagonal touches were not counted as neighbours.
+
+Dark detail, the other direction
+  A dark hairline enclosed in a lit field is the inverted panel's problem, not
+  this one's, but bloom from two bright masses still narrows a 1-px gap. Rule I
+  used: an enclosed dark detail is at least 2 px (Saturn's ring shadow, every
+  crater, the porthole, the comet nucleus). 1-px dark gaps only where they open
+  to the void and cannot be filled from both sides: the rocket's flame gap, the
+  saucer's underside dashes, the Hudson Bay notch.
+
+Placement hints for the animator
+  - Rows 16-47 are under the ship and its mask halo. Let the large planets take
+    the cut; put small garnish in rows 0-15 and 48-63 where it stays whole.
+  - EARTH: bleed 8-12 rows off the top, as the original did, or place whole.
+    GIANT: a third off the bottom (or top), it is a horizon, not a disc.
+  - EARTH and GIANT are each about 1000 lit px; keep them on opposite halves of
+    the 256 loop so the panel never shows both. SATURN is the second hero.
+  - One large object per 128 columns, then one or two medium (moon, crescent,
+    comet), then stars, 8-12 per 128 columns, mostly STAR_2 and STAR_3*, one
+    STAR_7 at most per loop.
+  - STAR_5 and STAR_7 share a centre: alternating them is a twinkle for free.
+  - SATURN is two pieces by design (the body's cap below the ring shadow);
+    ROCKET is two pieces by design (the flame). Everything else is one piece.
+  - All objects face so they travel with the scroll; PROBE deliberately points
+    the other way.
+
+Drawn and rejected
+  - GIANT v1: 2-3 px bands with the red spot in a hollow of a band. Read as a
+    face with a mouth. Now 4-5 px bands and the spot alone in a lit zone.
+  - DIPPER v1: bowl 10 px wide; the 2-px lines and the 3x3 stars fused into a
+    block. Bowl is now 13x14 and the figure 50x20.
+  - A Sputnik with four trailing antennae: 1-px diagonals are chains of
+    isolated pixels, and 2-px staircases were heavier than the ball. Dropped;
+    the PROBE covers "a thing we sent".
+  - A comms satellite with gridded solar panels: the grid is enclosed 1-px dark
+    hairlines. Dropped.
+  - A 1-px glint in the comet's nucleus, as JBaguley had it. Made 2x1.
+  - A crater on ASTEROID_S: a single dark pixel. Dropped.
+  - Saturn with a 1-px ring shadow: a dark hairline between two bright masses.
+    Went to 2 px, which also reads as the ring's shadow on the body.
+  - Completing Earth's disc at the top (the current strip's fix): loses the
+    bleed that made the original's Earth big. Drawn whole instead, so the
+    animator can clip it or not.

@@ -606,6 +606,53 @@ Bjorn's per-loop task runs only while Bjorn is the one drawn. Letting his idle c
 unseen would mean he came back mid-doze; this way he always returns awake, which is the honest
 reading — you just arrived.
 
+### The spaceship's space
+
+JBaguley's ship, mask and mechanism — `wpm/4` slides the ship right, `wpm/15` sets the scroll
+speed, 50 ms a tick — are unchanged since April. The space behind the ship was redrawn on
+2026-10-16, because the original was composed for a **32-row Corne panel**: only pages 2-5 were
+ever his, and padding that to 64 rows left 32 rows of stray stars with the Earth and moon clipped
+at the old band's edge. A 64-row space has to be composed as 64 rows from the start.
+
+**Three parallax planes off one counter.** Far stars at `state >> 2`, a mid plane at `state >> 1`,
+a near plane at `state`, with periods 128, 256 and 512. Each nearer plane carries an occlusion
+mask — its silhouette, holes filled, dilated 1 px — so far stars do not shine through a planet's
+dark continents and do not fuse with its rim. Masks are stored complemented, the ship mask's own
+convention, so all four reads are the same AND-then-OR. 18 432 bytes of planes.
+
+**The loop doubled, from 256 to 512, and the reason is arithmetic.** A plane at speed `1/n` needs
+a period dividing `loop/n`. Under 256 the far plane would be a 64-px tile shown twice across the
+128-px screen, and anything on the mid plane would have period 128 — exactly the screen width —
+so Saturn could never leave: its copy enters right as it exits left. Under 512 the periods are
+128/256/512, every object has time off screen, and at the wrap all three offsets are 128, 256 and
+512, each ≡ 0 modulo its period, so the seam is invisible. The cost is a longer loop: **25.6 s at
+rest instead of 12.8, 6.4 s at wpm 50 instead of 3.2.** `state` was already a `uint16_t`.
+
+**Parallax does not make it cheaper**, and should not be sold as if it did. A full-width scroll
+dirties both blocks of every row it touches, so this animation is 16 blocks a tick by nature and
+always was. Measured over a loop: mean 10.9 at rest (sparse planes leave some blocks untouched on a
+given tick), 15.5 at wpm 50, ceiling 16. Budget for 16.
+
+**Lit-on-black is the natural polarity for space** and the bloom risk is an isolated lit pixel.
+The objects were drawn to a 2x2 star floor, derived from JBaguley's own smallest star on this panel
+(7 lit px) and a bloom simulation; the planes have zero isolated pixels. Lit area is 15.9% against
+the old 9.2%, because the planets are solid discs like the original Earth — that is the chosen
+style, and the brighter panel is the price.
+
+**The ship's outline is one pixel, and it cannot be zero.** JBaguley's mask left up to 4 px of
+dark margin. Tried at zero: lit-on-black, a lit ship over lit Earth has no edge and simply
+vanishes, leaving its window. One pixel keeps the edge and halves the halo (213 → 102 px). The
+mask is now derived from the ship's own silhouette — holes filled so the window stays opaque,
+dilated once, complemented — by the generator, so the ship stays byte-identical and the mask
+cannot drift from it. `test_space.c` asserts the ring around every ship pixel.
+
+**Authoring** lives in `tools/space/`: the objects and the placement script they were composed from
+under `authoring/` (the script needs Pillow and is provenance, not build), the five planes as grids
+in `planes.txt`, and the stdlib generator that appends each strip's 128-column tail from its head —
+appended, never authored, because an authored tail can drift from its head and then the seam shows
+once a loop. `tests/unit/test_space.c` asserts closure on the compiled bytes at rest and at speed,
+and that the ship is bit-exact inside its own mask.
+
 ## Open experiments
 
 | Idea | Why | Status |
