@@ -1,5 +1,5 @@
 // Slave-side OLED art: Monitor logo 2.
-// Pure data. Selection lives in oled_panel.h; this file has no opinion about it
+// Pure data. Declared in oled.h; this file has no opinion about it
 // and is included by exactly one translation unit.
 
 #pragma once

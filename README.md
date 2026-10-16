@@ -1,59 +1,58 @@
-# QMK Userspace
+# qmk_userspace
 
-This is a template repository which allows for an external set of QMK keymaps to be defined and compiled. This is useful for users who want to maintain their own keymaps without having to fork the [main QMK repository](https://github.com/qmk/qmk_firmware). You must still fork the main QMK repository if writing firmware for a *new* keyboard.
+Firmware for my splitkb **Kyria rev3** (Liatris RP2040 controllers, an SSD1306 OLED on each
+half, RGB matrix, two encoders), running [QMK](https://qmk.fm) with a
+[Miryoku](https://github.com/manna-harbour/miryoku) layout on Colemak-DH. Keyboard first, mouse
+less and less, vim-style: the layout keeps the hands on the home row.
 
-## Howto configure your build targets
+Two things make this more than a keymap. The host-OS switch: `Win` or `Mac` is detected on
+plug-in and swaps Ctrl and GUI, so shortcuts use the same fingers on both. And the OLEDs: the
+master half shows the layer as a picture with the held modifiers under it; the other half shows
+Bjorn, a Tamagotchi Viking who reacts to typing speed and idles in the weather, or a spaceship,
+or a logo, cycled from a key.
 
-1. Run the normal `qmk setup` procedure if you haven't already done so -- see [QMK Docs](https://docs.qmk.fm/#/newbs) for details.
-1. Fork this repository
-1. Clone your fork to your local machine
-1. Enable userspace in QMK config using `qmk config user.overlay_dir="$(realpath qmk_userspace)"`
-1. Add a new keymap for your board using `qmk new-keymap`
-    * This will create a new keymap in the `keyboards` directory, in the same location that would normally be used in the main QMK repository. For example, if you wanted to add a keymap for the Planck, it will be created in `keyboards/planck/keymaps/<your keymap name>`
-    * You can also create a new keymap using `qmk new-keymap -kb <your_keyboard> -km <your_keymap>`
-    * Alternatively, add your keymap manually by placing it in the location specified above.
-    * `layouts/<layout name>/<your keymap name>/keymap.*` is also supported if you prefer the layout system
-1. Add your keymap(s) to the build by running `qmk userspace-add -kb <your_keyboard> -km <your_keymap>`
-    * This will automatically update your `qmk.json` file
-    * Corresponding `qmk userspace-remove -kb <your_keyboard> -km <your_keymap>` will delete it
-    * Listing the build targets can be done with `qmk userspace-list`
-1. Commit your changes
+## How it is built
 
-## Howto build with GitHub
+This is a QMK **external userspace**, started from
+[`qmk/qmk_userspace`](https://github.com/qmk/qmk_userspace). It holds only my files. QMK itself
+is a separate, unmodified checkout that the `qmk` CLI is pointed at, so updating QMK is a
+`git pull` there and a rebuild here: nothing is merged, and nothing in QMK core is patched. (The
+previous setup was a fork carrying a core patch, and it could not be synced any more.)
 
-1. In the GitHub Actions tab, enable workflows
-1. Push your changes above to your forked GitHub repository
-1. Look at the GitHub Actions for a new actions run
-1. Wait for the actions run to complete
-1. Inspect the Releases tab on your repository for the latest firmware build
+| Path | Whose | What |
+|------|-------|------|
+| `keyboards/splitkb/kyria/keymaps/rvannoord/` | mine | the keymap: key positions, host OS, tap-hold tuning, OLEDs, split sync. **Start at its `readme.md`** |
+| `users/manna-harbour_miryoku/custom_config.h`, `custom_rules.mk` | mine | the features and tuning that Miryoku's userspace includes |
+| rest of `users/manna-harbour_miryoku/` | Miryoku, vendored | the layers. `miryoku_babel/` is generated upstream; a layer is overridden in `custom_config.h`, never edited there |
+| `tools/` | mine | the Python generators behind every file in the keymap's `art/` |
+| `tests/` | mine | host tests: plain-C unit tests that need only `cc`, GoogleTest scenarios that run through a QMK tree, and a host preview of the idle show |
+| `docs/` | mine | `layout.md` is the spec and the tuning log; `flash-checklist.md` what is on the board and what to look at; `environment.md` the two machines; `oled-v2.md` the work plan for the OLEDs |
+| `VENDORED.md` | mine | where everything that is not my own work came from, pinned to commits |
 
-## Howto build locally
+## Build, flash, test
 
-1. Run the normal `qmk setup` procedure if you haven't already done so -- see [QMK Docs](https://docs.qmk.fm/#/newbs) for details.
-1. Fork this repository
-1. Clone your fork to your local machine
-1. `cd` into this repository's clone directory
-1. Set global userspace path: `qmk config user.overlay_dir="$(realpath .)"` -- you MUST be located in the cloned userspace location for this to work correctly
-    * This will be automatically detected if you've `cd`ed into your userspace repository, but the above makes your userspace available regardless of your shell location.
-1. Compile normally: `qmk compile -kb your_keyboard -km your_keymap` or `make your_keyboard:your_keymap`
-
-Alternatively, if you configured your build targets above, you can use `qmk userspace-compile` to build all of your userspace targets at once.
-
-## Extra info
-
-If you wish to point GitHub actions to a different repository, a different branch, or even a different keymap name, you can modify `.github/workflows/build_binaries.yml` to suit your needs.
-
-To override the `build` job, you can change the following parameters to use a different QMK repository or branch:
-```
-    with:
-      qmk_repo: qmk/qmk_firmware
-      qmk_ref: master
+```sh
+qmk config user.overlay_dir="$(realpath .)"      # once, with a stock qmk_firmware set up
+qmk compile -kb splitkb/kyria/rev3 -km rvannoord
 ```
 
-If you wish to manually manage `qmk_firmware` using git within the userspace repository, you can add `qmk_firmware` as a submodule in the userspace directory instead. GitHub Actions will automatically use the submodule at the pinned revision if it exists, otherwise it will use the default latest revision of `qmk_firmware` from the main repository.
+The `.uf2` lands in this folder. Both halves take the same file and **must run the same
+build**: the split handshake XORs the transaction count, so a mismatched pair stops talking.
+Put a half in the bootloader (double-tap Miryoku's Boot key, or hold that half's outer-column
+top-row key while plugging in), then `picotool load -v -x <file>.uf2` or `qmk flash`, and
+repeat for the other half. `docs/flash-checklist.md` has the procedure, including how to read
+back an unknown build first.
 
-This can also be used to control which fork is used, though only upstream `qmk_firmware` will have support for external userspace until other manufacturers update their forks.
+```sh
+tests/run_unit.sh            # split transport, panel, spaceship, Bjorn: needs only cc
+tests/run_scenarios.sh new   # tap-hold and host OS through real QMK: needs ~/qmk_firmware
+```
 
-1. (First time only) `git submodule add https://github.com/qmk/qmk_firmware.git`
-1. (To update) `git submodule update --init --recursive`
-1. Commit your changes to your userspace repository
+GitHub Actions builds the firmware on push, through the template's own workflow in
+`.github/workflows/build_binaries.yaml`.
+
+## Also coming
+
+A splitkb Halcyon Kyria Wireless. It runs ZMK, not QMK, and gets its own repo; the layout
+stays the same on both boards, so a layout change goes into `docs/layout.md` first and then
+into both firmwares.

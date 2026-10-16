@@ -1,7 +1,7 @@
 # World-layer sprites, pixel-exact. Generated once from the design study and
 # committed; tools/world/gen_world.py reads this and needs nothing installed.
 #
-# '#' is a set bit = ink = dark on the inverted panel.
+# '#' is a set bit = ink = a lit pixel.
 
 [RAIN] w=128 h=18  # full width, 1px slits, tiles vertically, scrolls
 ....#....#.....#.........#............#.......................#..........#..........##...........................#.........#....

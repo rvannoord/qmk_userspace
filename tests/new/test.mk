@@ -4,4 +4,4 @@
 OS_DETECTION_ENABLE = yes
 CAPS_WORD_ENABLE = yes      # as the firmware has it, so split_state.c builds the same way
 
-SRC += tap_hold.c host_os.c split_state.c split_sync.c split_health.c rvannoord_keymap.c chordal_hold_layout.c
+SRC += tap_hold.c host_os.c split_state.c split_sync.c split_health.c rvannoord_keymap.c chordal_hold_layout.c oled_stub.c

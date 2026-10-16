@@ -18,7 +18,7 @@
 #include "driver.h"
 #include "split_state.h"
 #include "split_sync.h"
-#include "bjorn_art.h"
+#include "art/bjorn_art.h"
 #include "oled_canvas.h"
 
 uint8_t  fake_oled[OLED_MATRIX_SIZE + 1];

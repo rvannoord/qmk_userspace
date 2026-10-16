@@ -1,3 +1,5 @@
+// The one switch for everything OS-specific: Win or Mac, set by QMK's OS detection on
+// plug-in and flipped by hand with the SYS key. See host_os.h.
 #include "quantum.h"
 #include "host_os.h"
 

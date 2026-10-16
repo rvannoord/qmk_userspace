@@ -15,11 +15,13 @@ while the reason for it is still obvious.
 
 | Build | Commit | Flashed | Notes |
 |-------|--------|---------|-------|
-| `2026-10-15-994a874.uf2` | `994a874` | 2026-10-15 | Both halves. The world layer, and the panel reverted to lit-on-black at brightness 255 |
-| `2026-10-15-1008480.uf2` | `1008480` | 2026-10-15 | Both halves. Read-backs taken first, kept as `readback-{left,right}-2026-10-15c.uf2` |
+| `2026-10-16-27a1e24.uf2` | `27a1e24` | 2026-10-16 | Both halves, loaded and verified with `picotool load -v`. The new space behind the ship |
 
-Before it: `a8dc5e6`, `934e27c`, `91477af`, `c95356d`, and before those an unrecorded
-build — the read-backs of 2026-10-14 matched none of the kept `.uf2` files.
+Before it, all on 2026-10-15 and all kept: `0c47a23` (the animation key), `1034f2e`,
+`6c9b28f`, `994a874` (the world layer, lit-on-black at 255), `1008480` (read-backs taken
+first, kept as `readback-{left,right}-2026-10-15c.uf2`). Before those: `a8dc5e6`,
+`934e27c`, `91477af`, `c95356d`, and an unrecorded build — the read-backs of 2026-10-14
+matched none of the kept `.uf2` files.
 
 **This table was wrong for a day, and the fix is the point of the method.** It still read
 `91477af` on 2026-10-15 while the board had been reflashed four times since, 21 commits
@@ -49,10 +51,10 @@ that was not flashed simply stops typing.
 
 | Check | What should happen | Why it matters | From |
 |-------|--------------------|----------------|------|
-| Black and white are swapped | Both panels show dark figures on a lit field, everywhere — badge, mod glyphs, the layer picture, Bjorn | The whole point of the change: Bjorn's art is dark ink on a white page, so this is the medium he was drawn for | `a6bd2f9` |
+| ~~Black and white are swapped~~ | **Superseded**: the inversion from `a6bd2f9` was reverted in `994a874`, and the panel is lit-on-black again | The check as written can no longer be made. Kept because rows move here, they do not vanish | `a6bd2f9` |
 | ~~The alarm banner still shouts~~ | **Superseded**: there is no banner any more. See the band-inversion row below | The `a6bd2f9` check was written when the alarm was a 128x8 row on page 5. The three-band panel put the layer picture there and moved the alarm to the whole band | `a6bd2f9` |
-| Caps Word still reads | Hold the Nav layer and tap the key under **M**. Bjorn's tile should still visibly flip against the rest of the panel | His tile inverts for Caps Word. With the panel already inverted, that flip now goes the other way — it should still be unmistakable, but check it is not now subtle | `a6bd2f9` |
-| It is comfortable to look at | A lit panel at brightness 128 for two minutes at a time | Pixel wear goes from about a quarter of the pixels lit to about three quarters. The panels do now sleep after 120 s, which is what makes this tolerable, but it is a real change | `a6bd2f9` |
+| ~~Caps Word still reads~~ | **Superseded**: the inversion from `a6bd2f9` was reverted in `994a874`, and the panel is lit-on-black again | The check as written can no longer be made. Kept because rows move here, they do not vanish | `a6bd2f9` |
+| ~~It is comfortable to look at~~ | **Superseded**: the inversion from `a6bd2f9` was reverted in `994a874`, and the panel is lit-on-black again | The check as written can no longer be made. Kept because rows move here, they do not vanish | `a6bd2f9` |
 | Both halves idle together | Stop typing and watch both. Bjorn should settle at about 8 s and doze at about 75 s, in step with the master counting down to 120 s | He used to derive idle from how long the WPM reading had been *still*, and WPM keeps changing all the way down as it decays over its own five-second window — so that half started idling up to five seconds late | `f2dd88c` |
 | The other half still types | Any key on the non-USB half | The transaction table changed. If this fails, the halves are on different builds | `f2dd88c` |
 | Bjorn's own drawings appear | Stop typing. From about 20 s he should cut between six of infinition's frames, roughly every 18 s — two smiling, two with the goat, one in spectacles, one hooded | The first time anything beyond the four posture poses has been on the panel. **The goat arrives here**, because IDLE9 and IDLE10 contain it | `c15779c` |
@@ -85,12 +87,6 @@ leaves and nothing else. Snow, rain and the star field cannot be looked at on th
 without either rebuilding with a faked date or adding a way to force the state. That is
 a real gap in what can be checked, and it is an argument for the host daemon doing more
 than supplying weather: a forced state is also how these get tested.
-
-### If the inversion is not wanted
-
-Comment out `U_OLED_INVERT` in `users/manna-harbour_miryoku/custom_config.h` and reflash.
-Nothing else depends on it and no art changes either way — the dither produces the same
-bits and the inversion is a hardware command.
 
 ---
 

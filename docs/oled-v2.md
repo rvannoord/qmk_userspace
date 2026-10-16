@@ -1,10 +1,17 @@
 # OLED v2: plan
 
+> **A work plan, not the state of the firmware.** Stages 0 to 4a are done, and parts of
+> the later stages have since been built differently from how they are written here: the
+> master panel is three bands, the slave animations are chosen at runtime, the weather layer
+> exists. What the firmware does today is in `docs/layout.md`; what is waiting to be looked at
+> on the board is in `docs/flash-checklist.md`. This file is kept for the build order and for
+> the diagnosis of 2026-10-14, and goes when the last stage is done.
+
 The next round of work on the OLEDs: the two bugs found while daily-driving (the panels never sleep, and the link between the halves was seen down), the idle director, the goat, weather by season, and a place for every one of Bjorn's seventeen sprite sets. Written 2026-10-14 on the work PC, from a read of `main` at `c4c93b9` and stock QMK 0.34.6 at `7a1bbf37c5`, plus host harnesses run against the real renderer. It is worked through on the Mac in `~/qmk_userspace`, top to bottom, one stage at a time, stopping at every checkpoint. The repo plus this file are enough.
 
 QMK line numbers refer to `7a1bbf37c5`. Repo line numbers refer to `c4c93b9`. If the repo has moved on, read `git log c4c93b9..HEAD` first and adjust.
 
-Keep the Progress table below current, in the same commit that finishes a stage. The design itself stays in `docs/layout.md`; this file is the build order. When every stage is done it goes, the way `MIGRATION.md` will.
+Keep the Progress table below current, in the same commit that finishes a stage. The design itself stays in `docs/layout.md`; this file is the build order. When every stage is done it goes, the way `MIGRATION.md` did.
 
 ## Progress
 
@@ -45,90 +52,7 @@ forward-looking text:
 The alarm's move is the one with a reason worth carrying forward: a 128x8 inverted banner
 had fallen to about two held mod cells, so it could no longer outshine a routine frame.
 
----
-
-## 1. Working rules (Roel's, binding)
-
-- **Attribution.** The rule in `CLAUDE.md` applies to every commit, tag and pushed file, including the tools and generated files this plan adds.
-- **Commit and push only when Roel asks. Ask before every push.** Commit verified states only: built clean with no warnings, tests run. Conventional commits with an emoji, like the history (`✨ feat(oled): ...`, `🐛 fix(oled): ...`, `✅ test: ...`, `📝 docs(...)`, `♻️ refactor(...)`). Identity `rvannoord <rvannoord@icloud.com>`, SSH-signed through 1Password. Check `git config user.email` before every commit. If signing fails, stop and tell Roel. Never bypass signing.
-- **Stages with checkpoints.** Each stage ends at a checkpoint where Roel looks before the next stage starts; some stages also have an earlier stop. Honour every "stop here".
-- **Never change QMK core** (`quantum/`, `tmk_core/`, `platforms/`, `drivers/` in `~/qmk_firmware`). If something seems to need it, stop and say so. Don't update QMK during this work unless Roel asks.
-- **Don't reinstall working tools, and don't install anything without asking.**
-- **Verify in the real build instead of assuming**: `cflags.txt`, preprocessing with the build's own flags, reading symbols and data out of the ELF (Appendix A). Every report says plainly what was checked and what was not.
-- **Flash both halves together, with the same build.** `NUM_TOTAL_TRANSACTIONS` is XORed into every split handshake (`platforms/chibios/drivers/serial_protocol.c:69`), so two builds with different transaction tables fail every transaction, matrix included. Today this rule is recorded only in the message of commit `df5c23b`; Stage 0 puts it in the docs.
-- **An unknown build on the board is read back first**, per half, with `picotool save -a -v` (MIGRATION.md step 8), before anything is flashed.
-- **Roel's design rules in `docs/layout.md` (OLED section) are binding** unless he changes them: dark at rest; "an expression is for something wrong, a prop is for something true, idle is for everything else"; nothing loops while typing; a budget of 8 dirty blocks per animation step when idle and 2 while typing, with priorities fault > alarm > one-shot reaction > Bjorn pose > goat locomotion > ambient, and over budget defers by one step; non-harmonic ambient clocks; "a beat on a fixed timer is wallpaper within a week"; the Motion rules (pre-dithered bits at integer offsets, gestures differ in place, cuts for identity and motion for position, overlap only on soft masses, an overlay is a whole 64-byte block); never freeze mid-stride, because frozen with no blink means the link died.
-
----
-
-## 2. Start here (Mac session)
-
-### 2.1 Pull and look
-
-```sh
-cd ~/qmk_userspace
-git status --short                      # must be empty
-git pull --ff-only                      # expect c4c93b9 or later
-git log --oneline c4c93b9..HEAD         # anything newer than this plan
-git -C ~/qmk_firmware log -1 --format='%h %s'   # expect 7a1bbf37c5
-```
-
-### 2.2 Environment check (record the output, install nothing)
-
-```sh
-qmk --version                           # 1.1.8 (Homebrew)
-qmk config user.qmk_home user.overlay_dir
-cc --version
-python3 --version                       # tools in this plan use the standard library only
-which picotool arm-none-eabi-gcc arm-none-eabi-size arm-none-eabi-nm arm-none-eabi-objdump gh
-picotool version                        # 2.3.1
-git -C ~/qmk_userspace config user.email      # rvannoord@icloud.com
-git -C ~/qmk_userspace config gpg.format      # ssh
-git -C ~/qmk_userspace config commit.gpgsign  # true
-ls -l ~/kyria-firmware-backup
-```
-
-If `arm-none-eabi-size`/`nm` are missing, ask Roel before installing anything; meanwhile the `.uf2` size divided by 2 is the payload size (each 512-byte UF2 block carries 256 bytes).
-
-### 2.3 Baseline before any change
-
-```sh
-qmk compile -kb splitkb/kyria/rev3 -km rvannoord     # must be clean, no warnings
-tests/run_unit.sh                                    # split_sync and panel: all good
-tests/run_scenarios.sh new                           # all pass
-arm-none-eabi-size -A ~/qmk_firmware/.build/splitkb_kyria_rev3_rvannoord.elf
-arm-none-eabi-nm -S ~/qmk_firmware/.build/splitkb_kyria_rev3_rvannoord.elf | grep split_transaction_table
-ls -l ~/qmk_userspace/splitkb_kyria_rev3_rvannoord.uf2
-shasum -a 256 ~/qmk_userspace/splitkb_kyria_rev3_rvannoord.uf2
-```
-
-If anything fails or warns at baseline, stop and report before changing anything.
-
-Reference values from the work-PC build of `c4c93b9` (arm-none-eabi-gcc 15.2; the Mac uses gcc 8, so expect different numbers and measure all deltas on the Mac): `.text` 43,384, `.rodata` 12,384, `.data` 3,524, `.bss` 9,508 bytes; `.uf2` 119,808 bytes (about 59.9 KB of payload); `split_transaction_table` 180 bytes, i.e. 15 transactions of 12 bytes. Bjorn's pixel data is 7,232 bytes (a 512-byte base plus 105 patches of 64 bytes).
-
-### 2.4 Read, in this order
-
-1. This file, completely.
-2. `CLAUDE.md`, `MIGRATION.md` (Progress table, "Environment (Mac)"), `docs/layout.md` (whole OLED section), `.claude/rules/oled.md` (stale, see 3.5), `tests/README.md`, `VENDORED.md`.
-3. Keymap folder `keyboards/splitkb/kyria/keymaps/rvannoord/`: `oled.c`, `oled_panel.h`, `oled_master_zones.c`, `oled_master_text.c`, `oled_slave_bjorn.c`, `bjorn_art.h` (and the frame table at the end of `bjorn_art.c`), `split_state.c/.h`, `split_sync.c/.h`, `keymap.c`, `host_os.c`, `tap_hold.c`, `rules.mk`, `config.h`; then `users/manna-harbour_miryoku/custom_config.h`.
-4. Tests: `tests/run_unit.sh`, `tests/unit/test_panel.c`, `tests/unit/test_split_sync.c`, `tests/unit/stub/*`, `tests/scenarios/*`.
-
-### 2.5 Ask Roel first, then wait
-
-**About the link loss (Bug B).** Ask all of these before Stage 1 changes anything, because the answers describe the old build:
-
-- Q1. What exactly did you see: (a) the inverted `LINK DOWN` banner on the master panel (page 5), (b) Bjorn not blinking (he still breathes when settled; no blink is the design's "link dead" signal), (c) both, or (d) something else (blank or garbled slave panel)?
-- Q2. Which machine (Windows work PC or Mac), which half had the USB cable, and was the computer asleep, locked with the screen off, or awake? Roughly how long were you away?
-- Q3. Did keys on the other half still type? Did the master still show held modifiers?
-- Q4. Did it clear by itself, after typing (how soon), or only after a replug? Which half was replugged?
-- Q5. Was Bjorn asleep (eyes shut) or awake when you came back? Did he blink at all afterwards?
-- Q6. Once or several times? Which build is on the board (date, commit, which machine built and flashed it)?
-- Q7. Anything else odd at the time (RGB, stuck or repeating keys, panel artefacts)?
-- Q8. If it is happening right now: don't replug; look at both panels first.
-
-Tell Roel what reading the code found (section 3.4): Bjorn stops blinking after every doze and after any stale period, for up to about 55 minutes, which shows the "link dead" signal with nothing wrong on the link. If his answer is (b) only, that is the likely explanation. If it is (a), the master's sends really failed for at least 1.25 s while it was awake, and Stage 2's diagnostics are needed.
-
-**Decisions:**
+### Decisions of record, 2026-10-14
 
 - D1. Decided 2026-10-14: this plan lives in the repo as `docs/oled-v2.md`.
 - D2. Generators and tools go under `tools/` in the repo, Python 3 standard library only, nothing installed? (Default yes.)
@@ -142,9 +66,9 @@ Tell Roel what reading the code found (section 3.4): Bjorn stops blinking after 
 
 ---
 
-## 3. What was found on 2026-10-14
+## 1. What was found on 2026-10-14
 
-### 3.1 QMK facts this plan relies on
+### 1.1 QMK facts this plan relies on
 
 | Fact | Where (QMK `7a1bbf37c5`) |
 |------|------|
@@ -182,7 +106,7 @@ Tell Roel what reading the code found (section 3.4): Bjorn stops blinking after 
 
 Confirmed earlier today by preprocessing with the build's `cflags.txt`: `OLED_TIMEOUT 120000`, `OLED_BRIGHTNESS 128`, `OLED_UPDATE_INTERVAL 50`, `OLED_UPDATE_PROCESS_LIMIT 1`, `SPLIT_OLED_ENABLE`, `SPLIT_TRANSPORT_MIRROR`, `SPLIT_WPM_ENABLE`, `USB_VBUS_PIN 19U`, `SPLIT_HAND_PIN B5`, `SERIAL_DRIVER_VENDOR`, and `NO_DEBUG`/`NO_PRINT` (so there is no console). Not defined: `SPLIT_WATCHDOG_ENABLE`, `SPLIT_ACTIVITY_ENABLE`, `SPLIT_USB_DETECT`.
 
-### 3.2 Bug A: the panels never turn off (confirmed)
+### 1.2 Bug A: the panels never turn off (confirmed)
 
 Mechanism, in stock QMK: any dirty block makes `oled_render_dirty()` call `oled_on()`, which re-arms the 120 s timeout; `oled_task()` only switches off when it expires (3.1).
 
@@ -208,7 +132,7 @@ Checked by reading today (all halves, all renderers):
 
 Fix direction (Stage 1): compose each frame in a 1 KB RAM canvas and commit it once, so an unchanged frame writes no byte; plus a safety net on the master that switches the panels off when `last_input_activity_elapsed()` reaches `OLED_TIMEOUT`, whatever is drawn.
 
-### 3.3 Bug B: "link lost" after being away (not pinned down)
+### 1.3 Bug B: "link lost" after being away (not pinned down)
 
 Roel: "when I came back after a while I saw the link was lost between the two halves, that should never happen, or it should wake up again when typing."
 
@@ -224,7 +148,7 @@ A web search earlier today found no matching QMK bug. Suspend-related knobs exis
 
 Code-level causes found today (details in 3.4): the blink stall (D-1) produces the "link dead" signal on the slave with nothing wrong; the per-build sequence counter (D-3) could make a healthy link look stale on the slave; a dead link leaves the slave panel lit indefinitely (D-6). None of them produces the master's banner.
 
-### 3.4 Other defects found today
+### 1.4 Other defects found today
 
 - **D-1. Bjorn stops blinking after every doze and after any stale period (reproduced).** `oled_render_slave()` reschedules a blink only when `(uint16_t)(bjorn_ticks - bjorn_blink_at) == BJORN_BLINK_OPEN` (`oled_slave_bjorn.c:356-376`), and the doze, falling-asleep, waking and hard-stale paths return before that code (`:270-274`, `:340-354`). If the scheduled tick passes while he is asleep or stale, the difference only comes round again when the 16-bit tick counter wraps: 65,536 render ticks, about 54.6 minutes of panel-on time. Host harness against the real renderer: awake 0-30 s, 6 blinks; idle to 200 s (settle, doze), then a key and 120 s awake, **0 blinks**; separately, 150 s awake 24 blinks, 75 s hard stale, then 120 s fresh, **0 blinks**. A blink was counted when every patch of one of the eyes-shut frames was in the buffer. With Bug A the doze could last hours; when Roel came back, Bjorn woke, followed the typing and breathed when settled, but did not blink: exactly the design's "link died" signal.
 - **D-2. The slave writes overlay blocks twice every frame** (measured; 3.2).
@@ -235,7 +159,7 @@ Code-level causes found today (details in 3.4): the blink stall (D-1) produces t
 - **D-7. The driver writes one byte past its buffer for `index >= 1024`** (`oled_driver.c:668`). Keep every index below 1024; host stubs should mirror it with a canary byte.
 - **D-8. `bjorn_art.c` uses `NULL` without including `<stddef.h>`.** The firmware gets it indirectly; a host build of it fails without it (add the include to the test stub `progmem.h`, not to the generated file).
 
-### 3.5 Doc staleness (fix in Stage 0, first of all the rules file)
+### 1.5 Doc staleness (fix in Stage 0, first of all the rules file)
 
 1. `.claude/rules/oled.md` describes the old design: master shows logo, "Kyria rev3" and text; slave shows the spaceship or logos; the slave learns state through `SPLIT_LAYER_STATE_ENABLE`/`SPLIT_MODS_ENABLE`/`SPLIT_LED_STATE_ENABLE`; and line 14 says a keymap `oled_init_user` does nothing (false, `oled_driver.c:295`). This rules file is loaded automatically whenever an OLED file is edited, so it has to be right before anything else changes.
 2. `docs/layout.md`: line 73 says "Specified 2026-10-10, not yet in the firmware"; the Open experiments row (line 348) says "specified, not yet built"; line 105 gives the breath as 1.2 s (built: 3.6 s); the Stage 1 table gives the doze breath as 5.4 s, 1.8 in and 3.6 out (code: `BJORN_DOZE_PERIOD` 120 ticks = 6 s, `BJORN_DOZE_INHALE` 30 = 1.5 s in, 4.5 s out); the misfire row says 1200 ms in all with 750 ms at the top (code: 1750 ms, 100/150/200 ms rising, 1000 ms held, 3 x 100 ms down); "Art is 4672 bytes" (now 7,232 bytes of pixel data); the Files table lacks `split_state.c/.h` and `split_sync.c/.h`; the Tuning log is empty although the daily-driver week started 2026-10-10; there is no built / still-to-do list.
@@ -252,7 +176,7 @@ Code-level causes found today (details in 3.4): the blink stall (D-1) produces t
 
 ---
 
-## 4. Stages
+## 2. Stages
 
 Every stage follows the same pattern: do the work, run `tests/run_unit.sh` and `tests/run_scenarios.sh new`, build clean, verify in the build (Appendix A), **stop** and report (what changed, test output, size delta, what was and was not checked), commit only when Roel says so, flash both halves when the stage changes firmware, **stop** for Roel's check on the board, update the docs listed, commit the docs. New source files go into `SRC` in the keymap's `rules.mk` (never `keymap.c`); slave-only modules compile only under `OLED_SLAVE_ANIMATION_BJORN`, the way `oled_panel.h` already gates the art. Every stage that adds or changes behaviour also updates `docs/layout.md` (OLED section, "Built and still to do") and, for each flash, the Tuning log.
 
@@ -560,7 +484,7 @@ Files: `oled_slave_bjorn.c` (Caps Lock crown and frame, the defeated pose, the g
 
 ---
 
-## 5. Risks and open questions for Roel
+## 3. Risks and open questions for Roel
 
 1. **Where this plan lives** (D1): decided, `docs/oled-v2.md`.
 2. **Old generators missing.** If the Bjorn generator is gone, `bjorn_art.c` can't be regenerated byte for byte; it stays frozen and new art goes into new files. The same applies to `panel_font.c` and `panel_glyphs.c`.

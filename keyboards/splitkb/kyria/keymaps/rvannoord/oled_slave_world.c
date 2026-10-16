@@ -24,10 +24,10 @@
 //    through his beard.
 
 #include QMK_KEYBOARD_H
-#include "oled_panel.h"
+#include "oled.h"
 #include "oled_canvas.h"
 #include "oled_slave_world.h"
-#include "world_art.h"
+#include "art/world_art.h"
 
 #ifdef OLED_SLAVE_WORLD
 

@@ -14,8 +14,8 @@
 
 #include <stdint.h>
 
-// 1 KB against roughly 249 KB of free heap. One canvas serves both halves: only one
-// renderer is compiled into each build.
+// 1 KB against roughly 249 KB of free heap. One canvas serves both halves: a half is
+// master or slave for the whole session, so only one renderer ever draws into it.
 extern uint8_t u_canvas[OLED_MATRIX_SIZE];
 
 // Copy the canvas into the driver's buffer, writing only the bytes that differ.

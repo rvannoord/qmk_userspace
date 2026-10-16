@@ -1,5 +1,5 @@
 // Slave-side OLED art: the spaceship animation strips.
-// Pure data. Selection lives in oled_panel.h.
+// Pure data. Declared in oled.h.
 
 #pragma once
 

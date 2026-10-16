@@ -8,11 +8,11 @@
 // built yet: the goat, Caps Lock, the defeated pose for a non-base default layer.
 
 #include QMK_KEYBOARD_H
-#include "oled_panel.h"
+#include "oled.h"
 
 
-#include "bjorn_art.h"
-#include "bjorn_poses.h"
+#include "art/bjorn_art.h"
+#include "art/bjorn_poses.h"
 #include "oled_slave_world.h"
 #include "split_sync.h"
 #include "oled_canvas.h"

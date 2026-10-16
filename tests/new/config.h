@@ -8,6 +8,7 @@
 #define QUICK_TAP_TERM 0
 #define CHORDAL_HOLD
 #define FLOW_TAP_TERM 160
+#define OLED_TIMEOUT 120000         // as custom_config.h has it; oled.h's sleep predicate needs it
 
 #define QMK_KEYBOARD_H "quantum.h"
 #define MIRYOKU_CLIPBOARD_WIN

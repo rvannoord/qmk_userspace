@@ -3,7 +3,7 @@
 #include "quantum.h"
 #include "split_state.h"
 #include "host_os.h"
-#include "oled_panel.h"
+#include "oled.h"
 
 #define U_ANOMALY_MS 500         // a hold this long with nothing typed is a misfire
 #define U_HOLDS       4          // deepest chord worth tracking

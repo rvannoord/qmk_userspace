@@ -1,21 +1,18 @@
-// Which panel and which slave-side art get compiled in. This is the only place that
-// decides; the art headers are pure data and the renderers only ask whether they are
-// the chosen one. See docs/layout.md.
-//
-// Pick one of each in users/manna-harbour_miryoku/custom_config.h.
+// The OLED module's interface: what keymap.c calls, what the renderers implement, and
+// which slave animations exist. oled.c is the dispatcher. The master half (the one with
+// the USB cable) draws oled_master_zones.c; the other half draws one of the oled_slave_*
+// animations, chosen at runtime with the U_ANIM key. Design in docs/layout.md, OLED.
 
 #pragma once
 
 #include <stdbool.h>
+#include <stdint.h>
 
-// Counted the long way on purpose: `defined(X)` produced by a macro inside #if is
-// undefined behaviour in ISO C, and GCC warns about it (-Wexpansion-to-defined).
 // --- the slave's animation --------------------------------------------------
 // All five are compiled in and chosen at runtime, because switching between them
-// is the point. OLED_SLAVE_ANIMATION_* in custom_config.h now names only the
-// *boot default* - the one you get on a fresh EEPROM - rather than the only one
-// that exists. It is no longer an error to define none, and defining more than
-// one is resolved by taking the first in this order rather than failing a build.
+// is the point. OLED_SLAVE_ANIMATION_* in custom_config.h names only the *boot
+// default* - the one you get on a fresh EEPROM. Defining none means Bjorn, and
+// defining more than one takes the first in this order.
 
 enum u_slave_anim {
     U_ANIM_BJORN,
@@ -53,40 +50,18 @@ void u_slave_bjorn_task(void);
 void u_slave_spaceship_render(void);
 void u_slave_logo_render(enum u_slave_anim which);
 
-#if defined(OLED_MASTER_PANEL_TEXT)
-#    define U_OLED_MASTER_N_TEXT 1
-#else
-#    define U_OLED_MASTER_N_TEXT 0
-#endif
-
-#if defined(OLED_MASTER_PANEL_ZONES)
-#    define U_OLED_MASTER_N_ZONES 1
-#else
-#    define U_OLED_MASTER_N_ZONES 0
-#endif
-
-#define U_OLED_MASTER_N (U_OLED_MASTER_N_TEXT + U_OLED_MASTER_N_ZONES)
-
-#if U_OLED_MASTER_N == 0
-#    define OLED_MASTER_PANEL_ZONES
-#elif U_OLED_MASTER_N > 1
-#    error "Pick exactly one OLED_MASTER_PANEL_* in custom_config.h"
-#endif
-
-// Implemented by whichever renderer was selected above. Each is a no-op in the
-// builds where its own file compiled to nothing.
-//
-// oled_render_* draw, and run at the panel's update rate — 20 Hz, and not at all
+// --- the two halves -----------------------------------------------------------
+// oled_render_* draw, and run at the panel's update rate - 20 Hz, and not at all
 // while it sleeps. oled_*_task run every main loop on their own half, so they are
 // where state that must not miss an edge belongs.
+void oled_render_master(void);
+void oled_render_slave(void);
+void oled_master_task(void);
+void oled_slave_task(void);
+
 // QMK's own display timeout follows oled_on(), which any dirty block calls, so a panel
 // that keeps drawing can hold itself awake for ever. This reads the input clock instead,
 // which no amount of drawing can re-arm. Pure, so the tests can pin the boundary.
 static inline bool u_oled_should_sleep(bool on, uint32_t idle_ms) {
     return OLED_TIMEOUT > 0 && on && idle_ms >= OLED_TIMEOUT;
 }
-
-void oled_render_master(void);
-void oled_render_slave(void);
-void oled_master_task(void);
-void oled_slave_task(void);

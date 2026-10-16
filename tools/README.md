@@ -9,23 +9,36 @@ then regenerate.
 
 | Tool | Produces | Source it reads |
 |------|----------|-----------------|
-| `bjorn/gen_bjorn.py` | `bjorn_art.c` / `.h` | `bjorn/STAGE1.txt` |
-| `panel/gen_glyphs.py` | `panel_glyphs.c` / `.h` | `panel/glyphs.py` (16x16 mod glyphs), `panel/statusbar.py` (7x7 lock glyphs) |
-| `panel/gen_font.py` | `panel_font.c` / `.h` | QMK's own `drivers/oled/glcdfont.c`, read out of the QMK checkout |
-| `panel/gen_font_dungeon.py` | `panel_font.c` / `.h` | the DUNGEON.mode pack, which is not in this repo. Superseded 2026-10-15; kept in case that face is wanted back |
+| `bjorn/gen_bjorn.py` | `art/bjorn_art.c` / `.h` | `bjorn/STAGE1.txt`, the shipped frames as text grids |
+| `bjorn/gen_poses.py` | `art/bjorn_poses.c` / `.h` | infinition's own frames, reduced the way the panel needs them; not in this repo, see `VENDORED.md` |
 | `bjorn/sprites.py` | contact sheets, for looking at | Bjorn's upstream sprite sets, not in this repo |
-| `panel/gen_layer_icons.py` | `panel_layer_icons.c` / `.h` | splitkb's Halcyon icons and QMK's Kyria logo, neither in this repo — see `VENDORED.md` |
-| `space/gen_space.py` | `art/space_art.c` / `.h` | `space/planes.txt`, the three parallax planes and two masks as grids. `space/authoring/` holds the objects and the placement script they were composed from; that script needs Pillow and is provenance, not part of the build |
+| `bjorn/oled_art.py` | nothing on its own | a library: ASCII grid <-> page-format bytes <-> PNG, shared by the generators |
+| `panel/gen_glyphs.py` | `art/panel_glyphs.c` / `.h` | `panel/glyphs.py` (the 16x16 mod glyphs as span lists), `panel/statusbar.py` (the 7x7 lock glyphs as grids) |
+| `panel/gen_locks.py` | the lock glyphs on stdout, as C | `panel/statusbar.py`. A check tool: it prints what `gen_glyphs.py` emits, and asserts the gutter column and the underline row stay clear |
+| `panel/gen_font.py` | `art/panel_font.c` / `.h` | QMK's own `drivers/oled/glcdfont.c`, read out of the QMK checkout |
+| `panel/gen_font_dungeon.py` | `art/panel_font.c` / `.h` | the DUNGEON.mode pack, which is not in this repo. Superseded 2026-10-15; kept in case that face is wanted back |
+| `panel/gen_layer_icons.py` | `art/panel_layer_icons.c` / `.h` | splitkb's Halcyon icons and QMK's Kyria logo, neither in this repo (see `VENDORED.md`), then `panel/icon_overrides.txt` for the hand corrections |
+| `panel/nerd_grids.py` | text grids for `icon_overrides.txt` | a Nerd Font TTF. **The one tool here that needs something installed** (Pillow) |
 | `panel/qgf.py` | nothing on its own | a library: reads a QMK Graphics Format image back out of its generated `.qgf.c` |
+| `world/gen_world.py` | `art/world_art.c` / `.h` | `world/sprites.txt`, the weather sprites as grids |
+| `space/gen_space.py` | `art/space_art.c` / `.h` | `space/planes.txt`, the three parallax planes and two masks as grids, plus the ship rows in `art/oled_spaceship.h` for the derived ship mask |
+| `space/authoring/` | `space/planes.txt`, previews | provenance: the objects and the placement script the planes were composed from. Needs Pillow, is not part of the build |
+| `preview.py` | `strip.png`, `anim.gif` | a frame dump from `tests/preview/`; see `tests/README.md` |
 
 ```sh
-cd tools/bjorn && python3 -I gen_bjorn.py STAGE1.txt ../../keyboards/splitkb/kyria/keymaps/rvannoord
-cd tools/panel && python3 -I gen_glyphs.py ../../keyboards/splitkb/kyria/keymaps/rvannoord/panel_glyphs.{c,h}
-python3 -I tools/panel/gen_font.py ~/qmk_firmware keyboards/splitkb/kyria/keymaps/rvannoord
-python3 -I tools/panel/gen_layer_icons.py <halcyon-icons> ~/qmk_firmware/keyboards/splitkb/kyria/keymaps/default/keymap.c keyboards/splitkb/kyria/keymaps/rvannoord
+cd tools/bjorn && python3 -I gen_bjorn.py STAGE1.txt ../../keyboards/splitkb/kyria/keymaps/rvannoord/art
+cd tools/bjorn && python3 -I gen_poses.py ~/bjorn-src/resources/images ../../keyboards/splitkb/kyria/keymaps/rvannoord/art
+cd tools/panel && python3 -I gen_glyphs.py ../../keyboards/splitkb/kyria/keymaps/rvannoord/art/panel_glyphs.c ../../keyboards/splitkb/kyria/keymaps/rvannoord/art/panel_glyphs.h
+python3 -I tools/panel/gen_font.py ~/qmk_firmware keyboards/splitkb/kyria/keymaps/rvannoord/art
+python3 -I tools/panel/gen_layer_icons.py <halcyon-icons> ~/qmk_firmware/keyboards/splitkb/kyria/keymaps/default/keymap.c keyboards/splitkb/kyria/keymaps/rvannoord/art
+python3 -I tools/world/gen_world.py keyboards/splitkb/kyria/keymaps/rvannoord/art
+python3 -I tools/space/gen_space.py keyboards/splitkb/kyria/keymaps/rvannoord/art
 ```
 
-Both were checked on 2026-10-14 to reproduce the committed files byte for byte.
+Every generator reproduces its committed files byte for byte. `gen_bjorn`, `gen_glyphs`,
+`gen_font`, `gen_world` and `gen_space` were re-run and compared on 2026-10-16;
+`gen_layer_icons` and `gen_poses` on 2026-10-15 and 2026-10-14, when their sources were
+last fetched.
 
 ## Floyd-Steinberg has nothing to work with on 1-bit sources
 

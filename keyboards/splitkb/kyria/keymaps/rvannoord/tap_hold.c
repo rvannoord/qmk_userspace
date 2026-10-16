@@ -1,3 +1,6 @@
+// Home-row mods: QMK's stock Chordal Hold and Flow Tap, tuned through these callbacks.
+// Layer-tap thumbs are exempt from both. The values and the reasoning behind them are
+// in docs/layout.md, Home-row mods; tests/scenarios/ pins them.
 #include "quantum.h"
 
 char chordal_hold_handedness(keypos_t key) {

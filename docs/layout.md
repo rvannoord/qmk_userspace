@@ -23,7 +23,8 @@ The source of truth for my layout. A change goes here first, then into the firmw
 
 | Key | Where | Does |
 |-----|-------|------|
-| SYS (`U_SYS`) | left half, outer pinky column, top row | toggles Win/Mac by hand when detection guesses wrong; the left OLED shows the result. Held while plugging in, it enters the bootloader (Bootmagic) |
+| SYS (`U_SYS`) | left half, outer pinky column, top row | toggles Win/Mac by hand when detection guesses wrong; the left OLED shows the result. Held two seconds, the stats page. Held while plugging in, it enters the bootloader (Bootmagic) |
+| ANIM (`U_ANIM`) | right half, outer pinky column, top row, mirroring SYS | cycles the other half's animation: Bjorn, spaceship, Kyria logo, Monitor 1, Monitor 2. Persisted across a replug. See *Switching the slave's animation* |
 
 ## Home-row mods
 
@@ -139,7 +140,7 @@ Ambient clocks are non-harmonic so the scene never looks metronomic: breath 3.6 
 
 | Trigger | Response |
 |---------|----------|
-| WPM tier (0-19 / 20-39 / 40-59 / 60+, 8 WPM hysteresis) | horn posture, four static poses from IDLE8 / IDLE1 / IDLE3 / IDLE9. No speed lines: motion in peripheral vision taxes concentration, and WPM is the one signal with nothing to act on |
+| WPM tier (up at 10 / 30 / 50 WPM, down at 6 / 24 / 42: `bjorn_tier_up` / `_down` in `oled_slave_bjorn.c`) | horn posture, four static poses from IDLE8 / IDLE1 / IDLE3 / IDLE9. No speed lines: motion in peripheral vision taxes concentration, and WPM is the one signal with nothing to act on |
 | Command modifier held | axe into his hand, and for 800 ms after it is released. Two dirty blocks, seated beside him inside the left column so it never crosses the dither seam and leaves the right half free for the goat. Disjoint from the blink window, so the two compose with no combined variants. **Shift is excluded** — here it is a home-row mod, part of typing a capital rather than an instruction, and it is held so often the axe would simply always be there. The trailing dwell is what stops a 100-300 ms hold strobing the prop. An earlier rule fired on a *completed* command instead, and was wrong twice over: with Chordal Hold most same-hand shortcuts resolve as letters, and Miryoku's clipboard keys are not modifiers at all, so the event barely happens |
 | Misfire: a command modifier held past 500 ms with nothing typed | the axe raises overhead over three frames and holds, 1750 ms in all, with his horns drooping. The only thing in the design that animates, on the principle that the only thing which moves should be the only thing that is wrong. The steps *slow* as it rises — 100 ms taking hold, then 150 and 200 rising, 1000 ms held at the top, and three 100 ms steps back down — because a lifted mass decelerates toward the top of its arc, and that is what makes it read as heavy rather than as a sprite being repositioned. Measured 4, 5 and 4 blocks for the raise; 8 entering or leaving a non-drooped posture, 3 leaving to the drooped one. The whole figure cuts to the drooped posture rather than splicing horns into the current one: the tier progression is an arousal scale so that pose already exists, half a droop reads as damage where both falling reads as deflation, and since nothing was typed the typing-speed posture carries no information worth preserving. A misfire outranks the held axe and **cancels** it rather than suspending it — resuming a stale success indicator afterwards would read as a second event that never happened |
 | Caps Word | a three-point crown, then his tile flips to dark-on-white 100 ms later. Inverted he reads **better**, not worse: his art is an e-paper original drawn as dark lines on a white page, so flipping restores the polarity the linework was made for. The bloom objection was measured rather than argued — 26 isolated pixels of 983, and inversion is a bijection so that count is identical in both polarities, bounding the loss at 2.6%. The earlier 77%-lit figure still stands but argued about *sustained* brightness, not legibility. Done at runtime as one XOR per byte, so every frame — blink, axe, misfire, breath, all four postures — composes unchanged and gets its inverted form free. Crown first and the flip a beat later makes the loudest event in the design feel authored; leaving is both at once, slow in and quick out. **Pages 0-6 invert with `0xFF`, page 7 with `0x7F`**, preserving row 63: the floor rule runs across both halves, and flipping only the left of it would put the two halves' dots a pixel out of phase and recreate the seam step the floor exists to remove. The right column never inverts — a white card beside black reads as deliberate, and it is a defined register one step below full-panel inversion |
@@ -288,13 +289,14 @@ on, and one side of that comparison is misleading on its own.
 
 ### Split sync
 
-One custom 5-byte RPC, master to slave, on change plus a 250 ms heartbeat and a 20 ms minimum
-interval. Five bytes rather than four because the wire cost is 13 bytes of fixed overhead
+One custom 6-byte RPC, master to slave, on change plus a 250 ms heartbeat and a 20 ms minimum
+interval. Six bytes rather than a packed four because the wire cost is 13 bytes of fixed overhead
 against 43 us per payload byte — width is about 3% of a send, so the bytes go on clarity
 rather than packing. Not `SPLIT_LAYER_STATE_ENABLE` / `SPLIT_MODS_ENABLE` / `SPLIT_LED_STATE_ENABLE`: those
 re-send every 100 ms whether or not anything changed, and they cannot carry Caps Word (QMK has no
 sync for it) or the host OS (`SPLIT_DETECTED_OS_ENABLE` ignores the SYS override). Layout: layer,
-finger-ordered mods, locks, flags, and a sequence counter the slave uses as its staleness clock.
+finger-ordered mods, locks, flags, the `world` byte (the chosen animation, with spare bits for
+weather and time of day), and a sequence counter the slave uses as its staleness clock.
 The slave's callback may only `memcpy` into a volatile struct — it runs in a HIGHPRIO thread
 holding the shared-memory lock, and blocking there costs up to 200 ms of frozen scanning.
 
@@ -315,14 +317,15 @@ while every send was succeeding.
 | Setting | From | To | Why |
 |---------|------|----|-----|
 | `OLED_TIMEOUT` | 60000 (QMK default) | 120000 | Deep idle starts at 20 s and the petting beat at 45 s, so at 60 s the best scene is visible for 15 seconds |
-| `OLED_BRIGHTNESS` | 255 (QMK default) | 128 | Pairs with the above: OLED wear is strongly superlinear in drive current, so the two together are less total wear than today |
+| `OLED_BRIGHTNESS` | 255 (QMK default) | 128, then back to 255 on 2026-10-15 | OLED wear is strongly superlinear in drive current. 128 was set while the panel ran inverted, about three quarters lit; lit-on-black lights about a quarter, so 255 is the lighter load of the two |
 
 ### Keeping the old art
 
-The existing slave art stays selectable exactly as it is, through the
-`OLED_SLAVE_ANIMATION_SPACESHIP` / `_MONITOR1` / `_MONITOR2` / `_KYRIA` flags in
-`custom_config.h`. Bjorn is an additional option, not a replacement. A matching selector is added
-for the master panel so today's text layout stays available the same way.
+The spaceship and the three logos are still compiled in beside Bjorn, and the `U_ANIM` key
+cycles through all five at runtime; see *Switching the slave's animation* below.
+`OLED_SLAVE_ANIMATION_*` in `custom_config.h` names only the boot default. The old text
+panel for the master half was removed on 2026-10-16 (`oled_master_text.c`, git has it): the
+three-band panel is the only master renderer.
 
 ### Stage 1, as built
 
@@ -406,19 +409,24 @@ the goat later.
 
 | File | Holds |
 |------|-------|
-| `oled_panel.h` | the only place that decides which panel and which art compile in, with an `#error` on picking two |
-| `oled.c` | dispatcher: sleep check, master/slave branch, nothing else |
-| `oled_master_zones.c` | the panel. Four zones, raw page bytes rather than `oled_write`, because a zone has to clear exactly its own area. 1x and 2x glyph blitters; the 2x one doubles each source row, so a 16x16 is two page bytes a column |
-| `panel_glyphs.c` | generated. The five mod-row glyphs — four-pane, option mark, caret, command, shift — hand-drawn at 16x16 in page format, in the weight language of DUNGEON.mode, which the panel no longer uses for text but which these were drawn against. Eight slots are five drawings: shift is one drawing in both sets, and the caret is one drawing that changes cell when the OS does, so the Ctrl/GUI swap is visible as a hop from the middle finger to the pinky |
-| `panel_font.c` | generated. Printable ASCII transposed out of QMK's own 6x8 `glcdfont.c`, one byte a row, flush left in an 8 px cell. Both the generator and its source are available — `tools/panel/gen_font.py` reads the QMK checkout — so this regenerates without fetching anything |
-| `oled_master_text.c` | the text panel. Layer names now come from Miryoku's `MIRYOKU_LAYER_LIST` X-macro instead of a second copy of the layer order, so they are the short forms (`Base`, `Nav`, `Sym`). Override `MIRYOKU_LAYER_LIST` to change them |
+| `oled.h` / `oled.c` | the module's interface and its dispatcher. The header holds the slave-animation enum and boot default, `u_anim_get` / `u_anim_next`, the four entry points `oled_render_*` / `oled_*_task` and the pure sleep predicate; the `.c` draws the boot splash and then branches on master or slave. The sleep check itself is in `keymap.c`'s `housekeeping_task_user`, so a stray dirty block can light the panel for one main loop at most |
+| `oled_master_zones.c` | the master panel. Three bands, status bar, 128x40 layer picture and mod row, in raw page bytes composed in the canvas and committed once, never `oled_write`. 1x and 2x glyph blitters; the 2x one doubles each source row, so a 16x16 is two page bytes a column |
+| `art/panel_glyphs.c` | generated. The five mod-row glyphs — four-pane, option mark, caret, command, shift — hand-drawn at 16x16 in page format, in the weight language of DUNGEON.mode, which the panel no longer uses for text but which these were drawn against. Eight slots are five drawings: shift is one drawing in both sets, and the caret is one drawing that changes cell when the OS does, so the Ctrl/GUI swap is visible as a hop from the middle finger to the pinky |
+| `art/panel_font.c` | generated. Printable ASCII transposed out of QMK's own 6x8 `glcdfont.c`, one byte a row, flush left in an 8 px cell. Both the generator and its source are available — `tools/panel/gen_font.py` reads the QMK checkout — so this regenerates without fetching anything |
+| `art/panel_layer_icons.c` | generated. The ten 128x40 layer bands, reduced from splitkb's Halcyon icons and the Kyria logo; see `VENDORED.md` |
 | `oled_slave_bjorn.c` | the mascot: tier hysteresis, idle ladder, ambient clocks, blitter |
-| `split_state.c` / `.h` | the 5-byte payload the master gathers: modifiers in finger order, the active and default layers, locks and Caps Word, the host OS, and a misfire count. Built fresh every main loop; a modifier it reports is one that is held at that instant |
+| `oled_slave_world.c` | the weather behind Bjorn, across the whole panel, season from `__DATE__` until a host daemon supplies it |
+| `oled_slave_select.c` | which slave animation is live: EEPROM on the master, the `world` byte of the sync on the slave |
+| `split_state.c` / `.h` | the 6-byte payload the master gathers: modifiers in finger order, the active and default layers, locks and Caps Word, the host OS, a misfire count, and the chosen animation. Built fresh every main loop; a modifier it reports is one that is held at that instant |
 | `split_sync.c` / `.h` | the transport for that payload. Double-buffered on the slave because the callback runs on a HIGHPRIO thread; heartbeat 250 ms, minimum interval 20 ms, soft stale 600 ms, hard stale 1250 ms. `u_sync_link_down()` answers for both halves — the master from its own failed sends, the slave from the sequence number standing still |
-| `oled_slave_spaceship.c` | `render_space()`, moved byte-for-byte |
+| `split_health.c` / `.h` | link health: the stats page behind a long SYS press, self-reset of a half whose link stays dead, the hardware watchdog. Every guard is explained in the header |
+| `oled_slave_spaceship.c` | the ship, JBaguley's and byte-identical, over three parallax planes of my own; speed from WPM |
 | `oled_slave_logo.c` | the three static logos |
-| `bjorn_art.c` / `.h` | generated: base, patch table, frame index |
-| `art/*.h` | one header per animation, pure data, no selection logic, one includer each |
+| `art/bjorn_art.c` / `.h` | generated: base, patch table, frame index |
+| `art/bjorn_poses.c` / `.h` | generated: the idle poses, six of infinition's frames |
+| `art/world_art.c` / `.h` | generated: the weather sprites |
+| `art/space_art.c` / `.h` | generated: the three planes, their occlusion masks and the ship's derived mask |
+| `art/oled_*.h` | the vendored ship and logos: pure data, no selection logic |
 
 Ambient timing counts render ticks rather than wall-clock milliseconds, so it freezes with
 the panel and resumes where it stopped instead of jumping to a random phase on wake. The
@@ -558,7 +566,7 @@ too, so both halves were saturating their buses rather than one — a difference
 explanation. What wedged it is not established, and nothing here should be read as if it were.
 
 A software self-reset cannot help a half whose code has stopped, so the hardware watchdog in
-`docs/oled-v2.md` §2.4 is the fix that matches this evidence regardless of the cause — which is
+`docs/oled-v2.md` (Stage 2) is the fix that matches this evidence regardless of the cause — which is
 the point of preferring it: it does not depend on guessing right.
 
 ### Attribution
@@ -665,7 +673,7 @@ and that the ship is bit-exact inside its own mask.
 | Flow Tap after any key | If mods misfire right after Backspace, Enter or digits, widen `is_flow_tap_key()` to match the old typing streak | only if it happens |
 | `PERMISSIVE_HOLD` | QMK's recommended pairing with Chordal Hold. Makes quick deliberate shortcuts register before 200 ms | after the migration settles |
 | OLED redesign in pixel art | Specified in full under OLED above, including the Bjorn mascot, the goat, the master panel zones and the split-sync design | partly built, see Built and still to do |
-| Invert the whole OLED | **Wanted, 2026-10-14.** Bjorn's source art is dark ink on a white page — it is an e-paper original — so inverting is not a style choice but a return to the medium he was drawn for. It also dissolves two reduction problems rather than working around them: the hooded poses, whose solid cowl blobs at 33% lit on a dark panel and is simply a solid cowl on a light one, and the pupil catchlight, a dark speck in a lit mass that the panel eats and an inverted one would not. It blocks nothing: the dither produces the same bits either way and inversion is a hardware flip, so all 32 can be reduced before deciding. The costs are unchanged, with one correction: the alarm ladder's top rung *is* full-panel inversion, and an already-inverted panel does not lose it — escalating means inverting *back*, which is the same full-panel flip in the other direction. What is lost is the direction, not the rung; "dark at rest" becomes "lit at rest"; and wear goes from about 23% of pixels lit to about 77%, which is the one that needs thinking about even though the panels now sleep |
+| Invert the whole OLED | **Tried in `a6bd2f9` on 2026-10-14, reverted 2026-10-15.** The case for it and what flips with the polarity are under the OLED section above, in the polarity note | done, and reverted |
 
 ## Tuning log
 

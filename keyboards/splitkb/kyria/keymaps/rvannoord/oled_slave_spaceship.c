@@ -12,7 +12,7 @@
 // tools/space/gen_space.py and docs/layout.md.
 
 #include QMK_KEYBOARD_H
-#include "oled_panel.h"
+#include "oled.h"
 
 
 #include "art/oled_spaceship.h"

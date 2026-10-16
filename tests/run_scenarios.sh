@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Runs the scenario tests (MIGRATION.md step 7) against a qmk_firmware tree:
+# Runs the scenario tests (see tests/README.md) against a qmk_firmware tree:
 #   tests/run_scenarios.sh new [tree]   current QMK with this userspace's keymap code (default ~/qmk_firmware)
 #   tests/run_scenarios.sh old [tree]   the old fork at archive/miryoku-with-latest-qmk (default ~/miryoku_qmk_old)
 # QMK only finds tests inside its own tests/ folder, so the files are staged into
@@ -29,7 +29,7 @@ if [ "$mode" = new ]; then
        "$keymap/tap_hold.c" "$keymap/host_os.c" "$keymap/host_os.h" \
        "$keymap/split_state.c" "$keymap/split_state.h" \
        "$keymap/split_sync.c" "$keymap/split_sync.h" \
-       "$keymap/split_health.c" "$keymap/split_health.h" "$stage/"
+       "$keymap/split_health.c" "$keymap/split_health.h" "$keymap/oled.h" "$stage/"
     # The test framework has its own keymap.c and config.h, so these get other names
     cp "$keymap/keymap.c" "$stage/rvannoord_keymap.c"
     cp "$keymap/config.h" "$stage/rvannoord_keymap_config.h"

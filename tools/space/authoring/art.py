@@ -1,6 +1,6 @@
 """Parse art/oled_spaceship.h into byte arrays, and page-format helpers."""
 import re, pathlib
-HDR = pathlib.Path('/Users/roelvannoord/qmk_userspace/keyboards/splitkb/kyria/keymaps/rvannoord/art/oled_spaceship.h')
+HDR = pathlib.Path(__file__).resolve().parents[3] / 'keyboards/splitkb/kyria/keymaps/rvannoord/art/oled_spaceship.h'
 
 def arrays():
     src = HDR.read_text()

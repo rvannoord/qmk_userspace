@@ -7,8 +7,9 @@
 
 #define XXX KC_NO
 
-// The state the master ships to the other half. Lands in QMK's transaction enum after
-// GET_RPC_RESP_DATA, which is required: ids at or below it are rejected.
+// The state the master ships to the other half (split_sync.c). QMK appends this name
+// to its transaction enum, after GET_RPC_RESP_DATA as required: ids at or below it are
+// rejected.
 #define SPLIT_TRANSACTION_IDS_USER U_SYNC_STATE
 
 // Custom keycodes (U_ prefix: QMK already uses short names like OS_TOGG)

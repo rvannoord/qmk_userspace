@@ -1,4 +1,4 @@
-// Scenarios 1-9 from MIGRATION.md. They run against both the old tree (bilateral combinations) and
+// Scenarios 1-9 from tests/README.md. They run against both the old tree (bilateral combinations) and
 // the new setup (Chordal Hold + Flow Tap); a scenario that passes in one and fails in the other is a
 // behaviour difference. Expectations are the new setup's intended behaviour. Times are milliseconds
 // from the first press. Colemak-DH home row: A=GUI R=Alt S=Ctrl T=Shift | N=Shift E=Ctrl I=Alt O=GUI.

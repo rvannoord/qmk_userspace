@@ -2,16 +2,17 @@
 // https://github.com/manna-harbour/miryoku
 
 // This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. You should have received a copy of the GNU General Public License along with this program. If not, see <http://www.gnu.org/licenses/>.
+// Miryoku's keymap, with this board's hooks. There is no keymaps[] here: the layers
+// come from users/manna-harbour_miryoku/ (USER_NAME in rules.mk), through the
+// LAYOUT_miryoku wrapper in config.h. This file only adds what Miryoku does not have:
+// the host OS switch, the split state sync, the OLED tasks and the encoders.
 #include QMK_KEYBOARD_H
 #include "manna-harbour_miryoku.h"
 #include "host_os.h"
 #include "split_state.h"
 #include "split_sync.h"
-#include "oled_panel.h"
+#include "oled.h"
 #include "split_health.h"
-#ifdef OLED_ENABLE
-#    include "oled_panel.h"   // only needed by housekeeping_task_user below
-#endif
 
 // Before the split transport starts, so the slave's handler can never be called while
 // the callback pointer is still null.

@@ -5,7 +5,7 @@
 ship over them with the C arithmetic, writes GIFs, strips, ASCII data and the checks."""
 import sys, pathlib, math, re
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))          # art.py sits beside this file
-sys.path.insert(0, '/Users/roelvannoord/qmk_userspace/tools')
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2]))   # tools/, for preview.py
 import art, preview
 from PIL import Image
 

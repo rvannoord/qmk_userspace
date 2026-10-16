@@ -16,7 +16,7 @@ When a QMK update breaks Miryoku, fix it here and add a line below. Checking whe
 | 2026-10-09 | `manna-harbour_miryoku.c` | `key_overrides` from a NULL-terminated pointer to an array: `const key_override_t *key_overrides[] = { &capsword_key_override };` | Current QMK takes `ARRAY_SIZE(key_overrides)`, a hard error on a pointer |
 | 2026-10-09 | `custom_config.h` (mine) | Keycode shims for the renamed mouse keys (`KC_MS_*`, `KC_WH_*`, `KC_BTN*` → `MS_*`) and RGB keys (`RGB_*` → `RM_*` / `UG_*`, or `KC_NO`) | QMK renamed them after Miryoku's layers were generated. Shimmed instead of editing `miryoku_babel/`. Also covers the `KC_BTN*` in the thumb combos in `manna-harbour_miryoku.c` |
 
-## `keyboards/splitkb/kyria/keymaps/rvannoord/panel_font.c`
+## `keyboards/splitkb/kyria/keymaps/rvannoord/art/panel_font.c`
 
 **QMK's own 6x8 OLED font**, `drivers/oled/glcdfont.c` — the face `oled_write()` draws with. GPL-2.0-or-later WITH BSD-2-Clause, derived from the Adafruit GFX library's font. It is already in the toolchain, so this is a vendored dependency the repo does **not** have to carry: `tools/panel/gen_font.py` reads it out of the QMK checkout at generation time.
 
@@ -26,7 +26,7 @@ Previously this was **DUNGEON.mode** by datagoblin ([datagoblin.itch.io/dungeonm
 
 Worth recording, since the question will come up again: all 45 `glcdfont*.c` in the QMK tree were compared over 0x20-0x7e, and every one is within **0.6%** of the default except `rubi` (5.3%) and `sendyyeah/pix` (12.6%). They are the same Adafruit face with a glyph or two changed, so "pick a nicer one from QMK" is not an option that exists. `gen_font.py --font <path>` takes any of them.
 
-## `keyboards/splitkb/kyria/keymaps/rvannoord/bjorn_art.c`
+## `keyboards/splitkb/kyria/keymaps/rvannoord/art/bjorn_art.c`
 
 Bjorn, the Tamagotchi Viking, from **[infinition/Bjorn](https://github.com/infinition/Bjorn)**, MIT licensed, "Copyright (c) 2024 infinition".
 
@@ -52,7 +52,7 @@ Checked against that commit on 2026-10-16: `space_row_1..4`, `ship_row_1..4` and
 
 `space_top_row_1..2` and `space_bottom_row_1..2` were **not** upstream. They were my own attempt to extend the 32-row original to the full 64-row panel, and they never looked right — stray stars with the Earth and moon clipped at the old band's edge. All eight strip rows, his four and my four, were removed on 2026-10-16 and replaced by three parallax planes composed from my own objects (`tools/space/`). **The ship and the mechanism are still his**, byte-identical. His hand-drawn mask was retired the same day: the render now uses a mask derived from his ship rows by `tools/space/gen_space.py` — silhouette plus a 1 px rim — so it can never drift from the ship, and the margin went from up to 4 px to exactly one.
 
-## `keyboards/splitkb/kyria/keymaps/rvannoord/panel_layer_icons.c`
+## `keyboards/splitkb/kyria/keymaps/rvannoord/art/panel_layer_icons.c`
 
 The master panel's ten layer bands. Two separate sources, neither drawn here.
 

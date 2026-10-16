@@ -255,8 +255,8 @@ def main(icons_dir, keymap_c, outdir, method):
               "// Do not edit: change the mapping in the generator and regenerate.\n"
               "//\n"
               "// One 128x40 band per layer - the master panel's middle zone, rows 8..47.\n"
-              "// Page format, bit 0 at the top; a set bit is the glyph, which the panel's\n"
-              "// inversion then draws dark on a lit field. Sources in VENDORED.md.\n")
+              "// Page format, bit 0 at the top; a set bit is a lit pixel of the glyph.\n"
+              "// Sources in VENDORED.md.\n")
 
     with open(outdir / 'panel_layer_icons.h', 'w') as f:
         f.write(banner)

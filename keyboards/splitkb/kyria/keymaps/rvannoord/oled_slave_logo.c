@@ -1,9 +1,9 @@
 // Slave-side OLED: the static logos. All three are compiled and chosen at
 // runtime now, so all three headers are included - they are pure data with
-// distinct names, so there is nothing to collide. See oled_panel.h.
+// distinct names, so there is nothing to collide. See oled.h.
 
 #include QMK_KEYBOARD_H
-#include "oled_panel.h"
+#include "oled.h"
 
 #include "art/oled_kyria.h"
 #include "art/oled_monitor1.h"

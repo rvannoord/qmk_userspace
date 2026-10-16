@@ -15,6 +15,8 @@ A QMK external userspace, started from `qmk/qmk_userspace`. It only holds my fil
 | `users/manna-harbour_miryoku/miryoku_babel/` | Miryoku, generated | Never. Override a layer in `custom_config.h` instead |
 | rest of `users/manna-harbour_miryoku/` | Miryoku, vendored | Only if there is no other way, and note it in `VENDORED.md` |
 
+The human-facing map is `README.md` and the keymap's `readme.md`: a friend reads those, not this file, so keep both current when a file moves or a rule changes. Generated and vendored data lives in the keymap's `art/`.
+
 The keymap folder pulls in the Miryoku userspace through `USER_NAME := manna-harbour_miryoku` in its `rules.mk`. The same `rules.mk` sets `CONVERT_TO = liatris` and the Miryoku build options, so a plain `qmk compile` always builds the right firmware. Never pass `-e MIRYOKU_...` on the command line: the old setup did, and afterwards nobody knew which options the flashed firmware had.
 
 Miryoku options in use (everything else is Miryoku's default):
@@ -87,7 +89,7 @@ Thumb arc, five positions per half, numbered from the outside edge toward the mi
 - Symbols depend on the OS keyboard layout (see `docs/layout.md`). Miryoku assumes plain US. US-International turns `' " ` ~ ^` into dead keys, which breaks both the symbol layer and vim.
 - LF line endings everywhere (`.gitattributes`). A `rules.mk` with CRLF breaks make.
 - Commits use my personal identity, `rvannoord <rvannoord@icloud.com>`, and are SSH-signed through 1Password. Check `git config user.email` before committing: the work PC's global identity is my Monitor one and must never end up in this repo.
-- Never attribute anything to Claude: no `Co-Authored-By: Claude` trailer, no "Generated with Claude Code", and no mention of Claude or AI in commit messages, tags, PR or release text, or the content of files that get pushed. Everything here is published as my own work, whatever the default attribution setting says. The only exceptions are `CLAUDE.md`, `.claude/` and, until the migration is done, `MIGRATION.md`.
+- Never attribute anything to Claude: no `Co-Authored-By: Claude` trailer, no "Generated with Claude Code", and no mention of Claude or AI in commit messages, tags, PR or release text, or the content of files that get pushed. Everything here is published as my own work, whatever the default attribution setting says. The only exceptions are `CLAUDE.md` and `.claude/`.
 - Commit and push only when I ask. Commits are conventional commits with an emoji, same as the existing history (`✨ feat(oled): ...`).
 
 ## Halcyon Kyria Wireless

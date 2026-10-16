@@ -5,27 +5,22 @@
 
 #pragma once
 
-// Slave-side OLED art. Pick ONE (defaults to SPACESHIP if none set).
+// Mine, not Miryoku's. Miryoku's rules.mk includes it, which is how a Miryoku layout
+// gets a keyboard's own features and tuning without touching the vendored files around
+// it. Key positions are in the keymap folder's config.h; everything else is here.
+
+// The other half's animation at boot, on a fresh EEPROM. All five are compiled in and
+// the U_ANIM key cycles through them (see the keymap's oled.h); this names the default.
 //   OLED_SLAVE_ANIMATION_BJORN       the Viking, reacting to typing speed
 //   OLED_SLAVE_ANIMATION_SPACESHIP   the WPM-driven parallax scroll
-//   OLED_SLAVE_ANIMATION_MONITOR1
-//   OLED_SLAVE_ANIMATION_MONITOR2
-//   OLED_SLAVE_ANIMATION_KYRIA
+//   OLED_SLAVE_ANIMATION_KYRIA / _MONITOR1 / _MONITOR2   the static logos
 #define OLED_SLAVE_ANIMATION_BJORN
 
-// Master panel. Pick ONE (defaults to ZONES if none set).
-//   OLED_MASTER_PANEL_ZONES   the pixel-art panel: badge, mod row, layer band, events
-//   OLED_MASTER_PANEL_TEXT    the old 21-column text readout
-#define OLED_MASTER_PANEL_ZONES
-
 /* OLED panel. Both halves sleep together (keyboard.json syncs it). See docs/layout.md.
-   120 s so the idle states are actually seen; 128 to pay for it. OLED wear rises
-   superlinearly with drive current, so dropping 255 -> 128 buys back more life than
-   doubling the on-time costs, and it matches the board's RGB cap. */
+   120 s so the idle states are actually seen. Full brightness, because lit-on-black
+   lights about a quarter of the pixels: 255 here is a lighter load than 128 was while
+   the panel ran inverted (2026-10-14 to -15), and OLED wear follows drive current. */
 #define OLED_TIMEOUT 120000
-/* Full brightness, which is affordable again precisely because the inversion is
-   off: lit-on-black lights about a quarter of the pixels where inverted lit
-   about three quarters, so 255 here is a lighter load than 128 was inverted. */
 #define OLED_BRIGHTNESS 255
 
 #ifdef RGB_MATRIX_ENABLE
@@ -84,25 +79,10 @@
 #define U_SELF_HEAL
 #define U_WATCHDOG_MS 2000
 
-// Swap black and white on both panels, in hardware. Bjorn's art is dark ink on a white
-// page, so this puts him back on paper; it also makes the six hooded poses legible,
-// which on a dark panel are a 33% blob. Comment it out to go back — nothing else
-// depends on it, and the art is identical either way.
-//
-// Known costs, before deciding to keep it: the alarm ladder's loudest rung was
-// full-panel inversion, which now means inverting *back* rather than forth; "dark at
-// rest" becomes "lit at rest"; and pixel wear goes from about a quarter lit to about
-// three quarters, which matters less now the panels actually sleep after two minutes.
-/* Reverted to lit-on-black on 2026-10-15. The inversion shipped in a6bd2f9
-   because Bjorn's source is dark ink on a white page and that is the medium he
-   was drawn for; it was tried on the board and the lit field is not wanted.
-   Define this to swap back - the art is unchanged either way, since the
-   inversion is a display command and not a change to the buffer.
-   The failure mode inverts with it: lit-on-black eats isolated LIT pixels
-   rather than dark hairlines, which is the regime the lock glyphs were
-   originally drawn for. See docs/layout.md.
-#define U_OLED_INVERT
-*/
+// Swap black and white on both panels, in hardware. Tried in a6bd2f9 for Bjorn's sake
+// (his source is dark ink on a white page) and reverted on 2026-10-15: the lit field was
+// not wanted. The art is identical either way; docs/layout.md has what flips with it.
+// #define U_OLED_INVERT
 
 // The world layer: weather across the whole slave panel, behind Bjorn. Season
 // comes from __DATE__ until the host daemon exists, so the panel is never dead

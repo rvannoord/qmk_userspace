@@ -2,8 +2,8 @@
 // Do not edit: change the mapping in the generator and regenerate.
 //
 // One 128x40 band per layer - the master panel's middle zone, rows 8..47.
-// Page format, bit 0 at the top; a set bit is the glyph, which the panel's
-// inversion then draws dark on a lit field. Sources in VENDORED.md.
+// Page format, bit 0 at the top; a set bit is a lit pixel of the glyph.
+// Sources in VENDORED.md.
 
 #include "panel_layer_icons.h"
 

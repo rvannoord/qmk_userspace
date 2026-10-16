@@ -3,7 +3,7 @@
 # transport's master half, which only exists under SPLIT_KEYBOARD, and the panel's
 # drawing, which needs a buffer to draw into. No QMK tree and no toolchain beyond cc.
 #
-#   tests/run_unit.sh            build and run both
+#   tests/run_unit.sh            build and run all four
 #   tests/run_unit.sh --dump     print the panel's frames instead of checking them
 set -euo pipefail
 
@@ -21,12 +21,12 @@ cc_flags=(-std=c11 -Wall -Wextra -Werror -I "$here/unit" -I "$here/unit/stub" -I
 # parameters a master-to-slave transaction never uses, and that is QMK's shape, not ours.
 cc "${cc_flags[@]}" -Wno-unused-parameter -o "$out/split_sync" \
    "$here/unit/test_split_sync.c" "$keymap/split_sync.c" "$keymap/split_health.c"
-cc "${cc_flags[@]}" -DOLED_MASTER_PANEL_ZONES -o "$out/panel" \
-   "$here/unit/test_panel.c" "$keymap/panel_font.c" "$keymap/panel_glyphs.c" "$keymap/panel_layer_icons.c" \
+cc "${cc_flags[@]}" -o "$out/panel" \
+   "$here/unit/test_panel.c" "$keymap/art/panel_font.c" "$keymap/art/panel_glyphs.c" "$keymap/art/panel_layer_icons.c" \
    "$keymap/oled_canvas.c" "$keymap/split_health.c"
 
 cc "${cc_flags[@]}" -DOLED_SLAVE_ANIMATION_BJORN -o "$out/bjorn" \
-   "$here/unit/test_bjorn.c" "$keymap/bjorn_art.c" "$keymap/bjorn_poses.c" "$keymap/oled_canvas.c"
+   "$here/unit/test_bjorn.c" "$keymap/art/bjorn_art.c" "$keymap/art/bjorn_poses.c" "$keymap/oled_canvas.c"
 
 # -Wno-unused-parameter: the spaceship's oled_set_cursor stub takes QMK's (col, line).
 cc "${cc_flags[@]}" -Wno-unused-parameter -o "$out/space" \

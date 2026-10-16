@@ -1,7 +1,7 @@
 // The state the master gathers for the slave half: modifiers in finger order, the
 // active and default layers, lock and Caps Word state, the host OS, and a count of
-// home-row misfires. Built on the master every main loop; stage 2 ships it across
-// the split link, and the master panel already renders from it. See docs/layout.md.
+// home-row misfires. Built on the master every main loop, shipped across the
+// split link by split_sync.c, and rendered from on both halves. See docs/layout.md.
 
 #pragma once
 

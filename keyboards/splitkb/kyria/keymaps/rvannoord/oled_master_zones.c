@@ -27,17 +27,15 @@
 
 #include QMK_KEYBOARD_H
 #include "manna-harbour_miryoku.h"
-#include "oled_panel.h"
+#include "oled.h"
 #include "host_os.h"
 #include "split_state.h"
 #include "split_sync.h"
-#include "panel_font.h"
-#include "panel_glyphs.h"
-#include "panel_layer_icons.h"
+#include "art/panel_font.h"
+#include "art/panel_glyphs.h"
+#include "art/panel_layer_icons.h"
 #include "oled_canvas.h"
 #include "split_health.h"
-
-#ifdef OLED_MASTER_PANEL_ZONES
 
 // Rebuilt every main loop by oled_master_task. That is a resampling, not a capture:
 // u_sync_build() reports only what is held at the instant it is called, and each build
@@ -491,5 +489,3 @@ void oled_render_master(void) {
     render_mods();
     u_canvas_commit();     // the only point that touches the driver's buffer
 }
-
-#endif     // OLED_MASTER_PANEL_ZONES

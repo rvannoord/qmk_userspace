@@ -13,7 +13,7 @@
 // told, which also means the two halves cannot disagree after a replug.
 
 #include QMK_KEYBOARD_H
-#include "oled_panel.h"
+#include "oled.h"
 #include "split_state.h"
 #include "split_sync.h"
 
