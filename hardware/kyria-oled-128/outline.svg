@@ -1,0 +1,110 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 480" width="1000" height="480" font-family="Segoe UI, Arial, sans-serif" font-size="9">
+  <!-- Scale: 10 px = 1 mm (side view: 20 px = 1 mm horizontally). Board 25.9 x 32.3 mm, 32.4 with the wrapped ribbon. -->
+  <rect width="1000" height="480" fill="#ffffff"/>
+  <text x="20" y="24" font-size="14" font-weight="600" fill="#222">1.12" 128x128 OLED carrier - minimal outline (mm): 25.9 x 30.1 body + 12.0 x 2.2 ribbon tab</text>
+
+  <!-- ============ FRONT ============ -->
+  <text x="70" y="46" font-size="11" font-weight="600" fill="#222">Front - display side</text>
+  <text x="161.4" y="64" text-anchor="middle" fill="#222">GND</text>
+  <text x="186.8" y="64" text-anchor="middle" fill="#222">VCC</text>
+  <text x="212.2" y="64" text-anchor="middle" fill="#222">SCL</text>
+  <text x="237.6" y="64" text-anchor="middle" fill="#222">SDA</text>
+  <!-- board, then glass flush with top and sides -->
+  <path d="M70 70 H329 V371 H259.5 V388 Q259.5 393 254.5 393 H144.5 Q139.5 393 139.5 388 V371 H70 Z" fill="#2e5e8c" stroke="#1d3d5c"/>
+  <rect x="70" y="70" width="259" height="301" fill="#161616" stroke="#000"/>
+  <rect x="75" y="75" width="249" height="254" fill="none" stroke="#3a3a3a"/>
+  <rect x="99.1" y="89.3" width="200.8" height="200.8" fill="#0b0b0b" stroke="#6aa0d8" stroke-dasharray="4 3"/>
+  <text x="199.5" y="186" text-anchor="middle" fill="#9cc3ea" font-size="10">active area</text>
+  <text x="199.5" y="200" text-anchor="middle" fill="#9cc3ea" font-size="10">20.08 x 20.08</text>
+  <text x="199.5" y="352" text-anchor="middle" fill="#888">glass 25.9 x 30.1</text>
+  <!-- header pins under the glass -->
+  <g fill="none" stroke="#c9a227" stroke-dasharray="2 2">
+    <rect x="153.4" y="75" width="16" height="16"/>
+    <circle cx="186.8" cy="83" r="8"/>
+    <circle cx="212.2" cy="83" r="8"/>
+    <circle cx="237.6" cy="83" r="8"/>
+  </g>
+  <!-- ribbon on the front, to the bottom edge -->
+  <rect x="148" y="371" width="103" height="23" fill="#d08a2c" stroke="#9a6418"/>
+  <text x="199.5" y="386" text-anchor="middle" fill="#222">ribbon</text>
+  <!-- splitkb 128x64 module for comparison, top edges aligned -->
+  <rect x="70" y="70" width="261" height="262" fill="none" stroke="#e07020" stroke-width="1.5" stroke-dasharray="6 4"/>
+  <text x="352" y="324" fill="#e07020">splitkb</text>
+  <text x="352" y="335" fill="#e07020">26.1 x 26.2</text>
+  <!-- dimensions -->
+  <g stroke="#444" fill="none">
+    <line x1="70" y1="410" x2="329" y2="410"/><line x1="70" y1="405" x2="70" y2="415"/><line x1="329" y1="405" x2="329" y2="415"/>
+    <line x1="50" y1="70" x2="50" y2="394"/><line x1="45" y1="70" x2="55" y2="70"/><line x1="45" y1="394" x2="55" y2="394"/>
+    <line x1="345" y1="70" x2="345" y2="394"/>
+    <line x1="340" y1="70" x2="350" y2="70"/><line x1="340" y1="83" x2="350" y2="83"/><line x1="340" y1="371" x2="350" y2="371"/><line x1="340" y1="394" x2="350" y2="394"/>
+  </g>
+  <text x="199.5" y="425" text-anchor="middle" fill="#222" font-size="10">25.9</text>
+  <text x="40" y="232" text-anchor="middle" fill="#222" font-size="10" transform="rotate(-90 40 232)">32.4 at the tab (30.1 at the corners)</text>
+  <text x="352" y="80" fill="#222">1.3 pin row</text>
+  <text x="352" y="230" fill="#222">30.1 glass</text>
+  <text x="352" y="386" fill="#222">2.2 tab</text>
+
+  <!-- ============ BACK ============ -->
+  <text x="430" y="46" font-size="11" font-weight="600" fill="#222">Back - seen from behind (mirrored)</text>
+  <text x="511.4" y="64" text-anchor="middle" fill="#222">SDA</text>
+  <text x="536.8" y="64" text-anchor="middle" fill="#222">SCL</text>
+  <text x="562.2" y="64" text-anchor="middle" fill="#222">VCC</text>
+  <text x="587.6" y="64" text-anchor="middle" fill="#222">GND</text>
+  <path d="M420 70 H679 V371 H609.5 V388 Q609.5 393 604.5 393 H494.5 Q489.5 393 489.5 388 V371 H420 Z" fill="#2e5e8c" stroke="#1d3d5c"/>
+  <rect x="579.6" y="75" width="16" height="16" fill="#c9a227"/>
+  <circle cx="562.2" cy="83" r="8" fill="#c9a227"/>
+  <circle cx="536.8" cy="83" r="8" fill="#c9a227"/>
+  <circle cx="511.4" cy="83" r="8" fill="#c9a227"/>
+  <circle cx="587.6" cy="83" r="5" fill="#555"/>
+  <circle cx="562.2" cy="83" r="5" fill="#555"/>
+  <circle cx="536.8" cy="83" r="5" fill="#555"/>
+  <circle cx="511.4" cy="83" r="5" fill="#555"/>
+  <!-- parts zone -->
+  <rect x="425" y="96" width="249" height="209" fill="none" stroke="#ffffff" stroke-dasharray="5 4"/>
+  <text x="431" y="110" fill="#ffffff">parts zone 25 x 21, max 1.6 tall</text>
+  <!-- suggested placement -->
+  <rect x="470" y="118" width="160" height="34" fill="#ffffff" fill-opacity="0.15" stroke="#ffffff" stroke-opacity="0.6"/>
+  <text x="550" y="132" text-anchor="middle" fill="#ffffff">U1 LDO, C1 C2 C3</text>
+  <text x="550" y="145" text-anchor="middle" fill="#ffffff">Q1 level shifter, R4 R5, JP1</text>
+  <rect x="600" y="164" width="68" height="134" fill="#ffffff" fill-opacity="0.15" stroke="#ffffff" stroke-opacity="0.6"/>
+  <text x="634" y="184" text-anchor="middle" fill="#ffffff">step-up</text>
+  <text x="634" y="198" text-anchor="middle" fill="#ffffff">U2 L1 D1</text>
+  <text x="634" y="211" text-anchor="middle" fill="#ffffff">C5 C6 C9</text>
+  <text x="634" y="224" text-anchor="middle" fill="#ffffff">R1 R2</text>
+  <rect x="520" y="232" width="74" height="66" fill="#ffffff" fill-opacity="0.15" stroke="#ffffff" stroke-opacity="0.6"/>
+  <text x="557" y="252" text-anchor="middle" fill="#ffffff">panel support</text>
+  <text x="557" y="266" text-anchor="middle" fill="#ffffff">C4 C7 R3</text>
+  <text x="557" y="280" text-anchor="middle" fill="#ffffff">R6 C8 D2</text>
+  <!-- ribbon pads: 22 x 0.4 mm on 0.7 mm pitch, y 24.1-27.1 -->
+  <line x1="474" y1="326" x2="625" y2="326" stroke="#c9a227" stroke-width="30" stroke-dasharray="4 3"/>
+  <!-- ribbon lying over the pads, coming round the bottom edge -->
+  <path d="M453 317 H646 V367 H601 V393 H498 V367 H453 Z" fill="#d08a2c" fill-opacity="0.35" stroke="#d08a2c"/>
+  <text x="623" y="356" text-anchor="middle" fill="#ffffff">1</text>
+  <text x="476" y="356" text-anchor="middle" fill="#ffffff">22</text>
+  <text x="549.5" y="410" text-anchor="middle" fill="#222">ribbon pads: 22 x 0.4 x 3.0, 0.7 pitch, y 24.1-27.1</text>
+
+  <!-- ============ SIDE ============ -->
+  <text x="800" y="46" font-size="11" font-weight="600" fill="#222">Side (thickness x2)</text>
+  <rect x="802.8" y="70" width="25.2" height="301" fill="#161616"/>
+  <rect x="830" y="70" width="20" height="323" fill="#2e5e8c" stroke="#1d3d5c"/>
+  <rect x="850" y="96" width="30" height="209" fill="none" stroke="#444" stroke-dasharray="4 3"/>
+  <!-- pin: flush with the front, soldered on the back, plastic slid down -->
+  <line x1="830" y1="83" x2="965" y2="83" stroke="#c9a227" stroke-width="3"/>
+  <path d="M850 78 L856 83 L850 88 Z" fill="#9a9a9a"/>
+  <rect x="862" y="76" width="50" height="14" fill="#333"/>
+  <!-- ribbon: down the front face, around the bottom edge, up the back -->
+  <path d="M829 371 V393 Q829 401 840 401 Q851 401 851 393 V317" fill="none" stroke="#d08a2c" stroke-width="2.5"/>
+  <text x="916" y="100" fill="#222">pins flush on the</text>
+  <text x="916" y="111" fill="#222">front, soldered</text>
+  <text x="916" y="122" fill="#222">on the back</text>
+  <text x="886" y="200" fill="#222">parts</text>
+  <text x="886" y="211" fill="#222">max 1.6</text>
+  <text x="886" y="290" fill="#222">PCB 1.0</text>
+  <text x="886" y="372" fill="#222">ribbon wraps</text>
+  <text x="886" y="383" fill="#222">bottom edge</text>
+  <text x="790" y="232" text-anchor="middle" fill="#222" transform="rotate(-90 790 232)">glass 1.26 + tape 0.1</text>
+  <text x="800" y="425" fill="#222">about 3.9 total, without pins</text>
+
+  <text x="20" y="452" fill="#555" font-size="10">All dimensions in mm. Front-view coordinates: x from the left edge, y from the top edge. Header pins under the glass at x 9.14 / 11.68 / 14.22 / 16.76, y 1.30.</text>
+  <text x="20" y="466" fill="#555" font-size="10">Orange dashes: splitkb 128x64 module with top edges aligned. The ribbon must not bend within 2.0 of the glass edge, which sets the 2.2 below the glass.</text>
+</svg>

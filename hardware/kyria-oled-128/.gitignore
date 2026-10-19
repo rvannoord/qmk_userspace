@@ -1,0 +1,12 @@
+# Kyria case files are CC BY-NC-SA: download them locally, don't commit them
+*.dxf
+# Datasheets: link to them instead
+*.pdf
+# KiCad scratch files
+*-backups/
+*.kicad_prl
+*.lck
+fp-info-cache
+_autosave-*
+# Python
+__pycache__/

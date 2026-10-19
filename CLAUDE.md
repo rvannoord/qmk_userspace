@@ -32,6 +32,8 @@ The other options (`MIRYOKU_ALPHAS`, `_EXTRA`, `_TAP`, `_NAV`, `_LAYERS`) and th
 
 `docs/oled-v2.md` is the staged plan for the current round of OLED work: the panels not sleeping, the link between the halves, the idle director, the goat, weather by season, and all of Bjorn's sprite sets. Work through it in order, stop at every checkpoint it names, and keep its Progress table current. It is removed when the last stage is done.
 
+`hardware/kyria-oled-128/` is a custom 128×128 OLED board (1.12" SH1107) to replace the 128×64 modules, in design. Start with its `HANDOFF.md`, then `DESIGN.md`.
+
 ## Build and flash
 
 QMK runs in WSL Ubuntu, with `qmk_firmware` in the WSL home and `user.overlay_dir` pointing at this repo under `/mnt/c/...`.
