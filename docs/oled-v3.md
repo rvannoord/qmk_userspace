@@ -238,8 +238,8 @@ art, all of it*):
 - **Locks.** Caps Lock and Scroll Lock are drashna's cells 0xc9 and 0xcb, through `gen_glyphs.py
   --drashna`. After the checkpoint, Caps Word was changed to light the Caps Lock cell, the way
   drashna's screen does, because he has no Caps Word glyph. The hand-drawn one and the middle slot
-  went, and the two locks right-align at x=109 and 118. The firmware is 113,320 bytes of text
-  with it. Not flashed yet: `f639c97` on the board still draws three slots.
+  went, and the two locks right-align at x=109 and 118. The firmware is 113,312 bytes of text
+  with it, from a clean tree. Flashed as `0130b8b` on 2026-10-22.
 - **Hosts.** The logo follows the host: Windows, the Apple logo for the Mac, Tux for Linux, and
   for iOS the Apple logo with the "i" in front (D14).
   - `host_os.c` keeps the detected host, and `host_kind()` reports it.

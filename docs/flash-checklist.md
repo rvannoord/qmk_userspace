@@ -15,6 +15,7 @@ while the reason for it is still obvious.
 
 | Build | Commit | Flashed | Notes |
 |-------|--------|---------|-------|
+| `2026-10-22-0130b8b.uf2` | `0130b8b` | 2026-10-22 | Both halves, loaded and verified with `picotool load -v`, built from a clean tree (label `0130b8`). Caps Word lights drashna's Caps Lock glyph; two lock slots. No full read-back, because the board had run `f639c97` since the night before; the right half was identified before loading by reading the start of its flash |
 | `2026-10-21-f639c97.uf2` | `f639c97` | 2026-10-21 | Both halves, loaded and verified with `picotool load -v`, built from a clean tree (label `f639c9`, no `-dirty`). Stage 1 of `docs/oled-v3.md`: Ein, drashna's icons and locks, the host logos with the iOS "i", the 7-byte payload. Read-backs of both halves taken first, `readback-{left,right}-2026-10-21.uf2`: both were `27a1e24`, matching the table |
 
 Before it: `27a1e24` (2026-10-16, the new space behind the ship). Before that, all on 2026-10-15 and all kept: `0c47a23` (the animation key), `1034f2e`,
@@ -37,7 +38,7 @@ From `91477af` on, the build date and the userspace commit are compiled in:
 strings <file>.uf2 | grep -oE "20[0-9]{2}-[0-9]{2}-[0-9]{2}-[0-9]{2}:[0-9]{2}:[0-9]{2}" | sort -u
 ```
 
-matches a read-back against the kept builds. `c95356d` and the migration build predate
+matches a read-back against the kept builds. **It can miss one:** a `.uf2` is cut into 256-byte blocks, and a date that falls across a block boundary comes out of `strings` as two pieces (`0130b8b`'s shows only `2026-10-22-0`). If nothing matches, search the read-back for the commit label instead, which is shorter and less likely to be split. `c95356d` and the migration build predate
 that and carry no date, so a read-back of either is identifiable only by byte comparison.
 
 ---
@@ -83,7 +84,7 @@ that was not flashed simply stops typing.
 | The logo survives the alarm | Unplug the TRRS for two seconds. The logo, and the line if SYS set the OS, show dark, cut out of the lit band | Under the alarm that corner is lit with the rest of the band, so the logo is knocked out of it instead of vanishing into it | `v3-1` |
 | The stats page in Ein | Hold SYS two seconds. All eight lines read | The font changed to drashna's Ein, and the stats page is the only text left on the master | `v3-1` |
 | The boot splash is unchanged | `QMK Firmware` on both panels at boot, as before | The logo still comes from QMK's own font, because drashna's does not carry it | `v3-1` |
-| Caps Lock and Scroll Lock read | Turn on Caps Word, then Caps Lock (Shift + the Caps Word key, held a moment on the Mac), then Scroll Lock (Fun layer) **on Windows**. Caps Word and Caps Lock light the same ⇪ at x=109; Scroll Lock sits at 118. On the Mac, Scroll Lock is brightness down and never lights | Both are drashna's 6x8 cells now (⇪ over a bar, and his Scroll Lock), replacing the hand-drawn padlock and ring. Caps Word lights the ⇪ as on his screen, which retired its own glyph. They must still read at 1 px without inverting. **Needs the build after `f639c97`**, which still draws three slots | `v3-1` |
+| Caps Lock and Scroll Lock read | Turn on Caps Word, then Caps Lock (Shift + the Caps Word key, held a moment on the Mac), then Scroll Lock (Fun layer) **on Windows**. Caps Word and Caps Lock light the same ⇪ at x=109; Scroll Lock sits at 118. On the Mac, Scroll Lock is brightness down and never lights | Both are drashna's 6x8 cells now (⇪ over a bar, and his Scroll Lock), replacing the hand-drawn padlock and ring. Caps Word lights the ⇪ as on his screen, which retired its own glyph. They must still read at 1 px without inverting. On the board since `0130b8b` | `v3-1` |
 | iOS shows "i" and the Apple logo | Plug into an iPad or iPhone, if one is at hand. Tap SYS: Windows, with a line; again: the "i" and Apple logo back, with the line under both | The "i" is hand-drawn, 2 px wide and 10 rows tall, with a 2 px gap that moves the logo 4 px right; iOS swaps Ctrl and GUI like the Mac | `v3-1` |
 | Linux shows Tux | Plug into a Linux machine, if one is at hand | QMK reports Linux, and the logo follows the new host byte. Behaviour stays Windows-like | `v3-1` |
 | SYS on Linux flips Linux and Mac | On that Linux machine, tap SYS twice | It should go to the Apple logo with a line under it, then back to Tux with the line, not to Windows | `v3-1` |
