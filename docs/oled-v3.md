@@ -24,7 +24,7 @@ QMK line numbers refer to `7a1bbf37c5`.
 
 | Stage | Status |
 |-------|--------|
-| 0. Sources, licence, generators | open |
+| 0. Sources, licence, generators | done 2026-10-21 |
 | 1. Bands: Ein, modifier icons, OS logo | open |
 | 2. Bootloader screen | open |
 | 3. PAGE key, page framework, the three bands | open |
@@ -69,7 +69,9 @@ Open, with a default, to answer before the stage that needs it:
   is not Base.
 - D9. **Kitty thresholds (stage 3).** drashna's are 10, 40 and 60 WPM. Default: Bjorn's tiers
   instead (10 / 30 / 50 up, 6 / 24 / 42 down, 800 ms dwell), so both characters read speed the same
-  way.
+  way. Found at stage 0: the small kitty's paw frames are byte for byte its sleep frames. So on
+  the bands it looks asleep in the paw tier, whichever WPM range that tier gets. The striped kitty
+  has three paw frames of its own.
 - D10. **Screensaver timing (stage 9).** The mock started at 60 s on both halves. Bjorn settles at
   8 s and dozes at 75 s, and v2's director owns the slave's idle time. Default: the master rains
   from 60 s, the slave keeps Bjorn's idle show and rains from 100 s, and both go dark at 120 s.
@@ -111,7 +113,7 @@ The outputs, all under the keymap's `art/`:
 
 | Output | From | What |
 |--------|------|------|
-| `panel_font.c` | `drashna_font.h`, Ein | 95 glyphs through `tools/panel/gen_font.py`. **Trap:** drashna zeroed the font's upper rows, and `gen_font.py` assembles `u_qmk_logo` from rows 0x80/0xa0/0xc0. So the logo must still come from QMK's own `glcdfont.c`, which needs a second source option in the generator |
+| `panel_font.c` | `drashna_font.h`, Ein | 95 glyphs through `tools/panel/gen_font.py`. **Trap:** `gen_font.py` assembles `u_qmk_logo` from rows 0x80/0xa0/0xc0, and drashna's font does not hold the logo there (those rows are mostly empty, with a few other glyphs). So the logo must still come from QMK's own `glcdfont.c`, which needs a second source option in the generator |
 | `panel_glyphs.c` | `drashna_font.h`, 0xE4-0xED | the five mod glyphs, each 12x8 icon centred in its 16x16 slot (offset 2, 4) |
 | `drashna_icons.c` | `drashna_font.h`, 0x95-0x98 / 0xB5-0xB8, 0xE0-0xE3, 0xF0-0xF1 | the 12x16 Windows and Apple logos; speaker, mute and bulb at 12x8 |
 | `kitty_art.c` | `oled_assets.h`, `pet_animiations` | pets 0 (striped, status sheet) and 2 (small, bands): sleep, kaki, mati and awake, 32x32 |
@@ -124,6 +126,30 @@ Add a section per source to `VENDORED.md`, with commit, licence, credit and the 
 
 **Done when:** each generator reproduces its output byte for byte on a second run, and nothing
 is compiled in yet.
+
+**As built, 2026-10-21.**
+- **Licence.** D6 answered and `LICENSE` replaced. The two clones are at `~/drashna-src` and
+  `~/drashna-modules`, at the pinned commits.
+- **Generators.** `tools/drashna/csource.py` reads the sources through the preprocessor.
+  `tools/drashna/gen_art.py` writes the six new art files. `gen_font.py` gained `--drashna … --face
+  EIN` and `gen_glyphs.py` gained `--drashna …`.
+- **Not written to `art/` yet.** `panel_font.c` and `panel_glyphs.c` stay as they are until stage 1
+  regenerates them.
+- **Verified:**
+  - all eight outputs came out byte for byte the same on a second run
+  - without the option, the committed `panel_font.*` and `panel_glyphs.*` still regenerate
+    unchanged
+  - the Ein build of `panel_font.c` keeps `u_qmk_logo` byte for byte, and the lock glyphs are
+    untouched
+  - every output compiles on the host with `-Wall -Wextra -pedantic -Werror`
+  - none of it is in `SRC`, and the firmware builds as before
+
+  A contact sheet rendered from the generated files was checked by eye.
+- **What the sources hold** that the later stages need is in `VENDORED.md`:
+  - the logo rows
+  - the small kitty's two paw frames, which are its sleep frames (D9)
+  - Yoshi's set sizes, 3 / 5 / 3 / 3 / 2
+  - Mario lit at y 5-31 standing and 3-28 jumping, and Bill at 28x21 from (2,2), as the mock had them
 
 ## Stage 1: the bands, art first
 
