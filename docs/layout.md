@@ -25,6 +25,7 @@ The source of truth for my layout. A change goes here first, then into the firmw
 |-----|-------|------|
 | SYS (`U_SYS`) | left half, outer pinky column, top row | toggles Win/Mac by hand when detection guesses wrong; the left OLED shows the result. Held two seconds, the stats page. Held while plugging in, it enters the bootloader (Bootmagic) |
 | ANIM (`U_ANIM`) | right half, outer pinky column, top row, mirroring SYS | cycles the other half's animation: Bjorn, spaceship, Kyria logo, Monitor 1, Monitor 2. Persisted across a replug. See *Switching the slave's animation* |
+| PAGE (`U_PAGE`), **planned** | left half, outer pinky column, middle row, under SYS | cycles the master's pages. While a layer map is showing it switches the map between the big grid and the Kyria-shaped one instead. Persisted across a replug. See *The drashna round* under OLED; build order in `docs/oled-v3.md` |
 
 ## Home-row mods
 
@@ -197,6 +198,12 @@ erasing itself per layer once that layer had been used enough. Cut before it was
 repeats what the finger already knows by the time it can read it, and it was the one zone whose
 size forced the 6x8 font on everything else. The 24 px it held went to the event strip, which
 shows the things the layer name cannot.
+
+**Reversed on 2026-10-21 for a different kind of map.** The argument above is against a map that
+sits in a corner all the time. The one decided in *The drashna round* below appears only while a
+thumb layer key is held, takes a whole panel, and takes it on the half under the fingers that use
+it, so it is read before the finger knows, not after. That matters while Colemak-DH and Miryoku's
+layers are still being learned.
 
 **The row reverses with the half.** Outer to inner is pinky, ring, middle, index, and on the
 left half that runs left to right across the keys. On the right half the same fingers run the
@@ -533,7 +540,9 @@ Still to do: the goat (wander from 20 s, pet at 45 s); Caps Lock on the mascot (
 default layer is not base (the master already draws a rule under the layer name, the mascot
 draws nothing); the "invert the whole OLED" look; raising the WPM tiers once typing speed
 settles. Beyond the original spec, `docs/oled-v2.md` adds the idle director, weather by season,
-the doze extras, and a place for every one of Bjorn's seventeen sprite sets.
+the doze extras, and a place for every one of Bjorn's seventeen sprite sets. *The drashna round*
+below adds master pages, the live layer map and more; none of it is built, and its build order is
+`docs/oled-v3.md`.
 
 **Known defects, found 2026-10-14.** Each line goes when the commit that fixes it lands.
 Bug A (neither panel could sleep), D-1 (he stopped blinking after a doze), D-2 (the slave
@@ -660,6 +669,156 @@ in `planes.txt`, and the stdlib generator that appends each strip's 128-column t
 appended, never authored, because an authored tail can drift from its head and then the seam shows
 once a loop. `tests/unit/test_space.c` asserts closure on the compiled bytes at rest and at speed,
 and that the ship is bit-exact inside its own mask.
+
+### The drashna round, decided 2026-10-21
+
+drashna's userspace (`drashna/qmk_userspace` at `0903be5`, with the bongocats module from
+`drashna/qmk_modules` at `ee2c35b`) was read through for OLED ideas. Each one was rendered on this
+keyboard's own panels before it was decided. The master frames came from `oled_master_zones.c` and
+Bjorn from `oled_slave_bjorn.c`, both compiled on the host, with everything new drawn over them.
+This section is what was picked. **None of it is built**; `docs/oled-v3.md` is the build order and
+holds the questions still open.
+
+**The master gets pages, and a key to turn them.** `U_PAGE` (left outer column, middle row, under
+SYS) cycles what the master shows, the way `U_ANIM` cycles the slave. It acts on release, is
+persisted in the same tagged EEPROM word, and only the master draws pages, so nothing new crosses
+the link for them. For 700 ms after a press, a row of dots in the middle of the status bar says
+which page you landed on. In order:
+
+| Page | What it shows |
+|------|---------------|
+| Bands | today's three bands, with the changes below |
+| Bands, kitty | the same, with drashna's small kitty in place of the Kyria emblem on the base layer, the wordmark kept. It reacts to WPM: sleeps, paws, watches, bounces |
+| Bands, QMK | the same, with the QMK splash logo across the base layer's band |
+| Status sheet | drashna's left screen rebuilt with this keyboard's data: header and border art, the striped kitty top left, WPM, the layer name (inverted off base), the OS logo with auto or manual, CW / CAPS / SCRL inverted when on, and eight modifier icons for both hands |
+| Layer map | the whole current layer, both halves at 1×, held keys inverted, the held layer key inverted in the thumb row |
+| Typing | WPM at 2×, the session peak, a history graph of one column per 300 ms, bongo cat along the bottom |
+| Stats | the SYS page as it is; holding SYS still opens it from any page |
+| Event log | the last eight events with uptime stamps (there is no clock): boot, link up and down, a self-heal reset, the OS set by detection or by SYS, a misfire |
+
+The three versions of the bands are three stops rather than a setting. That settles the kitty and
+the QMK logo both wanting the base band: pick by pressing. Every other layer looks the same in all
+three.
+
+**The bands page loses its last text.** The `Win`/`Mac` badge becomes drashna's 12x16 Windows or
+Apple logo at the top left. It borrows the band's empty top-left corner: x 0-13, y 8-17 is dark on
+all ten layers, and the leftmost band pixel anywhere is the Kyria emblem at x=15 (measured on the
+host renders). A hand-set OS keeps its underline, at y=16 under the logo. The mod row's glyphs
+become drashna's filled 12x8 icons (⊞ ⌥ ⌃ ⌘ ⇧), centred in the existing 16x16 slots, so the cell
+model does not change: holds, the Mac order, the mirroring and the misfire chip work exactly as
+now. Rendered against the real panel, the cell model matched the firmware byte for byte.
+
+**The font becomes Ein**, one of the faces in drashna's font file, from datacute's TinyOLED-Fonts.
+It draws whatever text the panels still carry: the stats page, the new pages and the layer maps.
+Its lowercase is small capitals.
+
+**The live layer map.** It shows only while a thumb layer key is held, and fills a whole panel on
+the half under the fingers that use it:
+
+- Space, Tab and Esc (Nav, Mouse, Media) fill the **right** panel; Enter, Bksp and Del (Sym, Num,
+  Fun) fill the **left**. Miryoku keeps the holding hand for mods and layer locks, so the half with
+  the layer key has nothing worth drawing.
+- Button, held on the pinky's Z or /, has keys on both hands, so both panels show their own half.
+- The physical half decides, not master or slave. The keymap is compiled into both halves and the
+  slave already receives the active layer, so either half can work out its own legends with
+  `keymap_key_to_keycode()`, and its own pressed keys from its own matrix.
+- Keys are drawn where they sit: on the left half pinky to inner, left to right; on the right half
+  inner to pinky. The thumbs sit under the inner columns (Ent, Bsp, Del from the inside out on the
+  right). There are no outlines. A pressed key lights as a small inverted box, and the layer's name
+  sits inverted in the two free thumb slots. Button's modifiers use the mod row's 12x8 icons.
+- Two styles, both kept, switched by **PAGE while a map is showing**. A page change would never be
+  wanted at that moment, so the key is free for it. The **big grid** has five columns of 25.6 px,
+  rows of 16 and single symbols at 2×. The **Kyria-shaped** map uses 1× legends on the board's own
+  column stagger (0.75, 0.25, 0, 0.25 and 0.5 units, pinky to inner) and thumb arc, both from
+  `keyboard.json`. The style is persisted with the page and crosses the link as bit 3 of `world`,
+  which leaves bits 4-7 for the weather and the time of day.
+- **The master's screen moves over.** While a map covers the master's panel and not the slave's,
+  the master's own bands page takes Bjorn's place on the other half: the OS logo, the layer icon
+  and the mod row, mirrored for that hand by the code that already mirrors it. So the layer icon
+  never disappears. With the cable on the left that happens for Sym, Num and Fun; with it on the
+  right, for Nav, Mouse and Media. Button covers both panels, so for that one layer there is
+  nowhere for it to go. The six bytes the slave already receives carry everything that page draws.
+
+**Two more slave animations** behind `U_ANIM`, after today's five. **Bongo cat** is drashna's
+bongocats module (HorrorTroll's art): 128x32 along the bottom, WPM at 2× top right, and it slaps
+faster as WPM climbs, with a frame time of max(100, 450 − 2.5 × WPM) ms. **Mario, Yoshi and
+Bullet Bill** is a small scene rather than a loop, described below. That makes seven, which still
+fits the three bits of `world` the animation index has.
+
+**Mario, Yoshi and Bullet Bill, driven by WPM.** All of it is drashna's art from `oled_assets.h`:
+- Mario: four 16x32 frames, two standing, a step and a jump.
+- Yoshi: five sets of 32x32, with drashna's own frame orders from the comments there. *Idle*
+  (0 0 1 2 1 2 1 2 1 0), *ready* (5 6 7 8 9 8 7 6), *fly*, a flutter (10 11 12 11), *hide*, curling
+  up (15 16 17), and *run* (20 21).
+- Bill: one 32x24 frame, nose left, so he flies right to left. A flying object needs no frames; his
+  motion is position.
+
+The layout:
+- Both face right with their feet on y=62: Mario at x=14, Yoshi in front at x=40.
+- Under them is a dotted floor rule at y=63, like Bjorn's, with a few grass tufts on y 61-62. Floor
+  and tufts scroll left at `wpm/15` px a tick, the spaceship's own rate.
+- **WPM at 2× in the top-right corner**, as bongo cat has it, with `wpm` small underneath (x 90-125,
+  y 1-25). Nobody ever reaches that corner, so nothing has to avoid it.
+
+The steps are Bjorn's WPM tiers (up at 10 / 30 / 50, down at 6 / 24 / 42), so the board reads speed
+one way:
+
+| WPM | Mario | Yoshi | Floor |
+|-----|-------|-------|-------|
+| 0 | standing | *idle* | still |
+| typing, below 10 | stepping (frames 1 and 2) | *ready* | creeping |
+| 10 and up | walking, max(100, 450 − 2.5 × WPM) ms a frame, bongo cat's formula | *run*, max(80, 300 − 3 × WPM) ms a frame | scrolling, faster with WPM |
+| stopped for a while | standing | *hide*, then stays curled | still |
+
+**Bill** comes in from the right along the ground (y 41-61), only while typing at 10 WPM or more.
+After each pass, the next one waits about 5 s, or about 2.8 s from 30 WPM. He flies at 4 px a tick
+plus the floor's speed. Yoshi flutters over him on *fly* and Mario jumps him on the jump frame, each
+on a 31 px arc. **The jump is timed to Bill, not fixed.** For each character, the jump lasts at
+least 16 ticks and long enough that the whole time Bill overlaps it horizontally falls in the middle
+half of the arc, where the lift clears Bill's top. So it works at every speed. Checked on the host
+renders: Bill touched neither of them in any frame. Yoshi's flutter apex reaches y=0 exactly.
+
+When Yoshi curls up is open (D13 in `docs/oled-v3.md`). The demo used 4 s, and on the board it
+would follow Bjorn's doze. This scene moves while you type, which Bjorn's never does. That is the
+point of it, and the spaceship already works the same way; ANIM is how you get the quiet one back.
+
+**A screen for the bootloader.** `reset_keyboard()` calls `shutdown_quantum()` (`quantum.c:208`),
+which calls `shutdown_user()`. There the panel paints the QMK splash logo with an inverted
+BOOTLOADER label under it, so a successful Boot double-tap is confirmed instead of the last frame
+freezing. Only the half that resets shows it.
+
+**Encoder feedback.** Turning the left encoder flashes VOL+ or VOL− in the band for under a second,
+with drashna's speaker icon at 2×. The right encoder shows BRI+ or BRI− with the bulb. A mute key,
+if the left encoder's click ever gets one, shows MUTE. Only the direction is known; the host's
+volume is not.
+
+**Glitch bursts, for the alarms only.** While the link is down, the master breaks up in short
+random bursts (row shifts, noise, a sliced inversion) over its alarm frame. Bjorn does the same
+while his link is dead, on top of the blink that already stops. They are procedural, with no
+stored art. Motion stays reserved for things that are wrong.
+
+**A screensaver step.** drashna's matrix rain (72 frames, 72 KB) runs between idle and the panels
+switching off. At the split's 50 ms update interval it loops every 3.6 s rather than drashna's
+2.2 s. When it starts, and on which half, is open.
+
+**Everything stays under the alarm.** Measured on the host renders: the status sheet is the
+brightest routine page at 2,519 lit px, the encoder flash 2,663, the rain 1,095 at most, bongo cat
+1,288 and the big-grid map 1,671. That is against roughly 4,200 for the master's inverted band.
+When each page is built, `test_panel.c`'s ratio test should cover it.
+
+**Declined, so they are not proposed again:**
+- Game of Life seeded by typing
+- a WPM graph anywhere but the Typing page
+- the autocorrect notice
+- a keylogger strip in the status bar
+- the event log as a second SYS page (it is a PAGE stop instead)
+- the glitch on an OS switch
+- the kitty on every layer, and the outline kitty
+- OS logos or 2× icons in the mod row
+- the 12x8 OS glyph as the badge
+- drashna's own two screens as they are
+- the train, the small running cat, the full-screen logos and the small sprites
+- the 128x128 arrangement as it was mocked
 
 ## Open experiments
 

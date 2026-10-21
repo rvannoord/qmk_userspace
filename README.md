@@ -26,7 +26,7 @@ previous setup was a fork carrying a core patch, and it could not be synced any 
 | rest of `users/manna-harbour_miryoku/` | Miryoku, vendored | the layers. `miryoku_babel/` is generated upstream; a layer is overridden in `custom_config.h`, never edited there |
 | `tools/` | mine | the Python generators behind every file in the keymap's `art/` |
 | `tests/` | mine | host tests: plain-C unit tests that need only `cc`, GoogleTest scenarios that run through a QMK tree, and a host preview of the idle show |
-| `docs/` | mine | `layout.md` is the spec and the tuning log; `flash-checklist.md` what is on the board and what to look at; `environment.md` the two machines; `oled-v2.md` the work plan for the OLEDs |
+| `docs/` | mine | `layout.md` is the spec and the tuning log; `flash-checklist.md` what is on the board and what to look at; `environment.md` the two machines; `oled-v2.md` the work plan for the OLEDs, and `oled-v3.md` the next one, for the ideas taken from drashna's userspace |
 | `hardware/` | mine | `kyria-oled-128/`: a custom 128×128 OLED board (1.12" SH1107) to replace the 128×64 modules, in design. Start at its `HANDOFF.md` |
 | `VENDORED.md` | mine | where everything that is not my own work came from, pinned to commits |
 

@@ -32,6 +32,8 @@ The other options (`MIRYOKU_ALPHAS`, `_EXTRA`, `_TAP`, `_NAV`, `_LAYERS`) and th
 
 `docs/oled-v2.md` is the staged plan for the current round of OLED work: the panels not sleeping, the link between the halves, the idle director, the goat, weather by season, and all of Bjorn's sprite sets. Work through it in order, stop at every checkpoint it names, and keep its Progress table current. It is removed when the last stage is done.
 
+`docs/oled-v3.md` is the build order for the OLED ideas decided on 2026-10-21 from drashna's userspace: master pages behind a PAGE key, the live layer map, the OS logo and modifier icons, the Ein font, two more slave animations, a bootloader screen, encoder feedback, glitch bursts and a screensaver. The design is *The drashna round* in `docs/layout.md`. Same rules as v2: in order, stop at every checkpoint, keep its Progress table current. Its D12 says how it interleaves with v2, and its D6 (licence) comes before anything else.
+
 `hardware/kyria-oled-128/` is a custom 128×128 OLED board (1.12" SH1107) to replace the 128×64 modules, in design. Start with its `HANDOFF.md`, then `DESIGN.md`.
 
 ## Build and flash
