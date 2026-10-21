@@ -2,8 +2,11 @@
 // Halcyon TFT panel (hlc_tft_display.c) and adapted to 128x64 monochrome, which is why
 // the layer is an icon rather than its name. See docs/layout.md, "Master half".
 //
-//   page 0    status bar   WIN/MAC badge, underlined when SYS set it by hand, plus
-//                          the latched locks as 8x8 glyphs in the dead right end
+//   page 0    status bar   the latched locks as 8x8 glyphs in the dead right end
+//   pages 0-1 OS logo      drashna's 12x16 Windows or Apple logo at (0,0): its top
+//                          half is the status bar's left end, its bottom half sits in
+//                          the band's top-left corner, which every band keeps dark.
+//                          Underlined at y=16 when SYS set the OS by hand
 //   pages 1-5 layer band   one 128x40 picture per layer, from panel_layer_icons.c.
 //                          A rule under it while a held layer hides a non-base
 //                          default. This band is also the alarm
@@ -34,6 +37,7 @@
 #include "art/panel_font.h"
 #include "art/panel_glyphs.h"
 #include "art/panel_layer_icons.h"
+#include "art/drashna_icons.h"
 #include "oled_canvas.h"
 #include "split_health.h"
 
@@ -129,10 +133,6 @@ static void draw_glyph_16_knockout(uint8_t x, uint8_t page, uint8_t which) {
     }
 }
 
-static void draw_text_1x(uint8_t x, uint8_t page, const char *s) {
-    for (; *s; s++, x += 8) draw_glyph_1x(x, page, glyph_of(*s));
-}
-
 // --- edges, watched every main loop -----------------------------------------
 // The render runs at 20 Hz and only when the screen is awake. Anything that must not
 // be missed is latched here instead.
@@ -178,27 +178,15 @@ static void watch_edges(const u_split_state_t *now) {
 }
 
 // --- status bar -------------------------------------------------------------
-// The badge lives at the left; the right end is permanently dark, which is where the
-// latched locks go. One row, so they cannot drift off a shared baseline.
+// The OS logo takes the left end (drawn after the band, below); the right end is
+// permanently dark, which is where the latched locks go. One row, so they cannot drift
+// off a shared baseline.
 
 #    define U_LOCK_X0 100
 #    define U_LOCK_DX   9
 
 static void render_status(void) {
-    const char *badge = (panel.flags & U_FLAG_IS_MAC) ? "Mac" : "Win";
-
     fill(0, 0, OLED_DISPLAY_WIDTH, 0x00);
-    draw_text_1x(0, 0, badge);
-    if (panel.flags & U_FLAG_OS_MANUAL) {
-        // Row 7 under the badge: detection was overridden by hand, so the badge is a
-        // decision rather than a reading. Redrawing the glyph columns with bit 7 set
-        // keeps it one pass, and none of the six letters the badge can hold reaches
-        // row 7 on its own - checked again when the badge went from MAC/WIN to
-        // Mac/Win, since a descender there would merge with the underline.
-        for (uint8_t x = 0; x < 24; x++) {
-            u_canvas[x] = (uint8_t)(0x80u | col_1x(glyph_of(badge[x / 8]), x % 8));
-        }
-    }
 
     // Num Lock is deliberately absent: no layer here carries KC_NUM and the Num layer
     // sends digits rather than keypad codes, so its state can neither be changed from
@@ -249,7 +237,8 @@ static void knock_chain(uint8_t x) {
     }
 }
 
-static void render_band(void) {
+// Returns whether the alarm lit the band this frame, which the OS logo needs to know.
+static bool render_band(void) {
     const uint8_t active = panel.layers & 0x0F;
     const uint8_t deflt  = panel.layers >> 4;
 
@@ -280,12 +269,12 @@ static void render_band(void) {
         fill_or(5, x0, (uint8_t)(x1 - x0 + 1), 0xe0);     // rows 45-47
     }
 
-    if (!u_sync_link_down()) return;
+    if (!u_sync_link_down()) return false;
 
     // Three blinks over 600 ms on entry, which no routine change ever does. After that
     // it is steady: a fault that stayed is not news any more, but it is still true.
     const uint32_t since = timer_elapsed32(alarm_at);
-    if (since < U_BLINK_MS && ((since / U_BLINK_HALF) & 1u) != 0) return;
+    if (since < U_BLINK_MS && ((since / U_BLINK_HALF) & 1u) != 0) return false;
 
     if (shown == U_BASE) {
         // The resting band is the one place the icon is not kept. It carries no
@@ -302,6 +291,63 @@ static void render_band(void) {
         // so nothing needed while typing is hidden by the alarm.
         invert_band();
         knock_chain(2);
+    }
+    return true;
+}
+
+// --- OS logo ----------------------------------------------------------------
+// drashna's 12x16 host logo in place of the old Win/Mac text: Windows, Apple, or Tux for
+// Linux. iOS is the Apple logo with a small lowercase "i" in front of it, drawn here
+// (docs/oled-v3.md, D14), and the logo moves right to make room. It is 16 rows tall and
+// the status bar is 8, so its bottom half borrows the band's top-left corner: x 0-15,
+// y 8-17 is dark on all ten bands, which test_panel.c asserts on the art itself. The band
+// is redrawn whole every frame, so this has to come after it.
+//
+// Under the alarm that corner is lit along with the rest of the band, so the logo, the
+// "i" and the underline are cut out of it, the way the chain is, instead of being ORed
+// onto a field that is already lit. The three logos drawn here and the "i" all light
+// column 0, which is what the "no 1 px edge frame" argument in docs/layout.md rests on
+// now that the badge is gone.
+
+#    define U_OS_UNDERLINE_PAGE 2       // y=16, the row under the logo
+#    define U_OS_UNDERLINE_BIT  0x01u
+#    define U_IOS_I_GAP         2       // between the "i" and the logo
+
+// One column of something two pages tall at the top left: the top byte onto the dark
+// status bar, the bottom byte onto the band, cut out of it when the alarm has lit it.
+static void put_corner(uint8_t x, uint8_t page, uint8_t byte, bool band_lit) {
+    uint8_t *at = &u_canvas[(uint16_t)page * OLED_DISPLAY_WIDTH + x];
+    if (page > 0 && band_lit) {
+        *at &= (uint8_t)~byte;
+    } else {
+        *at |= byte;
+    }
+}
+
+static void render_os_logo(bool band_lit) {
+    static const uint8_t logo_of[] = {[U_HOST_WINDOWS] = U_OS_LOGO_WINDOWS, [U_HOST_MAC] = U_OS_LOGO_APPLE,
+                                      [U_HOST_IOS] = U_OS_LOGO_APPLE, [U_HOST_LINUX] = U_OS_LOGO_LINUX};
+    const uint8_t *src = u_os_logo[panel.host < sizeof(logo_of) ? logo_of[panel.host] : U_OS_LOGO_WINDOWS];
+    const bool     ios = panel.host == U_HOST_IOS;
+    const uint8_t  x0  = ios ? U_IOS_I_W + U_IOS_I_GAP : 0;
+
+    if (ios) {
+        for (uint8_t i = 0; i < U_IOS_I_W; i++) {
+            put_corner(i, 0, pgm_read_byte(&u_ios_i[i]), band_lit);
+            put_corner(i, 1, pgm_read_byte(&u_ios_i[U_IOS_I_W + i]), band_lit);
+        }
+    }
+    for (uint8_t i = 0; i < U_OS_LOGO_W; i++) {
+        put_corner((uint8_t)(x0 + i), 0, pgm_read_byte(&src[i]), band_lit);
+        put_corner((uint8_t)(x0 + i), 1, pgm_read_byte(&src[U_OS_LOGO_W + i]), band_lit);
+    }
+    // Set by hand: detection was overridden, so the logo is a decision rather than a
+    // reading. The logos and the "i" end at y=14, so the line stands a row clear, and on
+    // iOS it runs under the "i" too.
+    if (panel.flags & U_FLAG_OS_MANUAL) {
+        for (uint8_t x = 0; x < x0 + U_OS_LOGO_W; x++) {
+            put_corner(x, U_OS_UNDERLINE_PAGE, U_OS_UNDERLINE_BIT, band_lit);
+        }
     }
 }
 
@@ -485,7 +531,7 @@ void oled_render_master(void) {
     }
 
     render_status();
-    render_band();
+    render_os_logo(render_band());
     render_mods();
     u_canvas_commit();     // the only point that touches the driver's buffer
 }

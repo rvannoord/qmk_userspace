@@ -55,6 +55,8 @@ TEST_F(SplitState, SlotsDoNotMoveWithTheOs) {
     EXPECT_EQ(mac.fingers, win.fingers);            // the cell has not moved
     EXPECT_NE(mac.flags & U_FLAG_IS_MAC, 0);        // only the label would
     EXPECT_NE(mac.flags & U_FLAG_OS_MANUAL, 0);     // and it was set by hand, not detected
+    EXPECT_EQ(win.host, U_HOST_WINDOWS);            // the logo crosses as its own byte
+    EXPECT_EQ(mac.host, U_HOST_MAC);
 
     release(a, 350);
 }

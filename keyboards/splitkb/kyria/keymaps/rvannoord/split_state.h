@@ -15,6 +15,7 @@ typedef struct {
     uint8_t flags;     // see below
     uint8_t anomaly;   // misfire count, wraps; only ever tested for change
     uint8_t world;     // see below
+    uint8_t host;      // u_host_t: which logo the panel shows. Behaviour reads U_FLAG_IS_MAC
 } u_split_state_t;
 
 // fingers: outer to inner, the order the panel's cells are in.
@@ -43,7 +44,8 @@ typedef struct {
 // are processed on the master, so the chosen animation has to cross the link -
 // the half that is told is not the half that draws.
 //
-// This widened the struct from 5 bytes to 6 rather than adding a transaction.
+// This widened the struct from 5 bytes to 6 rather than adding a transaction, and
+// `host` took it to 7 when the flags byte had no bit left for Linux and iOS.
 // NUM_TOTAL_TRANSACTIONS is the last member of an enum in QMK's
 // transaction_id_define.h, so it counts transaction *ids*, not bytes: widening
 // a payload adds no enum member and the handshake constant is untouched. That

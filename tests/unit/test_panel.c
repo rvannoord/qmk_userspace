@@ -45,6 +45,12 @@ void            u_sync_task(void) {}
 
 // --- looking at the buffer --------------------------------------------------
 
+// The OS logo's corner: x 0-15, y 8-17, which every band keeps dark. 15 because iOS
+// puts an "i" and a 2 px gap in front of the logo and moves the logo 4 px right.
+#define CORNER_X1 15
+#define CORNER_Y1 17
+#define LOGO_LINE 16     // the SYS underline, a row clear of the logo
+
 static bool lit(uint8_t x, uint8_t y) {
     return (fake_oled[(y / 8) * OLED_DISPLAY_WIDTH + x] >> (y % 8)) & 1;
 }
@@ -90,9 +96,21 @@ static void margins(uint8_t y0, uint8_t y1, int *left, int *right) {
 // because the box is what the code positions but the ink is what the eye judges —
 // DUNGEON.mode's glyphs do not fill their cells symmetrically, so a perfectly placed
 // word still has unequal margins. 4 is one 2x pixel of side bearing each side.
+//
+// Over the band only, and blind to the OS logo's corner (x 0-15, y 8-17), which holds
+// the logo's lower half rather than any of the layer's icon.
 static bool centred(uint8_t y0, uint8_t y1, int slop) {
-    int left, right;
-    margins(y0, y1, &left, &right);
+    int left = -1, right = -1;
+    for (uint8_t x = 0; x < OLED_DISPLAY_WIDTH; x++) {
+        for (uint8_t y = y0; y <= y1; y++) {
+            if (x <= CORNER_X1 && y <= CORNER_Y1) continue;
+            if (lit(x, y)) {
+                if (left < 0) left = x;
+                right = OLED_DISPLAY_WIDTH - 1 - x;
+                break;
+            }
+        }
+    }
     if (left < 0) return false;
     const int off = left - right;
     return (off < 0 ? -off : off) <= slop;
@@ -148,10 +166,38 @@ static bool any_dark_in(uint8_t x0, uint8_t x1, uint8_t y0, uint8_t y1) {
     return false;
 }
 
-static bool row_solid(uint8_t y) {
-    for (uint8_t x = 0; x < OLED_DISPLAY_WIDTH; x++)
+// From x0 to the right edge. The band's rows are probed from just past the OS logo's
+// corner, because under the alarm the logo is cut out of the lit band there.
+static bool row_solid_from(uint8_t x0, uint8_t y) {
+    for (uint8_t x = x0; x < OLED_DISPLAY_WIDTH; x++)
         if (!lit(x, y)) return false;
     return true;
+}
+
+// The logo exactly as drawn: its top half on the status bar, its bottom half lit on the
+// dark corner, or cut out of the lit band under the alarm. Exact bytes, so this also
+// proves the corner around the logo is uniformly dark, or uniformly lit.
+static bool logo_at(uint8_t which, uint8_t x0, bool cut) {
+    for (uint8_t i = 0; i < U_OS_LOGO_W; i++) {
+        const uint8_t top = u_os_logo[which][i], bot = u_os_logo[which][U_OS_LOGO_W + i];
+        if (fake_oled[x0 + i] != top) return false;
+        if (fake_oled[OLED_DISPLAY_WIDTH + x0 + i] != (uint8_t)(cut ? ~bot : bot)) return false;
+    }
+    return true;
+}
+
+static bool logo_is(uint8_t which, bool cut) { return logo_at(which, 0, cut); }
+
+// iOS: the "i" at x 0-1, a dark gap, then the Apple logo.
+static bool ios_is(bool cut) {
+    for (uint8_t i = 0; i < U_IOS_I_W; i++) {
+        if (fake_oled[i] != u_ios_i[i]) return false;
+        if (fake_oled[OLED_DISPLAY_WIDTH + i] != (uint8_t)(cut ? ~u_ios_i[U_IOS_I_W + i] : u_ios_i[U_IOS_I_W + i])) return false;
+    }
+    for (uint8_t gap = U_IOS_I_W; gap < U_IOS_I_W + U_IOS_I_GAP; gap++) {
+        if (fake_oled[gap] != 0 || fake_oled[OLED_DISPLAY_WIDTH + gap] != (uint8_t)(cut ? 0xff : 0x00)) return false;
+    }
+    return logo_at(U_OS_LOGO_APPLE, U_IOS_I_W + U_IOS_I_GAP, cut);
 }
 
 // The chamfer itself: the outermost pixel of each corner of a filled cell is off.
@@ -212,6 +258,7 @@ static const u_split_state_t on_nav = {
     .layers  = U_NAV,
     .fingers = U_FIN_L_INDEX | U_FIN_R_RING,
     .flags   = U_FLAG_IS_MAC | U_FLAG_OS_MANUAL | U_FLAG_CAPS_WORD,
+    .host    = U_HOST_MAC,
 };
 
 static const u_split_state_t latched = {
@@ -270,21 +317,42 @@ int main(int argc, char **argv) {
         int left, right;
         margins(0, 7, &left, &right);
         // x=0 specifically: docs/layout.md rests the "no 1 px edge frame" argument on
-        // the badge lighting the first column, so this is the assertion that keeps the
-        // font swappable without that going quietly false.
-        check("the badge starts at the left edge", left == 0);
-        check("and stays inside its own three cells", right >= OLED_DISPLAY_WIDTH - 24);
+        // the OS logo lighting the first column, so this is the assertion that keeps it
+        // from going quietly false.
+        check("the OS logo starts at the left edge", left == 0);
+        check("and stays inside its own twelve columns", right >= OLED_DISPLAY_WIDTH - U_OS_LOGO_W);
     }
-    check("no underline while detection is trusted", !lit(0, 7) && !lit(23, 7));
+    check("on Windows it is the Windows logo, its lower half in the band's corner",
+          logo_is(U_OS_LOGO_WINDOWS, false) && any_lit_in(0, U_OS_LOGO_W - 1, 8, 15));
+    check("no underline while detection is trusted", !any_lit_in(0, CORNER_X1, LOGO_LINE, CORNER_Y1));
 
-    // Set by hand: the badge becomes a decision rather than a reading.
+    // Set by hand: the logo becomes a decision rather than a reading.
     frame(on_nav, false);
     {
         bool solid = true;
-        for (uint8_t x = 0; x < 24; x++) solid = solid && lit(x, 7);
-        check("set by hand underlines the badge", solid);
-        check("and the underline stops with it", !lit(24, 7));
+        for (uint8_t x = 0; x < U_OS_LOGO_W; x++) solid = solid && lit(x, LOGO_LINE);
+        check("set by hand underlines the logo", solid);
+        check("a row clear of it", !any_lit_in(0, CORNER_X1, LOGO_LINE - 1, LOGO_LINE - 1));
+        check("and the underline stops with it", !lit(U_OS_LOGO_W, LOGO_LINE));
     }
+    check("on the Mac it is the Apple logo", logo_is(U_OS_LOGO_APPLE, false));
+
+    // The logo follows the host byte, not the Mac flag: Linux behaves like Windows and
+    // shows Tux, and iOS is a Mac for the mod row and still shows the Apple logo until
+    // its own mark is picked.
+    frame((u_split_state_t){.layers = U_BASE, .host = U_HOST_LINUX}, false);
+    check("on Linux it is Tux", logo_is(U_OS_LOGO_LINUX, false));
+    frame((u_split_state_t){.layers = U_BASE, .flags = U_FLAG_IS_MAC, .host = U_HOST_IOS}, false);
+    check("on iOS an \"i\" stands in front of the Apple logo", ios_is(false));
+    check("and the \"i\" keeps column 0 lit", lit(0, 13));
+    frame((u_split_state_t){.layers = U_BASE, .flags = U_FLAG_IS_MAC | U_FLAG_OS_MANUAL, .host = U_HOST_IOS}, false);
+    {
+        bool solid = true;
+        for (uint8_t x = 0; x < U_IOS_I_W + U_IOS_I_GAP + U_OS_LOGO_W; x++) solid = solid && lit(x, LOGO_LINE);
+        check("set by hand on iOS, the line runs under the \"i\" too",
+              solid && !lit(U_IOS_I_W + U_IOS_I_GAP + U_OS_LOGO_W, LOGO_LINE));
+    }
+    frame(on_nav, false);
 
     // Cells are fingers, outer to inner, and they do not move with the OS: this frame
     // is on the Mac, where Ctrl and GUI swap, holding left index and right ring.
@@ -322,16 +390,20 @@ int main(int argc, char **argv) {
     // which nothing else on this panel is allowed to do.
     fake_now = 10000;
     frame(latched, true);
-    check("the whole band inverts on entry", row_solid(BAND_Y0) && count(BAND_Y0, BAND_Y1) > 3500);
+    check("the whole band inverts on entry",
+          row_solid_from(CORNER_X1 + 1, BAND_Y0) && count(BAND_Y0, BAND_Y1) > 3500);
     fake_now += 100;
     step();
-    check("and returns to normal a blink later", !row_solid(BAND_Y0));
+    check("and returns to normal a blink later", !row_solid_from(CORNER_X1 + 1, BAND_Y0));
+    check("with the OS logo lit on the dark corner again", logo_is(U_OS_LOGO_WINDOWS, false));
     fake_now += 100;
     step();
-    check("and inverts again", row_solid(BAND_Y0));
+    check("and inverts again", row_solid_from(CORNER_X1 + 1, BAND_Y0));
     fake_now += 1000;
     step();
-    check("steady once the blinking is over", row_solid(BAND_Y0) && count(BAND_Y0, BAND_Y1) > 3500);
+    check("steady once the blinking is over",
+          row_solid_from(CORNER_X1 + 1, BAND_Y0) && count(BAND_Y0, BAND_Y1) > 3500);
+    check("the OS logo is cut out of the lit band", logo_is(U_OS_LOGO_WINDOWS, true));
     // Escalation by scope, not replacement. The chain is cut out of the inverted band
     // rather than drawn on it, so its own 40x24 box holds dark pixels while a patch of
     // band well clear of it stays solid — which is also what proves the band really is
@@ -343,6 +415,24 @@ int main(int argc, char **argv) {
     // Locks: two of three on, and Num Lock can never be, so its slot is never drawn.
     check("both latched locks show", any_lit_in(100, 108, 0, 7) && any_lit_in(118, 126, 0, 7));
     check("the unused lock slot stays dark", !any_lit_in(109, 117, 0, 7));
+
+    // Set by hand under the alarm: the underline is cut out of the lit band too, and the
+    // corner beside it stays lit. On base the band is filled rather than inverted, and
+    // the logo is cut out of that the same way.
+    {
+        u_split_state_t by_hand = latched;
+        by_hand.flags |= U_FLAG_IS_MAC | U_FLAG_OS_MANUAL;
+        by_hand.host = U_HOST_MAC;
+        frame(by_hand, true);
+        check("under the alarm the underline is cut out as well",
+              !any_lit_in(0, U_OS_LOGO_W - 1, LOGO_LINE, LOGO_LINE) && lit(U_OS_LOGO_W, LOGO_LINE)
+              && logo_is(U_OS_LOGO_APPLE, true));
+        frame(at_rest, true);
+        check("and on base, the logo is cut out of the filled band", logo_is(U_OS_LOGO_WINDOWS, true));
+        frame((u_split_state_t){.layers = U_BASE, .flags = U_FLAG_IS_MAC, .host = U_HOST_IOS}, true);
+        check("on iOS, the \"i\" is cut out with it", ios_is(true));
+        frame(latched, true);
+    }
 
     // The trace. A misfire is a count that changed and a finger bit that dropped on
     // the same loop; it is latched because the render would otherwise miss it.
@@ -420,6 +510,18 @@ int main(int argc, char **argv) {
     frame(at_rest, false);
     check("returning to rest shows the base logo again", any_lit(BAND_Y0, BAND_Y1));
 
+    // The OS logo's bottom half and its underline live in the band's top-left corner, so
+    // every band has to leave it dark. Asserted on the art itself, all ten bands; the
+    // base band's other versions (docs/oled-v3.md stage 3) join this when they exist.
+    {
+        bool dark = true;
+        for (uint8_t b = U_BASE; b <= U_FUN; b++)
+            for (uint8_t x = 0; x <= CORNER_X1; x++)
+                for (uint8_t y = 0; y <= CORNER_Y1 - BAND_Y0; y++)
+                    if ((u_layer_band[b][(y / 8) * U_BAND_W + x] >> (y % 8)) & 1) dark = false;
+        check("every band leaves the OS logo's corner dark", dark);
+    }
+
     // --- the stats page -----------------------------------------------------
     // Dark at rest is kept by only ever showing it on demand.
     {
@@ -473,6 +575,11 @@ int main(int argc, char **argv) {
     {
         const u_split_state_t caps = {.layers = U_BASE,
                                       .flags  = U_FLAG_CAPS_LOCK | U_FLAG_SCROLL_LOCK};
+        // Every lock at once, drashna's two and the hand-drawn Caps Word between them.
+        check("all three locks at once, a redraw is free",
+              redraw_cost((u_split_state_t){.layers = U_BASE,
+                                            .flags = U_FLAG_CAPS_LOCK | U_FLAG_CAPS_WORD | U_FLAG_SCROLL_LOCK},
+                          false) == 0);
         const u_split_state_t word = {.layers = U_BASE, .flags = U_FLAG_CAPS_WORD};
         const u_split_state_t dflt = {.layers = (uint8_t)(U_NAV | (U_EXTRA << 4))};
 
@@ -484,6 +591,14 @@ int main(int argc, char **argv) {
         check("with the locks lit, a redraw is free", redraw_cost(caps, false) == 0);
         check("with Caps Word on, a redraw is free", redraw_cost(word, false) == 0);
         check("with a non-base default, a redraw is free", redraw_cost(dflt, false) == 0);
+        check("with the OS set by hand, a redraw is free",
+              redraw_cost((u_split_state_t){.layers = U_BASE, .flags = U_FLAG_IS_MAC | U_FLAG_OS_MANUAL,
+                                            .host = U_HOST_MAC}, false) == 0);
+        check("on Linux, a redraw is free",
+              redraw_cost((u_split_state_t){.layers = U_BASE, .host = U_HOST_LINUX}, false) == 0);
+        check("on iOS set by hand, a redraw is free",
+              redraw_cost((u_split_state_t){.layers = U_BASE, .flags = U_FLAG_IS_MAC | U_FLAG_OS_MANUAL,
+                                            .host = U_HOST_IOS}, false) == 0);
 
         bool every_finger_free = true;
         for (uint8_t i = 0; i < 8; i++) {
@@ -499,6 +614,8 @@ int main(int argc, char **argv) {
         step();
         fake_now += 1000;
         check("LINK DOWN steady, a redraw is free", redraw_cost(at_rest, true) == 0);
+        check("and on a held layer with the OS set by hand, still free",
+              redraw_cost((u_split_state_t){.layers = U_NAV, .flags = U_FLAG_OS_MANUAL}, true) == 0);
 
         // Inside the 1.5 s the trace is shown.
         frame((u_split_state_t){.layers = U_BASE, .fingers = U_FIN_L_PINKY, .anomaly = 1}, false);

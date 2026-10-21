@@ -30,11 +30,11 @@ This panel's is **row-major**: 8 bytes a character, each byte one row, bit 7 the
 column. So every glyph is transposed on the way through.
 
 The 6 columns are placed at offset 0 in the 8 px cell. Flush left rather than centred,
-because `docs/layout.md` rests an argument on the badge lighting x=0 — it is why the
-master panel has no 1 px edge frame — and a centred glyph would quietly make that false.
-QMK's face is 5 columns of ink plus a spacing column, so the cell carries 3 px of
-tracking instead of its native 1. Cell width stays 8 because the stats page is 16
-characters across a 128 px panel and the badge is drawn on the same grid.
+which mattered while the Win/Mac badge was text: `docs/layout.md` rests its "no 1 px edge
+frame" argument on x=0 being lit, and the OS logo carries that now. QMK's face and Ein are
+both 5 columns of ink plus a spacing column, so the cell carries 3 px of tracking instead
+of its native 1. Cell width stays 8 because the stats page is 16 characters across a
+128 px panel.
 
 One trap: the hex in `glcdfont.c`'s trailing comments (`// 0x41 A`) parses as font data
 if the comments are not stripped first. That gives 1568 bytes instead of 1344, every

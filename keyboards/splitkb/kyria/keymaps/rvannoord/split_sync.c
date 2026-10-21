@@ -59,7 +59,8 @@ u_split_state_t u_sync_state(void) {
                              .layers  = slots[i].layers,
                              .flags   = slots[i].flags,
                              .anomaly = slots[i].anomaly,
-                             .world   = slots[i].world};
+                             .world   = slots[i].world,
+                             .host    = slots[i].host};
 }
 
 uint32_t u_sync_age_ms(void) {

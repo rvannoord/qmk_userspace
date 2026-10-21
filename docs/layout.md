@@ -17,13 +17,13 @@ The source of truth for my layout. A change goes here first, then into the firmw
 - OS layout: undecided, see Open experiments. Today: US-International on regular keyboards.
 - Mostly English. Swedish (å ä ö) is wanted later, not a priority.
 - Goal: keyboard first, less mouse, vim-style.
-- Hosts: Windows at work, Apple Silicon Mac at home. OS detection swaps Ctrl and Cmd on the Mac, so shortcuts use the same fingers on both. Side effect: on the Mac, Ctrl moves to the pinky, which you feel in the terminal and nvim. The alternative (mods stay put, only the clipboard keys adapt) stays open as a later switch.
+- Hosts: Windows at work, Apple Silicon Mac at home. OS detection swaps Ctrl and Cmd on the Mac, so shortcuts use the same fingers on both. QMK also tells Linux and iOS apart (since 2026-10-21 the panel shows which): Linux behaves like Windows, and iOS like the Mac, swap included, because iPadOS shortcuts are Cmd-based. Android hosts report themselves as Linux, and nothing here tries to tell them apart. Side effect: on the Mac, Ctrl moves to the pinky, which you feel in the terminal and nvim. The alternative (mods stay put, only the clipboard keys adapt) stays open as a later switch.
 
 ## Extra keys
 
 | Key | Where | Does |
 |-----|-------|------|
-| SYS (`U_SYS`) | left half, outer pinky column, top row | toggles Win/Mac by hand when detection guesses wrong; the left OLED shows the result. Held two seconds, the stats page. Held while plugging in, it enters the bootloader (Bootmagic) |
+| SYS (`U_SYS`) | left half, outer pinky column, top row | flips between the Mac and the detected non-Mac host (Windows, or Linux on a Linux machine) by hand when detection guesses wrong; the left OLED shows the result. Held two seconds, the stats page. Held while plugging in, it enters the bootloader (Bootmagic) |
 | ANIM (`U_ANIM`) | right half, outer pinky column, top row, mirroring SYS | cycles the other half's animation: Bjorn, spaceship, Kyria logo, Monitor 1, Monitor 2. Persisted across a replug. See *Switching the slave's animation* |
 | PAGE (`U_PAGE`), **planned** | left half, outer pinky column, middle row, under SYS | cycles the master's pages. While a layer map is showing it switches the map between the big grid and the Kyria-shaped one instead. Persisted across a replug. See *The drashna round* under OLED; build order in `docs/oled-v3.md` |
 
@@ -167,9 +167,9 @@ Three bands of pictures and no text, modelled on splitkb's own Halcyon TFT panel
 
 | Zone | Origin | Size | Content |
 |------|--------|------|---------|
-| Status bar | (0,0) | 128x8 | `WIN`/`MAC` badge, underlined when SYS set it by hand. The right end is permanently dark, so the latched locks live there at x=100, 109, 118 — one row, so they cannot drift off a shared baseline |
-| Layer band | (0,8) | 128x40 | one picture per layer, from `panel_layer_icons.c`. Three rows under the icon when a held layer is hiding a non-base default. **This band is also the alarm**: the link being down inverts the whole of it and cuts a broken chain out of it |
-| Mod row | (0,48) | 128x16 | four 32 px cells, one per finger, each showing its 16x16 glyph **always**. A held finger fills its whole cell and the glyph is knocked out of it; a finger that just misfired fills only the glyph's own 16 px box. Both fills are chamfered, 3 px off each corner, so a lit cell reads as a key rather than a black rectangle. **The order reverses with the half the panel is on** |
+| Status bar | (0,0) | 128x8 | drashna's 12x16 host logo at the left (since 2026-10-21; it was `Win`/`Mac` text): Windows, Apple for the Mac, Tux for Linux. iOS is the Apple logo with a small lowercase "i" in front of it, in Apple's own lettering style, so it reads as an i-device (decided 2026-10-21). The "i" is 2 px wide and 10 rows tall, a row shorter than first drawn, with a 2 px gap before the logo, which moves 4 px right for it. The logo is twice the bar's height, so its lower half sits in the band's top-left corner, x 0-15 by y 8-17, which every band keeps dark (in those rows the nearest band pixel is the Kyria emblem at x=18). Underlined at y=16 when SYS set the host by hand, under the "i" too on iOS. The right end is permanently dark, so the latched locks live there at x=100, 109, 118 — one row, so they cannot drift off a shared baseline. Caps Lock and Scroll Lock are drashna's cells there; Caps Word is this panel's own |
+| Layer band | (0,8) | 128x40 | one picture per layer, from `panel_layer_icons.c`. Three rows under the icon when a held layer is hiding a non-base default. **This band is also the alarm**: the link being down inverts the whole of it and cuts a broken chain out of it. The OS logo's lower half and its underline are cut out of it then too, rather than lost in the lit field |
+| Mod row | (0,48) | 128x16 | four 32 px cells, one per finger, each showing its glyph **always**: drashna's filled 12x8 icon (⊞ ⌥ ⌃ ⌘ ⇧, since 2026-10-21), centred in a 16x16 slot. A held finger fills its whole cell and the glyph is knocked out of it; a finger that just misfired fills only the glyph's own 16 px box. Both fills are chamfered, 3 px off each corner, so a lit cell reads as a key rather than a black rectangle. **The order reverses with the half the panel is on** |
 
 **Why the layer is a picture now.** The name was text because text was what a 16 px band
 could hold. Forty pixels holds a drawing, and a drawing is read without being parsed —
@@ -178,20 +178,21 @@ splitkb's own, lifted out of the Halcyon module's QGF files and reduced; base is
 Kyria logo out of QMK's default keymap for this board. Nothing is drawn from scratch.
 See `VENDORED.md` for the sources and `tools/panel/` for the reduction.
 
-**The font is QMK's own 6x8**, the face `oled_write()` draws with, transposed into this panel's
-row-major form by `tools/panel/gen_font.py`. It replaced DUNGEON.mode on 2026-10-15. Since the
-layer band became a picture the font draws only two things — the badge and the stats page — so the
-heavier 8x8 face was carrying a pack that nothing else needed; the 2x and inverse-text paths went
-with the layer name that used them.
+**The font is Ein** (since 2026-10-21), one of the faces in drashna's font file, transposed into
+this panel's row-major form by `tools/panel/gen_font.py --drashna`. Its lowercase is small capitals.
+Before it came QMK's own 6x8, the face `oled_write()` draws with (from 2026-10-15), and before that
+DUNGEON.mode. Since the badge became a logo the font draws only the stats page, until the pages of
+`docs/oled-v3.md` add more; the 2x and inverse-text paths went with the layer name that used them.
+The QMK splash logo is still QMK's own, carried in the same generated file.
 
-Glyphs sit **flush left** in an 8 px cell, not centred. That is load-bearing: the "no 1 px edge
-frame" argument below depends on the badge lighting x=0, and a centred glyph would make it quietly
-false. QMK's face is 5 columns of ink plus a spacing column, so the cell carries 3 px of tracking
-rather than its native 1. Cell width stays 8 because the stats page is 16 characters across 128 px.
+Glyphs sit **flush left** in an 8 px cell, not centred. That was load-bearing while the badge was
+text, because the "no 1 px edge frame" argument below depends on x=0 being lit; both OS logos light
+it now. Ein, like QMK's face, is 5 columns of ink plus a spacing column, so the cell carries 3 px of
+tracking rather than its native 1. Cell width stays 8 because the stats page is 16 characters
+across 128 px.
 
-There is no better font to be had for free: all 45 `glcdfont*.c` in the QMK tree are within 0.6% of
-the default over printable ASCII, bar two. Anything genuinely different would have to be vendored,
-and at 8 px tall the choice matters less than the tracking does.
+QMK itself offers nothing better: all 45 `glcdfont*.c` in the QMK tree are within 0.6% of the
+default over printable ASCII, bar two. That is why the different face had to be vendored.
 
 **There is no layer map.** The first design had one at (30,40), 60x24, one 6x8 legend a key,
 erasing itself per layer once that layer had been used enough. Cut before it was built: it only
@@ -258,14 +259,16 @@ What did **not** change is the rule. Nothing routine may light more of the panel
 panel's own alarm, and `tests/unit/test_panel.c` asserts the ratio rather than the layout,
 so the next person to move a band finds out immediately if they have spent the rung.
 
-**The lock glyphs are 1 px and must never be inverted in place.** They are 7x7 inside an
-8x8 cell — column 7 is a gutter so the 1 px channel between neighbours cannot close under
-bloom, row 7 belongs to the SYS underline. At that size a 2 px stroke leaves no interior,
-and 1 px is what the font's own symbol cells use anyway. Inverted they would become dark
-hairlines in a lit field, which is the failure the mascot's work already measured. Nothing
-inverts this row: the alarm is a different page. If that ever changes, this set has to be
-redrawn, and 7x7 will not give one that survives it. All three carry ink on row 0 and none
-of the six badge letters does, so the cluster sits a pixel proud of any text beside it.
+**The lock glyphs are 1 px and must never be inverted in place.** Caps Lock and Scroll Lock
+are drashna's font cells since 2026-10-21 (0xC9, a ⇪ over a bar, and 0xCB), which replaced the
+hand-drawn padlock and struck ring. Wherever this panel had a hand-drawn piece and drashna has
+one, his is used. Caps Word has no counterpart in his font, so its glyph is still the one drawn
+here. All three sit in 8x8 cells and leave column 7 empty, so the 1 px channel between neighbours
+cannot close under bloom. drashna's two are 5 px wide and 7 tall. At that size a 2 px stroke
+leaves no interior, and 1 px is what the font's own symbol cells use anyway. Inverted they would
+become dark hairlines in a lit field, which is the failure the mascot's work already measured.
+Nothing inverts this row: the alarm is a different page. If that ever changes, this set has to be
+redrawn, and these cells will not survive it.
 
 **Why AltGr is not shown.** It is held, not latched: you are holding it at the moment
 it would be displayed, so it carries nothing — the same reason the mascot's axe excludes
@@ -286,7 +289,7 @@ band, then full-panel inversion. The band keeps its layer icon while inverted �
 the alarm adds to what is on screen rather than replacing it; the one exception is base, whose
 band is given over to the chain entirely, because base is where you already are and the Kyria
 wordmark leaves no gutter to put a chain beside. The master has no 1 px edge frame — the frame needs
-x=0, x=127, y=0 and y=63 kept clear and a status panel cannot promise that, since the badge itself
+x=0, x=127, y=0 and y=63 kept clear and a status panel cannot promise that, since the OS logo itself
 lights x=0. Entry blinks three times over 600 ms, which routine changes never do.
 
 Miryoku uses the left-hand mod-tap variants on both hands (`LSFT_T(KC_T)` and `LSFT_T(KC_N)`), so
@@ -296,14 +299,18 @@ on, and one side of that comparison is misleading on its own.
 
 ### Split sync
 
-One custom 6-byte RPC, master to slave, on change plus a 250 ms heartbeat and a 20 ms minimum
-interval. Six bytes rather than a packed four because the wire cost is 13 bytes of fixed overhead
+One custom 7-byte RPC, master to slave, on change plus a 250 ms heartbeat and a 20 ms minimum
+interval. Seven bytes rather than a packed four because the wire cost is 13 bytes of fixed overhead
 against 43 us per payload byte — width is about 3% of a send, so the bytes go on clarity
-rather than packing. Not `SPLIT_LAYER_STATE_ENABLE` / `SPLIT_MODS_ENABLE` / `SPLIT_LED_STATE_ENABLE`: those
+rather than packing. The seventh, `host`, came on 2026-10-21 with the Linux and iOS logos: the
+flags byte had no bit left. `U_FLAG_IS_MAC` stays in flags, because the mod row's order follows
+it and iOS counts as a Mac there. Widening a payload adds no transaction, so the handshake
+constant is unchanged. Not `SPLIT_LAYER_STATE_ENABLE` / `SPLIT_MODS_ENABLE` / `SPLIT_LED_STATE_ENABLE`: those
 re-send every 100 ms whether or not anything changed, and they cannot carry Caps Word (QMK has no
 sync for it) or the host OS (`SPLIT_DETECTED_OS_ENABLE` ignores the SYS override). Layout: layer,
 finger-ordered mods, locks, flags, the `world` byte (the chosen animation, with spare bits for
-weather and time of day), and a sequence counter the slave uses as its staleness clock.
+weather and time of day), the `host` byte (Windows, Mac, iOS or Linux), and a sequence counter
+the slave uses as its staleness clock.
 The slave's callback may only `memcpy` into a volatile struct — it runs in a HIGHPRIO thread
 holding the shared-memory lock, and blocking there costs up to 200 ms of frozen scanning.
 
@@ -418,13 +425,13 @@ the goat later.
 |------|-------|
 | `oled.h` / `oled.c` | the module's interface and its dispatcher. The header holds the slave-animation enum and boot default, `u_anim_get` / `u_anim_next`, the four entry points `oled_render_*` / `oled_*_task` and the pure sleep predicate; the `.c` draws the boot splash and then branches on master or slave. The sleep check itself is in `keymap.c`'s `housekeeping_task_user`, so a stray dirty block can light the panel for one main loop at most |
 | `oled_master_zones.c` | the master panel. Three bands, status bar, 128x40 layer picture and mod row, in raw page bytes composed in the canvas and committed once, never `oled_write`. 1x and 2x glyph blitters; the 2x one doubles each source row, so a 16x16 is two page bytes a column |
-| `art/panel_glyphs.c` | generated. The five mod-row glyphs — four-pane, option mark, caret, command, shift — hand-drawn at 16x16 in page format, in the weight language of DUNGEON.mode, which the panel no longer uses for text but which these were drawn against. Eight slots are five drawings: shift is one drawing in both sets, and the caret is one drawing that changes cell when the OS does, so the Ctrl/GUI swap is visible as a hop from the middle finger to the pinky |
-| `art/panel_font.c` | generated. Printable ASCII transposed out of QMK's own 6x8 `glcdfont.c`, one byte a row, flush left in an 8 px cell. Both the generator and its source are available — `tools/panel/gen_font.py` reads the QMK checkout — so this regenerates without fetching anything |
+| `art/panel_glyphs.c` | generated. The five mod-row glyphs — four-pane, option mark, caret, command, shift — as drashna's filled 12x8 icons, centred at (2, 4) in 16x16 cells so the cell model did not change (until 2026-10-21 they were hand-drawn at 16x16, in DUNGEON.mode's weight language; `tools/panel/glyphs.py` still holds those). The lock glyphs are drashna's Caps Lock and Scroll Lock cells and this panel's own Caps Word, and the file also holds the 2x16 "i" that stands in front of the Apple logo on iOS. Eight slots are five drawings: shift is one drawing in both sets, and the caret is one drawing that changes cell when the OS does, so the Ctrl/GUI swap is visible as a hop from the middle finger to the pinky |
+| `art/panel_font.c` | generated. Printable ASCII in Ein, transposed out of drashna's font file, one byte a row, flush left in an 8 px cell; plus the QMK splash logo out of QMK's own `glcdfont.c`. Regenerating it needs the drashna clone as well as the QMK checkout (`VENDORED.md`) |
 | `art/panel_layer_icons.c` | generated. The ten 128x40 layer bands, reduced from splitkb's Halcyon icons and the Kyria logo; see `VENDORED.md` |
 | `oled_slave_bjorn.c` | the mascot: tier hysteresis, idle ladder, ambient clocks, blitter |
 | `oled_slave_world.c` | the weather behind Bjorn, across the whole panel, season from `__DATE__` until a host daemon supplies it |
 | `oled_slave_select.c` | which slave animation is live: EEPROM on the master, the `world` byte of the sync on the slave |
-| `split_state.c` / `.h` | the 6-byte payload the master gathers: modifiers in finger order, the active and default layers, locks and Caps Word, the host OS, a misfire count, and the chosen animation. Built fresh every main loop; a modifier it reports is one that is held at that instant |
+| `split_state.c` / `.h` | the 7-byte payload the master gathers: modifiers in finger order, the active and default layers, locks and Caps Word, the host and whether it is a Mac, a misfire count, and the chosen animation. Built fresh every main loop; a modifier it reports is one that is held at that instant |
 | `split_sync.c` / `.h` | the transport for that payload. Double-buffered on the slave because the callback runs on a HIGHPRIO thread; heartbeat 250 ms, minimum interval 20 ms, soft stale 600 ms, hard stale 1250 ms. `u_sync_link_down()` answers for both halves — the master from its own failed sends, the slave from the sequence number standing still |
 | `split_health.c` / `.h` | link health: the stats page behind a long SYS press, self-reset of a half whose link stays dead, the hardware watchdog. Every guard is explained in the header |
 | `oled_slave_spaceship.c` | the ship, JBaguley's and byte-identical, over three parallax planes of my own; speed from WPM |
@@ -434,7 +441,7 @@ the goat later.
 | `art/world_art.c` / `.h` | generated: the weather sprites |
 | `art/space_art.c` / `.h` | generated: the three planes, their occlusion masks and the ship's derived mask |
 | `art/oled_*.h` | the vendored ship and logos: pure data, no selection logic |
-| `art/drashna_icons.c`, `kitty_art.c`, `status_frame.c`, `drashna_sprites.c`, `painter_art.c`, `painter_fonts.c`, `bongo_art.c`, `mario_art.c`, `matrix_art.c` | generated by `tools/drashna/gen_art.py` from drashna's art, each with its `.h`: every cell of his font with a name, three kitties, the status sheet's frame, his other sprites, his Quantum Painter graphics and fonts, bongo cat, the Mario scene's sprites, the matrix rain. *drashna's art, all of it* above says what each is for. Generated at stage 0 of `docs/oled-v3.md`, so they are not in `SRC` yet: each one joins at the stage that draws it |
+| `art/drashna_icons.c`, `kitty_art.c`, `status_frame.c`, `drashna_sprites.c`, `painter_art.c`, `painter_fonts.c`, `bongo_art.c`, `mario_art.c`, `matrix_art.c` | generated by `tools/drashna/gen_art.py` from drashna's art, each with its `.h`: every cell of his font with a name, three kitties, the status sheet's frame, his other sprites, his Quantum Painter graphics and fonts, bongo cat, the Mario scene's sprites, the matrix rain. *drashna's art, all of it* above says what each is for. Generated at stage 0 of `docs/oled-v3.md`, and each joins `SRC` at the stage that draws it. `drashna_icons.c` is in since stage 1, for the OS logo |
 
 Ambient timing counts render ticks rather than wall-clock milliseconds, so it freezes with
 the panel and resumes where it stopped instead of jumping to a random phase on wake. The
@@ -713,9 +720,9 @@ the QMK logo both wanting the base band: pick by pressing. Every other layer loo
 three.
 
 **The bands page loses its last text.** The `Win`/`Mac` badge becomes drashna's 12x16 Windows or
-Apple logo at the top left. It borrows the band's empty top-left corner: x 0-13, y 8-17 is dark on
-all ten layers, and the leftmost band pixel anywhere is the Kyria emblem at x=15 (measured on the
-host renders). A hand-set OS keeps its underline, at y=16 under the logo. The mod row's glyphs
+Apple logo at the top left. It borrows the band's empty top-left corner: x 0-15, y 8-17 is dark on
+all ten layers, and in those rows the nearest band pixel is the Kyria emblem at x=18 (measured on
+the art). A hand-set OS keeps its underline, at y=16 under the logo. The mod row's glyphs
 become drashna's filled 12x8 icons (⊞ ⌥ ⌃ ⌘ ⇧), centred in the existing 16x16 slots, so the cell
 model does not change: holds, the Mac order, the mirroring and the misfire chip work exactly as
 now. Rendered against the real panel, the cell model matched the firmware byte for byte.

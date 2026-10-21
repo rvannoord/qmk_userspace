@@ -37,7 +37,7 @@ aliases under the same prefix, because QMK already uses the short names (`OS_TOG
 
 | Key | Where | Does |
 |-----|-------|------|
-| SYS (`U_SYS`) | left half, outer column, top row | toggles Win/Mac; held two seconds, the stats page; held while plugging in, the bootloader (Bootmagic) |
+| SYS (`U_SYS`) | left half, outer column, top row | flips between the Mac and the detected non-Mac host (Windows, or Linux on a Linux machine; an iPad flips iOS and Windows); held two seconds, the stats page; held while plugging in, the bootloader (Bootmagic) |
 | ANIM (`U_ANIM`) | right half, outer column, top row | cycles the other half's animation: Bjorn, spaceship, Kyria logo, Monitor 1, Monitor 2. Persisted across a replug |
 
 Thumb arc, five positions per half from the outside in: position 1 is the encoder (left:
@@ -48,9 +48,10 @@ thumb keys. Position 2, the upper thumb keys and the rest of the outer columns a
 
 QMK's OS detection sets `host_is_mac()` on plug-in (`OS_DETECTION_SINGLE_REPORT`, because Apple
 Silicon Macs re-trigger detection minutes later); SYS flips it when detection guesses wrong; the
-master OLED shows `Win` or `Mac`. On the Mac, Ctrl and GUI swap, so Cmd shortcuts use the same
-fingers as Ctrl shortcuts on Windows; redo is special-cased to Cmd+Shift+Z. Nothing hardcodes
-Ctrl or Cmd for one OS: anything OS-specific reads `host_is_mac()`.
+master OLED shows the host's logo (Windows, Apple, or Tux for Linux, which behaves like Windows;
+iOS behaves like the Mac). On the Mac, Ctrl and GUI swap, so Cmd shortcuts use the same fingers as
+Ctrl shortcuts on Windows; redo is special-cased to Cmd+Shift+Z. Nothing hardcodes Ctrl or Cmd for
+one OS: anything OS-specific reads `host_is_mac()`.
 
 ## The OLEDs, as the hardware actually works
 

@@ -13,9 +13,9 @@ then regenerate.
 | `bjorn/gen_poses.py` | `art/bjorn_poses.c` / `.h` | infinition's own frames, reduced the way the panel needs them; not in this repo, see `VENDORED.md` |
 | `bjorn/sprites.py` | contact sheets, for looking at | Bjorn's upstream sprite sets, not in this repo |
 | `bjorn/oled_art.py` | nothing on its own | a library: ASCII grid <-> page-format bytes <-> PNG, shared by the generators |
-| `panel/gen_glyphs.py` | `art/panel_glyphs.c` / `.h` | `panel/glyphs.py` (the 16x16 mod glyphs as span lists), `panel/statusbar.py` (the 7x7 lock glyphs as grids). With `--drashna <drashna_font.h>`, the five mod glyphs are drashna's 12x8 icons instead, centred at (2, 4) in their cells |
+| `panel/gen_glyphs.py` | `art/panel_glyphs.c` / `.h` | with `--drashna <drashna_font.h>`, as committed: drashna's five 12x8 mod icons, centred at (2, 4) in their 16x16 cells, and his Caps Lock and Scroll Lock cells. Without it, the hand-drawn glyphs in `panel/glyphs.py` and `panel/statusbar.py`. Caps Word and the iOS "i" come from `statusbar.py` either way |
 | `panel/gen_locks.py` | the lock glyphs on stdout, as C | `panel/statusbar.py`. A check tool: it prints what `gen_glyphs.py` emits, and asserts the gutter column and the underline row stay clear |
-| `panel/gen_font.py` | `art/panel_font.c` / `.h` | QMK's own `drivers/oled/glcdfont.c`, read out of the QMK checkout. With `--drashna <drashna_font.h> --face EIN`, the glyphs come from that face of drashna's font, and the logo is still QMK's |
+| `panel/gen_font.py` | `art/panel_font.c` / `.h` | with `--drashna <drashna_font.h> --face EIN`, as committed: the Ein face of drashna's font. Without it, QMK's own `drivers/oled/glcdfont.c`. The splash logo comes from QMK's checkout either way |
 | `panel/gen_font_dungeon.py` | `art/panel_font.c` / `.h` | the DUNGEON.mode pack, which is not in this repo. Superseded 2026-10-15; kept in case that face is wanted back |
 | `panel/gen_layer_icons.py` | `art/panel_layer_icons.c` / `.h` | splitkb's Halcyon icons and QMK's Kyria logo, neither in this repo (see `VENDORED.md`), then `panel/icon_overrides.txt` for the hand corrections |
 | `panel/nerd_grids.py` | text grids for `icon_overrides.txt` | a Nerd Font TTF. **The one tool here that needs something installed** (Pillow) |
@@ -31,27 +31,22 @@ then regenerate.
 ```sh
 cd tools/bjorn && python3 -I gen_bjorn.py STAGE1.txt ../../keyboards/splitkb/kyria/keymaps/rvannoord/art
 cd tools/bjorn && python3 -I gen_poses.py ~/bjorn-src/resources/images ../../keyboards/splitkb/kyria/keymaps/rvannoord/art
-cd tools/panel && python3 -I gen_glyphs.py ../../keyboards/splitkb/kyria/keymaps/rvannoord/art/panel_glyphs.c ../../keyboards/splitkb/kyria/keymaps/rvannoord/art/panel_glyphs.h
-python3 -I tools/panel/gen_font.py ~/qmk_firmware keyboards/splitkb/kyria/keymaps/rvannoord/art
+cd tools/panel && python3 -I gen_glyphs.py ../../keyboards/splitkb/kyria/keymaps/rvannoord/art/panel_glyphs.c ../../keyboards/splitkb/kyria/keymaps/rvannoord/art/panel_glyphs.h --drashna ~/drashna-src/users/drashna/display/oled/drashna_font.h
+python3 -I tools/panel/gen_font.py ~/qmk_firmware keyboards/splitkb/kyria/keymaps/rvannoord/art --drashna ~/drashna-src/users/drashna/display/oled/drashna_font.h --face EIN
 python3 -I tools/panel/gen_layer_icons.py <halcyon-icons> ~/qmk_firmware/keyboards/splitkb/kyria/keymaps/default/keymap.c keyboards/splitkb/kyria/keymaps/rvannoord/art
 python3 -I tools/world/gen_world.py keyboards/splitkb/kyria/keymaps/rvannoord/art
 python3 -I tools/space/gen_space.py keyboards/splitkb/kyria/keymaps/rvannoord/art
 python3 -I tools/drashna/gen_art.py ~/drashna-src ~/drashna-modules keyboards/splitkb/kyria/keymaps/rvannoord/art
 ```
 
-From stage 1 of `docs/oled-v3.md`, the font and the mod glyphs come from drashna's font file:
+Without `--drashna`, `gen_font` and `gen_glyphs` give QMK's own font and the hand-drawn 16x16
+mod glyphs from `panel/glyphs.py`. Those were the committed files until stage 1 of
+`docs/oled-v3.md` replaced them on 2026-10-21.
 
-```sh
-python3 -I tools/panel/gen_font.py ~/qmk_firmware keyboards/splitkb/kyria/keymaps/rvannoord/art --drashna ~/drashna-src/users/drashna/display/oled/drashna_font.h --face EIN
-cd tools/panel && python3 -I gen_glyphs.py ../../keyboards/splitkb/kyria/keymaps/rvannoord/art/panel_glyphs.c ../../keyboards/splitkb/kyria/keymaps/rvannoord/art/panel_glyphs.h --drashna ~/drashna-src/users/drashna/display/oled/drashna_font.h
-```
-
-Every generator reproduces its committed files byte for byte. `gen_bjorn`, `gen_glyphs`,
-`gen_font`, `gen_world` and `gen_space` were re-run and compared on 2026-10-16;
-`gen_layer_icons` and `gen_poses` on 2026-10-15 and 2026-10-14, when their sources were
-last fetched. `gen_art`, and `gen_font` and `gen_glyphs` with `--drashna`, gave identical output
-on a second run on 2026-10-21. The same day, `gen_font` and `gen_glyphs` without the option still
-reproduced the committed files.
+Every generator reproduces its committed files byte for byte. `gen_bjorn`, `gen_world` and
+`gen_space` were re-run and compared on 2026-10-16. `gen_layer_icons` and `gen_poses` were
+compared on 2026-10-15 and 2026-10-14, when their sources were last fetched. `gen_art`, and
+`gen_font` and `gen_glyphs` with `--drashna`, were compared on 2026-10-21.
 
 ## Floyd-Steinberg has nothing to work with on 1-bit sources
 

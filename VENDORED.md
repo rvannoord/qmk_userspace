@@ -18,6 +18,8 @@ When a QMK update breaks Miryoku, fix it here and add a line below. Checking whe
 
 ## `keyboards/splitkb/kyria/keymaps/rvannoord/art/panel_font.c`
 
+**Since 2026-10-21 the glyphs are drashna's Ein face** (stage 1 of `docs/oled-v3.md`), out of `drashna_font.h` through `gen_font.py --drashna … --face EIN`; its source and its untraced origin are under *drashna's OLED art* below. **The QMK logo in the same file is still QMK's own**, out of `glcdfont.c`, because drashna's font does not carry it. What follows is the QMK font, which the glyphs came from until then and which `gen_font.py` still produces without the option.
+
 **QMK's own 6x8 OLED font**, `drivers/oled/glcdfont.c` — the face `oled_write()` draws with. GPL-2.0-or-later WITH BSD-2-Clause, derived from the Adafruit GFX library's font. It is already in the toolchain, so this is a vendored dependency the repo does **not** have to carry: `tools/panel/gen_font.py` reads it out of the QMK checkout at generation time.
 
 The transform is a transpose. QMK's is column-major, 6 bytes a character, bit 0 the top row; this panel's drawing code is row-major, 8 bytes a character, bit 7 the leftmost column. The 6 columns sit flush left in the 8 px cell, because `docs/layout.md` rests its "no 1 px edge frame" argument on the badge lighting x=0.
@@ -75,7 +77,7 @@ One trap worth keeping. QMK's `docs/quantum_painter_qgf.md` says a non-repeating
 
 ## drashna's OLED art: `art/drashna_icons.c`, `kitty_art.c`, `status_frame.c`, `drashna_sprites.c`, `painter_art.c`, `painter_fonts.c`, `bongo_art.c`, `mario_art.c`, `matrix_art.c`
 
-The art for the drashna round (`docs/layout.md`, *The drashna round* and *drashna's art, all of it*; `docs/oled-v3.md` is the build order). On 2026-10-21 everything in his userspace that a 128x64 panel can draw was taken in whole: every non-text cell of his font, every sprite, all three kitties with all six moods, his Quantum Painter graphics and fonts. So most of these nine files are art that nothing draws yet, and each file joins `SRC` when something does. Stage 1 also regenerates `art/panel_font.c` with drashna's Ein face, keeping QMK's logo, and the five mod glyphs in `art/panel_glyphs.c` with drashna's 12x8 icons.
+The art for the drashna round (`docs/layout.md`, *The drashna round* and *drashna's art, all of it*; `docs/oled-v3.md` is the build order). On 2026-10-21 everything in his userspace that a 128x64 panel can draw was taken in whole: every non-text cell of his font, every sprite, all three kitties with all six moods, his Quantum Painter graphics and fonts. So most of these nine files are art that nothing draws yet, and each file joins `SRC` when something does. `drashna_icons.c` is in since stage 1, for the host logo. Stage 1 also regenerated `art/panel_font.c` with drashna's Ein face, keeping QMK's logo, and `art/panel_glyphs.c` with his five 12x8 mod icons and his Caps Lock and Scroll Lock cells; Caps Word has no counterpart in his font and stays the one drawn here.
 
 | Repo | Commit | Files | Licence |
 |------|--------|-------|---------|

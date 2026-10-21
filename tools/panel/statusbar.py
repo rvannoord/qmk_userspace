@@ -33,6 +33,13 @@ SCROLLLOCK = [
     "........",
 ]
 # badge letters, for the side-by-side confusability check (dungeon-mode r4c9/r4c13/r4c14 etc.)
+# The "i" in front of the Apple logo on iOS (docs/layout.md, Master half): Apple's own
+# lowercase i at this size, a 2 px stem with a square dot, 16 rows to sit beside the 12x16
+# logo. Its stem ends on the logo's lowest row, 14, and the dot sits a row clear above.
+# Ten rows tall: one shorter than first drawn, so it reads as smaller than the logo.
+IOS_I = ["..", "..", "..", "..", "..", "##", "##", "..",
+         "##", "##", "##", "##", "##", "##", "##", ".."]
+
 LETTERS = {
  'W': ["........",".#....#.","##...##.","##.#.##.","#######.","###.###.","##..##..","........"],
  'I': ["........",".######.","...##...","...##...","...##...","...##...",".######.","........"],

@@ -170,5 +170,6 @@ u_split_state_t u_sync_build(void) {
         .anomaly = anomalies,
         // The slave cannot see keypresses, so the chosen animation crosses here.
         .world   = (uint8_t)u_anim_get(),
+        .host    = (uint8_t)host_kind(),
     };
 }

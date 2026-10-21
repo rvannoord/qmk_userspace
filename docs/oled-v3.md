@@ -25,7 +25,7 @@ QMK line numbers refer to `7a1bbf37c5`.
 | Stage | Status |
 |-------|--------|
 | 0. Sources, licence, generators | done 2026-10-21 |
-| 1. Bands: Ein, modifier icons, OS logo | open |
+| 1. Bands: Ein, modifier icons, OS logo | built 2026-10-21, not flashed. Linux logo, the iOS "i" (D14) and drashna's locks added the same day; the checkpoint is on the board |
 | 2. Bootloader screen | open |
 | 3. PAGE key, page framework, the three bands | open |
 | 4. Live layer map, master screen moves over | open |
@@ -82,6 +82,15 @@ Open, with a default, to answer before the stage that needs it:
   should follow v2 stage 4 (the director). Default: v3 0-7, then v2 resumes, then v3 8-9.
 - D13. **When Yoshi curls up (stage 6).** The mock used 4 s after the last key. Default: at
   Bjorn's doze, 75 s, so the two slave scenes rest on the same clock.
+- D14. **How iOS is told from the Mac (stage 1).** Decided 2026-10-21: a small lowercase "i" in
+  front of the Apple logo, in Apple's lettering style, so it reads as an i-device. Roel's own
+  design, after these four were rendered over the real Mac frames:
+  - A: a tablet glyph beside the logo. It read as an O at panel size.
+  - B: drashna's 6x8 Apple. It lost the set-by-hand line.
+  - C: the logo inside a device outline. It broke up under the alarm.
+  - D: a home-indicator bar under the logo.
+
+  The "i" is drawn here, because drashna's fonts have only a 1 px one and Ein's is a small capital.
 
 ---
 
@@ -172,7 +181,7 @@ Three changes to the bands as they are today, all art and drawing, no new state.
    that counts glyph ink gets its numbers updated, and nothing else should move.
 3. **OS logo.** `render_status()` stops drawing the badge text and draws the 12x16 logo at (0,0).
    Its bottom half lands in the band, and `render_band()` rewrites pages 1-5 every frame. So the
-   logo must be drawn **after** the band, and the band art must keep x 0-13, y 8-17 dark: a test
+   logo must be drawn **after** the band, and the band art must keep x 0-15, y 8-17 dark: a test
    asserts that over all ten icons and every base variant. The SYS underline moves to y=16. **Two
    traps:**
    - During the link-down alarm the band is inverted, so the logo has to be knocked out of the lit
@@ -184,6 +193,49 @@ Update *Master half* in `docs/layout.md` (the status bar row, the font paragraph
 
 **Checkpoint, on the board:** from a normal seated position, can the five icons and the logo be
 named without leaning in? The 12x8 icons are smaller than the 16x16 glyphs they replace.
+
+**As built, 2026-10-21.**
+- `panel_font.c` and `panel_glyphs.c` were regenerated with `--drashna`. `u_qmk_logo` is unchanged
+  byte for byte, and so are the lock glyphs.
+- `render_band()` now returns whether the alarm lit the band this frame, and `render_os_logo()`
+  takes that. It runs after the band: the logo is ORed onto the dark corner, or cut out of the lit
+  band, and the underline likewise. `drashna_icons.c` is in `SRC`, adding 48 bytes.
+- `test_panel.c` now checks:
+  - the logo's exact bytes on Windows and on the Mac
+  - the underline at y=16, a row clear of the logo
+  - the cut-out under the alarm, on a held layer and on base, with and without the underline
+  - the corner dark on all ten bands' art
+  - two more redraws that must cost nothing
+
+  The badge's two checks became logo checks. The inverted-row probes start just past the
+  logo's corner, and the centring check ignores the corner.
+- Making the knockout an OR, or drawing the logo before the band, fails the tests (both tried and
+  reverted).
+- On the host renders: the master at rest lights 1,091 px, and the mod row 99 of them. A held
+  Nav with two mods lights 1,359. The alarm frame lights 4,612.
+
+**Added the same day, after the second pass over drashna's art** (`docs/layout.md`, *drashna's
+art, all of it*):
+- **Locks.** Caps Lock and Scroll Lock are drashna's cells 0xc9 and 0xcb, through `gen_glyphs.py
+  --drashna`. Caps Word keeps the glyph drawn here, because drashna has none.
+- **Hosts.** The logo follows the host: Windows, the Apple logo for the Mac, Tux for Linux, and
+  for iOS the Apple logo with the "i" in front (D14).
+  - `host_os.c` keeps the detected host, and `host_kind()` reports it.
+  - SYS still only flips Mac and not-Mac. Each side shows the detected flavour when the detected
+    host is on it, so a Linux machine flips Linux↔Mac and an iPad iOS↔Windows.
+  - An unsure detection is Windows, as before. QMK reports Android as Linux, so the Android logo
+    is art only.
+- **The link.** The payload grew to 7 bytes with a `host` byte, because the flags byte had no bit
+  left. `U_FLAG_IS_MAC` still drives the mod row's order. The transaction count, and so the
+  handshake, is unchanged.
+- **Tests.**
+  - The scenario `S10_HostKind` covers detection and SYS for Linux, iOS, macOS and unsure.
+  - `test_split_state` checks the host byte.
+  - `test_panel.c` checks Tux and the iOS "i" (drawn, set by hand, cut out under the alarm), and
+    redraws on Linux, on iOS and with all three locks lit.
+  - The corner every band keeps dark grew to x 0-15, because the "i" and its 2 px gap move the
+    logo 4 px right. In rows 8-17 the nearest band pixel is the Kyria emblem at x=18.
+- **Size.** The firmware is 113,288 bytes of text, 240 more than before these additions.
 
 ## Stage 2: bootloader screen
 

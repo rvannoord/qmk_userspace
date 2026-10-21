@@ -51,3 +51,41 @@ TEST_F(Scenario, S10_HostOs) {
     at(1800);
     EXPECT_EQ(typed(), "<Ctrl+c>");
 }
+
+// What the panel shows, which is more than what the keyboard does. Detection is called
+// by hand here, as QMK calls it once the USB setup packets have been counted.
+TEST_F(Scenario, S10_HostKind) {
+    TestDriver driver;
+    record(driver);
+    start({s});
+
+    process_detected_host_os_user(OS_LINUX);
+    EXPECT_EQ(host_kind(), U_HOST_LINUX);
+    EXPECT_FALSE(host_is_mac()) << "Linux behaves like Windows";
+    EXPECT_FALSE(host_os_is_manual());
+
+    host_os_toggle();                       // SYS: a Linux machine flips to the Mac...
+    EXPECT_EQ(host_kind(), U_HOST_MAC);
+    EXPECT_TRUE(host_is_mac());
+    EXPECT_TRUE(host_os_is_manual());
+    host_os_toggle();                       // ...and back to Linux, not to Windows
+    EXPECT_EQ(host_kind(), U_HOST_LINUX);
+    EXPECT_FALSE(host_is_mac());
+
+    process_detected_host_os_user(OS_IOS);
+    EXPECT_EQ(host_kind(), U_HOST_IOS);
+    EXPECT_TRUE(host_is_mac()) << "iPadOS shortcuts are Cmd-based, so iOS swaps like the Mac";
+    host_os_toggle();
+    EXPECT_EQ(host_kind(), U_HOST_WINDOWS);
+    host_os_toggle();
+    EXPECT_EQ(host_kind(), U_HOST_IOS);
+
+    process_detected_host_os_user(OS_MACOS);
+    EXPECT_EQ(host_kind(), U_HOST_MAC);
+    process_detected_host_os_user(OS_UNSURE);
+    EXPECT_EQ(host_kind(), U_HOST_WINDOWS) << "an unsure detection is Windows, as before";
+
+    process_detected_host_os_user(OS_WINDOWS);   // leave the next test on Windows
+    EXPECT_EQ(host_kind(), U_HOST_WINDOWS);
+    EXPECT_FALSE(host_is_mac());
+}

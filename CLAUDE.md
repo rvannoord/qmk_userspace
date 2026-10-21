@@ -66,7 +66,7 @@ The keyboard plugs into Windows at work and an Apple Silicon Mac at home. One sw
 - QMK OS detection sets it on plug-in. `OS_DETECTION_SINGLE_REPORT` is on because Apple Silicon Macs re-trigger detection minutes later.
 - The SYS key (`U_SYS`) flips it by hand when detection guesses wrong.
 - On the Mac it swaps Ctrl and GUI, so Cmd shortcuts use the same fingers as Ctrl shortcuts on Windows. Redo is special-cased to Cmd+Shift+Z.
-- The master OLED shows `Win` or `Mac`.
+- The master OLED shows the host's logo: Windows, Apple, or Tux on Linux (Linux behaves like Windows). iOS is a Mac, swap included, shown as the Apple logo with a small "i" in front.
 
 Never hardcode Ctrl or Cmd for one OS: anything OS-specific reads `host_is_mac()`. A possible later switch (keep the mods in place, adapt only the clipboard keys) should only need changes in `host_os.c`.
 
