@@ -435,7 +435,7 @@ the goat later.
 
 | File | Holds |
 |------|-------|
-| `oled.h` / `oled.c` | the module's interface and its dispatcher. The header holds the slave-animation enum and boot default, `u_anim_get` / `u_anim_next`, the four entry points `oled_render_*` / `oled_*_task` and the pure sleep predicate; the `.c` draws the boot splash and then branches on master or slave. The sleep check itself is in `keymap.c`'s `housekeeping_task_user`, so a stray dirty block can light the panel for one main loop at most |
+| `oled.h` / `oled.c` | the module's interface and its dispatcher. The header holds the slave-animation enum and boot default, `u_anim_get` / `u_anim_next`, the four entry points `oled_render_*` / `oled_*_task` and the pure sleep predicate; the `.c` draws the boot splash and then branches on master or slave, and paints the bootloader screen in `shutdown_user()` on the way into the bootloader. The sleep check itself is in `keymap.c`'s `housekeeping_task_user`, so a stray dirty block can light the panel for one main loop at most |
 | `oled_master_zones.c` | the master panel. Three bands, status bar, 128x40 layer picture and mod row, in raw page bytes composed in the canvas and committed once, never `oled_write`. 1x and 2x glyph blitters; the 2x one doubles each source row, so a 16x16 is two page bytes a column |
 | `art/panel_glyphs.c` | generated. The five mod-row glyphs — four-pane, option mark, caret, command, shift — as drashna's filled 12x8 icons, centred at (2, 4) in 16x16 cells so the cell model did not change (until 2026-10-21 they were hand-drawn at 16x16, in DUNGEON.mode's weight language; `tools/panel/glyphs.py` still holds those). The lock glyphs are drashna's Caps Lock and Scroll Lock cells (Caps Word lights the Caps Lock one), and the file also holds the 2x16 "i" that stands in front of the Apple logo on iOS. Eight slots are five drawings: shift is one drawing in both sets, and the caret is one drawing that changes cell when the OS does, so the Ctrl/GUI swap is visible as a hop from the middle finger to the pinky |
 | `art/panel_font.c` | generated. Printable ASCII in Ein, transposed out of drashna's font file, one byte a row, flush left in an 8 px cell; plus the QMK splash logo out of QMK's own `glcdfont.c`. Regenerating it needs the drashna clone as well as the QMK checkout (`VENDORED.md`) |
@@ -707,8 +707,8 @@ drashna's userspace (`drashna/qmk_userspace` at `0903be5`, with the bongocats mo
 `drashna/qmk_modules` at `ee2c35b`) was read through for OLED ideas. Each one was rendered on this
 keyboard's own panels before it was decided. The master frames came from `oled_master_zones.c` and
 Bjorn from `oled_slave_bjorn.c`, both compiled on the host, with everything new drawn over them.
-This section is what was picked. **None of it is built**; `docs/oled-v3.md` is the build order and
-holds the questions still open.
+This section is what was picked. `docs/oled-v3.md` is the build order, says which stages are
+built, and holds the questions still open.
 
 **The master gets pages, and a key to turn them.** `U_PAGE` (left outer column, middle row, under
 SYS) cycles what the master shows, the way `U_ANIM` cycles the slave. It acts on release, is

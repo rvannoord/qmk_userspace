@@ -3,7 +3,7 @@
 # transport's master half, which only exists under SPLIT_KEYBOARD, and the panel's
 # drawing, which needs a buffer to draw into. No QMK tree and no toolchain beyond cc.
 #
-#   tests/run_unit.sh            build and run all four
+#   tests/run_unit.sh            build and run all five
 #   tests/run_unit.sh --dump     print the panel's frames instead of checking them
 set -euo pipefail
 
@@ -27,6 +27,10 @@ cc "${cc_flags[@]}" -o "$out/panel" \
 
 cc "${cc_flags[@]}" -DOLED_SLAVE_ANIMATION_BJORN -o "$out/bjorn" \
    "$here/unit/test_bjorn.c" "$keymap/art/bjorn_art.c" "$keymap/art/bjorn_poses.c" "$keymap/oled_canvas.c"
+
+# The bootloader screen, from oled.c itself.
+cc "${cc_flags[@]}" -o "$out/boot" \
+   "$here/unit/test_boot.c" "$keymap/art/panel_font.c" "$keymap/oled_canvas.c"
 
 # -Wno-unused-parameter: the spaceship's oled_set_cursor stub takes QMK's (col, line).
 cc "${cc_flags[@]}" -Wno-unused-parameter -o "$out/space" \
@@ -55,4 +59,6 @@ echo
 "$out/space" || fails=1
 echo
 "$out/bjorn" || fails=1
+echo
+"$out/boot" || fails=1
 exit $fails

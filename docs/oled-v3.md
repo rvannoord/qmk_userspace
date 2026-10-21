@@ -26,7 +26,7 @@ QMK line numbers refer to `7a1bbf37c5`.
 |-------|--------|
 | 0. Sources, licence, generators | done 2026-10-21 |
 | 1. Bands: Ein, modifier icons, OS logo | **done 2026-10-21**, flashed `f639c97`; the checkpoint passed on the board. Linux logo, the iOS "i" (D14) and drashna's locks added the same day |
-| 2. Bootloader screen | open |
+| 2. Bootloader screen | built 2026-10-22, not flashed. The checkpoint is on the board |
 | 3. PAGE key, page framework, the three bands | open |
 | 4. Live layer map, master screen moves over | open |
 | 5. Status sheet, layer map page, Typing, Event log | open |
@@ -274,6 +274,25 @@ Bootmagic is a boot-time matrix scan and never reaches this, which is correct: t
 the panel yet at that point.
 
 **Checkpoint:** double-tap Boot on each half. The screen shows, and the flash still goes through.
+
+**As built, 2026-10-22.**
+- `shutdown_user()` in `oled.c`, beside the splash. It draws only when `jump_to_bootloader` is
+  true: `soft_reset_keyboard()` comes through the same hook with false. The link's self-heal
+  calls `mcu_reset()` directly and never reaches it.
+- **The screen.** The splash's QMK logo, now drawn by a shared `draw_logo()`, at y=12.
+  BOOTLOADER is in Ein, centred on its ink and cut out of an 83x11 bar at y=42. It lights
+  1,341 px.
+- **The flush.** The canvas is committed, then `oled_render_dirty(true)` sends every dirty block,
+  because nothing runs after `shutdown_user()` to send them. The SSD1306 keeps showing the frame
+  while the bootloader runs, since the panel stays powered.
+- **Only the master** shows it: keys are processed there, so a Boot double-tap resets the half
+  with the cable. Each half needs the cable for its own check.
+- **Tests.** `tests/unit/test_boot.c` compiles the real `oled.c` and records every flush. It
+  checks the logo pixel for pixel, the bar's edges, each letter cut out, a single full flush
+  after the commit, and that a soft reset draws and sends nothing. Leaving out the flush, or
+  drawing on a soft reset, fails it (both tried and reverted).
+- **Firmware.** Builds with no warnings at 113,544 bytes of text, 232 more than stage 1.
+  `shutdown_user` links as a strong symbol over QMK's weak default.
 
 ## Stage 3: the PAGE key, the page framework, the three bands
 

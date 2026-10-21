@@ -19,7 +19,7 @@ The design and every tuning decision are in `docs/layout.md`; this file is the m
 | `split_state.c` / `.h` | the 6-byte state the master gathers for the other half: modifiers in finger order, layers, locks, Caps Word, host OS, misfires, the chosen animation |
 | `split_sync.c` / `.h` | the custom RPC that carries it: on change plus a 250 ms heartbeat, double-buffered on the slave |
 | `split_health.c` / `.h` | link health: the stats page (hold SYS two seconds), self-reset of a half whose link stays dead, the hardware watchdog |
-| `oled.h` / `oled.c` | the OLED module's interface and its dispatcher: boot splash, then master or slave |
+| `oled.h` / `oled.c` | the OLED module's interface and its dispatcher: boot splash, then master or slave; and the bootloader screen, painted on the way into the bootloader |
 | `oled_canvas.c` / `.h` | the frame every renderer draws into, committed to the driver once per frame |
 | `oled_master_zones.c` | the master panel: status bar, a 128x40 layer picture, the mod row |
 | `oled_slave_select.c` | which slave animation is live: persisted on the master, sent to the slave |

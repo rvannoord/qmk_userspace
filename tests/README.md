@@ -5,7 +5,7 @@ Two mechanisms, because they cover different things:
 | Runner | What | Needs |
 |--------|------|-------|
 | `tests/run_scenarios.sh` | tap-hold timing and host OS, as scenarios through stock QMK's tapping code | a `qmk_firmware` tree |
-| `tests/run_unit.sh` | the split transport's master half, the master panel, the spaceship's background and Bjorn | just `cc` |
+| `tests/run_unit.sh` | the split transport's master half, the master panel, the spaceship's background, Bjorn, the bootloader screen, and that every art file compiles | just `cc` |
 | `tests/preview/run_preview.sh` | Bjorn's idle show, rendered on the host into a GIF to watch before flashing | `cc` and Python 3 |
 
 ## Scenario tests
@@ -49,7 +49,7 @@ The old tree needs `appdirs`, which the installed QMK CLI lacks, so `old` runs `
 # Unit tests
 
 ```bash
-tests/run_unit.sh          # build and run all four
+tests/run_unit.sh          # build and run all of them
 tests/run_unit.sh --dump   # print the panel's frames as text instead of checking them
 tests/run_unit.sh --raw    # the raw 1024-byte buffers, one per frame, for a renderer
 ```
@@ -62,6 +62,7 @@ exist for what the scenario tests cannot reach:
 | `unit/test_split_sync.c` | the master send path. The scenario tests build `split_sync.c`'s non-`SPLIT_KEYBOARD` branch, where every function is a stub, so nothing there covers it — and a regression is silent and total: no sends at all, which on the keyboard looks like the other half's mascot going inert for no reason. Boot, the heartbeat, the hard window and recovery, on a clock that is a variable |
 | `unit/test_bjorn.c` | the mascot. Compiles the real `oled_slave_bjorn.c` and `bjorn_art.c` on a fake clock. Two things with teeth: that he keeps blinking after a doze and after a dead link — a figure that moves but never blinks is this design's way of saying the link died, so losing the blink reports a fault that is not there — and that whenever two consecutive composed frames are identical, the commit writes no block at all |
 | `unit/test_panel.c` | the master panel's three bands. Compiles the real `oled_master_zones.c` against a buffer laid out like the driver's, then measures what was drawn: that the band carries the layer's picture and the mod row every finger's glyph, that a held finger fills its cell while a misfire chips only the glyph box, which side the handedness bar takes and whether it is drawn or cut out, that the alarm inverts the whole band and the chain is knocked out of it, and that the default-layer rule appears in exactly the two cases it should. `--dump` prints the frames and `--raw` the buffers, which is how the bands get looked at without a flash |
+| `unit/test_boot.c` | the bootloader screen. Compiles the real `oled.c` and records every flush. It checks that the jump to the bootloader draws the QMK logo whole and BOOTLOADER cut out of its bar, and sends it at once, one flush of every dirty block after the commit. That matters because nothing runs after `shutdown_user()` to send it later. It also checks that a soft reset, which comes through the same hook, leaves the panel alone |
 | `unit/test_space.c` | the spaceship's background. Drives the real render on a fake clock and asserts, on the compiled bytes, that one loop at rest and at 50 WPM returns the identical frame, that the ship is bit-exact inside its mask, and that a one-pixel dark rim surrounds every ship pixel. `--raw <wpm>` emits the frames for a renderer |
 
 `unit/stub/manna-harbour_miryoku.h` copies Miryoku's layer list rather than including the
