@@ -20,10 +20,13 @@ mkdir -p "$out"
 bin=$(mktemp -d)/preview
 trap 'rm -rf "$(dirname "$bin")"' EXIT
 
+# OLED_SLAVE_WORLD as in custom_config.h, so the weather he stands in on the board is in
+# the preview too.
 cc -std=c11 -Wall -Wextra -Werror \
    -I "$repo/tests/unit" -I "$repo/tests/unit/stub" -I "$keymap" \
-   -DQMK_KEYBOARD_H='"qmk_keyboard.h"' -DOLED_ENABLE -DOLED_SLAVE_ANIMATION_BJORN \
-   -o "$bin" "$here/preview.c" "$keymap/art/bjorn_art.c" "$keymap/art/bjorn_poses.c" "$keymap/oled_canvas.c"
+   -DQMK_KEYBOARD_H='"qmk_keyboard.h"' -DOLED_ENABLE -DOLED_SLAVE_ANIMATION_BJORN -DOLED_SLAVE_WORLD \
+   -o "$bin" "$here/preview.c" "$keymap/art/bjorn_art.c" "$keymap/art/bjorn_poses.c" "$keymap/oled_canvas.c" \
+   "$keymap/oled_slave_world.c" "$keymap/art/world_art.c"
 
 "$bin" "$scenario" "$out"
 python3 -I "$repo/tools/preview.py" "$out" $invert

@@ -46,12 +46,14 @@ bool            u_sync_hard_stale(void) { return stale_hard; }
 static FILE *frames, *events;
 static uint32_t tick_no;
 
-// One render tick: 50 ms, the panel's own rate.
+// One render tick: 50 ms, the panel's own rate. Bjorn's own entry points, not the
+// oled_slave_* dispatch in oled_slave_select.c: the preview is of him, not of whichever
+// animation the ANIM key last chose.
 static void tick(const char *what) {
     fake_now += 50;
     fake_dirty = 0;
-    oled_slave_task();
-    oled_render_slave();
+    u_slave_bjorn_task();
+    u_slave_bjorn_render();
     fwrite(fake_oled, 1, OLED_MATRIX_SIZE, frames);
     fprintf(events, "%u,%u,%s,%u\n", tick_no++, fake_now, what, fake_dirty);
 }
