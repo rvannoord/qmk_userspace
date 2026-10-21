@@ -73,13 +73,16 @@ git checkout fa9eaed52212232d10f49d3e0e608aa877ad547d
 
 One trap worth keeping. QMK's `docs/quantum_painter_qgf.md` says a non-repeating RLE run has `length = marker - 128`. The decoder that actually runs on the keyboard, `qp_drawimage_byte_rle_decoder` in `quantum/painter/qp_draw_codec.c`, uses `c - 127`. The doc is off by one; following it drops a byte per literal run and everything after the first run decodes as noise. `tools/panel/qgf.py` follows the decoder.
 
-## drashna's OLED art: `art/drashna_icons.c`, `kitty_art.c`, `status_frame.c`, `bongo_art.c`, `mario_art.c`, `matrix_art.c`
+## drashna's OLED art: `art/drashna_icons.c`, `kitty_art.c`, `status_frame.c`, `drashna_sprites.c`, `painter_art.c`, `painter_fonts.c`, `bongo_art.c`, `mario_art.c`, `matrix_art.c`
 
-The art for the drashna round (`docs/layout.md`, *The drashna round*; `docs/oled-v3.md` is the build order). The six files above are generated now, and each joins `SRC` at the stage that draws it. Stage 1 also regenerates `art/panel_font.c` with drashna's Ein face, keeping QMK's logo, and the five mod glyphs in `art/panel_glyphs.c` with drashna's 12x8 icons.
+The art for the drashna round (`docs/layout.md`, *The drashna round* and *drashna's art, all of it*; `docs/oled-v3.md` is the build order). On 2026-10-21 everything in his userspace that a 128x64 panel can draw was taken in whole: every non-text cell of his font, every sprite, all three kitties with all six moods, his Quantum Painter graphics and fonts. So most of these nine files are art that nothing draws yet, and each file joins `SRC` when something does. Stage 1 also regenerates `art/panel_font.c` with drashna's Ein face, keeping QMK's logo, and the five mod glyphs in `art/panel_glyphs.c` with drashna's 12x8 icons.
 
 | Repo | Commit | Files | Licence |
 |------|--------|-------|---------|
 | [drashna/qmk_userspace](https://github.com/drashna/qmk_userspace) | **`0903be5b3c56a394dbfb27b8095bc5ad747b8d98`** (2026-10-17) | `users/drashna/display/oled/drashna_font.h`, `oled_assets.h`, `screensavers/matrix_scroll.h` | GPL-3.0-or-later, "Copyright 2023" and "2025 Christopher Courtney, aka Drashna Jael're" |
+| the same | the same | `users/drashna/display/painter/graphics.qgf.c` | GPL-3.0-or-later for the generated code; the file says the "image retains original copyright". The three logos are Apple's, Microsoft's and Linux's Tux (Larry Ewing's), drawn by drashna for his TFTs |
+| the same | the same | `users/drashna/display/painter/fonts/font_oled.qff.c` | GPL-2.0-or-later, "Copyright 2024" drashna and @elpekenin. Converted from his own `font.png` and edited by hand |
+| the same | the same | `users/drashna/display/painter/fonts/font_proggy_clean.qff.c`, `font_proggy_tiny.qff.c`, `font_thintel15.qff.c` | GPL-3.0-or-later for the generated code; each says the "font retains original copyright". Converted from `ProggyCleanNerdFont-Regular.ttf` (Tristan Grimmer's Proggy Clean, as patched by Nerd Fonts), `ProggyTiny.ttf`, and for Thintel 15 a file it does not name. The original fonts' licences were not read |
 | [drashna/qmk_modules](https://github.com/drashna/qmk_modules) | **`ee2c35bcbb7d8b8be108c93c5b8715ea1a2c020c`** (2026-10-16) | `bongocats/bongocat_assets.c` | GPL-2.0-or-later, "Copyright 2022 HorrorTroll" and "2025 Christopher Courtney". The file's tag is misspelled `SPD-License-Identifier`; the generated file spells it right |
 
 **The licence moved with it.** drashna's display art is GPL-3.0-or-later, so on 2026-10-21 this repo moved from GPL-2.0 to GPL-3.0-or-later (`docs/oled-v3.md`, D6). That was allowed because everything recorded in this file was "or later" (Miryoku, JBaguley's ship, QMK's font) or permissive (Bjorn, MIT; the Material Symbols, Apache-2.0). Their own notices stay as they are: it is their "or later" that allows the move. It cannot be undone while any of this art is in the repo. The slave's three logos (`art/oled_kyria.h`, `oled_monitor1.h`, `oled_monitor2.h`) have no section here yet. They are logos rather than code, and the move changes nothing about them either way.
@@ -94,16 +97,20 @@ Nothing of drashna's is fetched at build time: the generated files are committed
 
 ```sh
 git clone --filter=blob:none --no-checkout https://github.com/drashna/qmk_userspace ~/drashna-src
-cd ~/drashna-src && git sparse-checkout init --cone && git sparse-checkout set users/drashna/display/oled
+cd ~/drashna-src && git sparse-checkout init --cone
+git sparse-checkout set users/drashna/display/oled users/drashna/display/painter/fonts
 git checkout 0903be5b3c56a394dbfb27b8095bc5ad747b8d98
 git clone --filter=blob:none --no-checkout https://github.com/drashna/qmk_modules ~/drashna-modules
 cd ~/drashna-modules && git sparse-checkout init --cone && git sparse-checkout set bongocats
 git checkout ee2c35bcbb7d8b8be108c93c5b8715ea1a2c020c
 ```
 
-`tools/drashna/gen_art.py` writes the six files. `gen_font.py --drashna` and `gen_glyphs.py --drashna` write the other two; `tools/README.md` has the commands. The sources are run through the preprocessor and only their initialisers are parsed, so nothing in a clone is ever executed. `gen_art.py` refuses a clone at any other commit, reading `.git/HEAD` rather than running git inside it.
+`painter/fonts` in cone mode also brings the files directly in `painter/`, which is where `graphics.qgf.c` is. The two 240x320 colour pictures in `painter/graphics/` are TFT art and are not fetched.
 
-What the sources turned out to hold, checked on 2026-10-21. The renderers depend on these facts. `gen_art.py` stops if any of the last four stops being true:
+`tools/drashna/gen_art.py` writes the nine files. `gen_font.py --drashna` and `gen_glyphs.py --drashna` write the other two; `tools/README.md` has the commands. The sources are run through the preprocessor and only their initialisers are parsed, so nothing in a clone is ever executed. `gen_art.py` refuses a clone at any other commit, reading `.git/HEAD` rather than running git inside it.
+
+What the sources turned out to hold, checked on 2026-10-21. The renderers depend on these facts. `gen_art.py` stops if any of the last five stops being true:
+- **Every lit cell outside the faces has a name** (0x00-0x1f and 0x80-0xff): the four 12x16 logos, thirteen 12x8 pairs and 76 single cells, listed in `docs/layout.md`. Five have no name in drashna's code and are named by their shape. `gen_art.py` stops on a lit cell with no name, so a cell drashna adds is noticed.
 - **The font's logo rows are not QMK's logo.** QMK keeps its logo at 0x80, 0xa0 and 0xc0. In drashna's file those rows are empty, apart from three small glyphs at 0x80-0x82 and twenty at 0xc1-0xd4. So `u_qmk_logo` keeps coming from QMK's `glcdfont.c`.
 - **The icons are the same in all nine faces**: 0x00-0x1f and 0x80-0xff. Ein's own glyphs use columns 0-4 and leave column 5 empty, as QMK's face does. Its lowercase letters are small capitals.
 - **The small kitty (luna) has two paw frames, not three, and they are its sleep frames, byte for byte.** `kitty_art.c` points its paw mood at the sleep frames rather than storing them twice. On the bands, it looks asleep in whatever tier drives paw.

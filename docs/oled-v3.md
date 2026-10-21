@@ -128,6 +128,17 @@ Add a section per source to `VENDORED.md`, with commit, licence, credit and the 
 is compiled in yet.
 
 **As built, 2026-10-21.**
+- **Extended the same day.** The second pass took in the rest of drashna's art:
+  - `drashna_icons.c` now names every lit non-text cell of his font, and `gen_art.py` stops on a
+    lit cell with no name.
+  - Three files are new: `drashna_sprites.c`, `painter_art.c` and `painter_fonts.c`.
+  - `kitty_art.c` carries all three kitties with all six moods, and `status_frame.c` has both
+    footers and row 2.
+  - The clone now needs `painter/fonts` as well, so take the fetch recipe from `VENDORED.md` rather
+    than the one above.
+  - All of it came out byte for byte the same on a second run, and nothing new is in `SRC`.
+    `tests/run_unit.sh` compiles every file in `art/` with `-Werror`, so art that nothing draws
+    cannot rot unnoticed.
 - **Licence.** D6 answered and `LICENSE` replaced. The two clones are at `~/drashna-src` and
   `~/drashna-modules`, at the pinned commits.
 - **Generators.** `tools/drashna/csource.py` reads the sources through the preprocessor.

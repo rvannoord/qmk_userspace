@@ -4,9 +4,11 @@ QMK ships a converter *into* QGF and nothing that reads one back, so this exists
 lift splitkb's Halcyon icons out of `antontanderup/qmk_userspace` as pixels. See
 `VENDORED.md` for the source and the pinned commit.
 
-Only what those files actually use is implemented: QGF v1, frame 0, no delta frames.
+Only what the files read so far use is implemented: QGF v1, frame 0, no delta frames.
 A palette frame is resolved through the V of its HSV888 entries, which is all a
-1-bit panel can use anyway.
+1-bit panel can use anyway. RGB565 frames (drashna's TFT logos) come back as their
+luminance. `blobs()` splits a file that holds several images, as drashna's
+`graphics.qgf.c` does.
 
 One trap, and the reason this is not a twenty-line function. `docs/quantum_painter_qgf.md`
 says a non-repeating RLE run has `length = marker - 128`. The decoder that actually
@@ -21,12 +23,19 @@ import struct
 
 MAGIC = 0x464751          # "QGF"
 BPP = {0: 1, 1: 2, 2: 4, 3: 8, 4: 1, 5: 2, 6: 4, 7: 8}
+RGB565 = 0x08
 
 
 def _blob(text):
     """The one hex array in a .qgf.c file, as bytes."""
     body = text.split('= {', 1)[1].rsplit('};', 1)[0]
     return bytes(int(v, 16) for v in re.findall(r'0x[0-9a-fA-F]{2}', body))
+
+
+def blobs(text):
+    """Every hex array in a generated file, by name, in file order."""
+    return {m.group(1): bytes(int(v, 16) for v in re.findall(r'0x[0-9a-fA-F]{2}', m.group(2)))
+            for m in re.finditer(r'\b(\w+)\s*\[\s*\d*\s*\]\s*=\s*\{(.*?)\};', text, re.S)}
 
 
 def _unrle(d):
@@ -54,7 +63,11 @@ def _header(d, o):
 
 def read(path):
     """-> (width, height, rows) where a row is a list of 0-255 greys, 255 = the glyph."""
-    d = _blob(open(path).read())
+    return read_bytes(_blob(open(path).read()))
+
+
+def read_bytes(d):
+    """read(), for an image already out of its C array."""
 
     type_id, length, o = _header(d, 0)
     if type_id != 0x00 or length != 18:
@@ -79,6 +92,22 @@ def read(path):
     o += 6
     if flags & 0x02:
         raise ValueError('qgf: delta frames are not implemented')
+
+    if fmt == RGB565:
+        type_id, length, o = _header(d, o)
+        if type_id != 0x05:
+            raise ValueError('qgf: no frame data block')
+        data = d[o:o + length]
+        if compression == 0x01:
+            data = _unrle(data)
+        if len(data) < w * h * 2:
+            raise ValueError(f'qgf: {len(data)} bytes decoded, expected {w * h * 2}')
+        grey = []
+        for i in range(w * h):
+            v = data[2 * i] << 8 | data[2 * i + 1]        # big-endian, as qmk's rgb_to565 packs it
+            r, g, b = (v >> 11) << 3, ((v >> 5) & 0x3f) << 2, (v & 0x1f) << 3
+            grey.append((r * 299 + g * 587 + b * 114) // 1000)
+        return w, h, [grey[y * w:(y + 1) * w] for y in range(h)]
 
     palette = None
     if fmt >= 0x04:

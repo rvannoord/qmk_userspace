@@ -27,7 +27,7 @@ The design and every tuning decision are in `docs/layout.md`; this file is the m
 | `oled_slave_world.c` / `.h` | the weather behind Bjorn, across the whole panel, season from `__DATE__` |
 | `oled_slave_spaceship.c` | the ship over three parallax planes, speed from WPM |
 | `oled_slave_logo.c` | the three static logos |
-| `art/` | **generated and vendored data only, never edited by hand.** `*_art.c`, `bjorn_poses.c`, `drashna_icons.c`, `status_frame.c` and `panel_*.c` come out of `tools/`, whose README says how to regenerate each; the `oled_*.h` are the vendored ship and logos. Where everything came from is in `VENDORED.md`. The art from drashna's userspace is generated ahead of the stages of `docs/oled-v3.md` that draw it, so not all of `art/` is in `SRC` yet |
+| `art/` | **generated and vendored data only, never edited by hand.** `*_art.c`, `bjorn_poses.c`, `drashna_*.c`, `status_frame.c`, `painter_*.c` and `panel_*.c` come out of `tools/`, whose README says how to regenerate each; the `oled_*.h` are the vendored ship and logos. Where everything came from is in `VENDORED.md`. The art from drashna's userspace is generated ahead of the stages of `docs/oled-v3.md` that draw it, so not all of `art/` is in `SRC` yet |
 
 Naming: `u_` / `U_` is this keymap's prefix, following Miryoku's own `U_` for its keycodes
 (`U_BASE`, `U_NAV`, `U_RDO`); it is not QMK's Unicode `U`. Custom keycodes are `QK_USER_n`

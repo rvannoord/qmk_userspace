@@ -19,12 +19,13 @@ then regenerate.
 | `panel/gen_font_dungeon.py` | `art/panel_font.c` / `.h` | the DUNGEON.mode pack, which is not in this repo. Superseded 2026-10-15; kept in case that face is wanted back |
 | `panel/gen_layer_icons.py` | `art/panel_layer_icons.c` / `.h` | splitkb's Halcyon icons and QMK's Kyria logo, neither in this repo (see `VENDORED.md`), then `panel/icon_overrides.txt` for the hand corrections |
 | `panel/nerd_grids.py` | text grids for `icon_overrides.txt` | a Nerd Font TTF. **The one tool here that needs something installed** (Pillow) |
-| `panel/qgf.py` | nothing on its own | a library: reads a QMK Graphics Format image back out of its generated `.qgf.c` |
+| `panel/qgf.py` | nothing on its own | a library: reads a QMK Graphics Format image back out of its generated `.qgf.c`, including RGB565 frames and files that hold several images |
 | `world/gen_world.py` | `art/world_art.c` / `.h` | `world/sprites.txt`, the weather sprites as grids |
 | `space/gen_space.py` | `art/space_art.c` / `.h` | `space/planes.txt`, the three parallax planes and two masks as grids, plus the ship rows in `art/oled_spaceship.h` for the derived ship mask |
 | `space/authoring/` | `space/planes.txt`, previews | provenance: the objects and the placement script the planes were composed from. Needs Pillow, is not part of the build |
 | `preview.py` | `strip.png`, `anim.gif` | a frame dump from `tests/preview/`; see `tests/README.md` |
-| `drashna/gen_art.py` | `art/drashna_icons.c`, `kitty_art.c`, `status_frame.c`, `bongo_art.c`, `mario_art.c`, `matrix_art.c`, each with its `.h` | drashna's OLED sources and the bongocats module, as pinned clones that are not in this repo (see `VENDORED.md`). It checks the art it relies on and stops if drashna has changed it |
+| `drashna/gen_art.py` | `art/drashna_icons.c`, `kitty_art.c`, `status_frame.c`, `drashna_sprites.c`, `painter_art.c`, `painter_fonts.c`, `bongo_art.c`, `mario_art.c`, `matrix_art.c`, each with its `.h` | drashna's OLED and Quantum Painter sources and the bongocats module, as pinned clones that are not in this repo (see `VENDORED.md`). It names every lit cell of his font, checks the art it relies on, and stops if drashna has changed it |
+| `drashna/painter.py` | nothing on its own | a library: drashna's Quantum Painter images and QMK Font Format fonts read back to 1-bit pixels, on top of `panel/qgf.py` |
 | `drashna/csource.py` | nothing on its own | a library: C arrays out of a source run through `cc -E`, which is how the faces and panel sizes kept behind `#if` are read. It executes nothing from the source, and refuses an initialiser that is not plain integers |
 
 ```sh

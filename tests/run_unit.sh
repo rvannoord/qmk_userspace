@@ -38,6 +38,16 @@ case "${1:-}" in
 esac
 
 fails=0
+
+# Every art file compiles on its own, including the ones nothing draws yet: drashna's
+# catalogue is generated ahead of use (docs/layout.md, "drashna's art, all of it"), and
+# art that only compiles once something includes it would rot unnoticed.
+art_ok=1
+for f in "$keymap"/art/*.c; do
+    cc "${cc_flags[@]}" -I "$keymap/art" -c "$f" -o "$out/art.o" || { echo "  FAIL $f"; art_ok=0; }
+done
+if [ $art_ok = 1 ]; then echo "art: all good"; else echo "art: FAILED"; fails=1; fi
+echo
 "$out/split_sync" || fails=1
 echo
 "$out/panel" || fails=1
