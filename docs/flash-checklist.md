@@ -15,9 +15,9 @@ while the reason for it is still obvious.
 
 | Build | Commit | Flashed | Notes |
 |-------|--------|---------|-------|
-| `2026-10-16-27a1e24.uf2` | `27a1e24` | 2026-10-16 | Both halves, loaded and verified with `picotool load -v`. The new space behind the ship |
+| `2026-10-21-f639c97.uf2` | `f639c97` | 2026-10-21 | Both halves, loaded and verified with `picotool load -v`, built from a clean tree (label `f639c9`, no `-dirty`). Stage 1 of `docs/oled-v3.md`: Ein, drashna's icons and locks, the host logos with the iOS "i", the 7-byte payload. Read-backs of both halves taken first, `readback-{left,right}-2026-10-21.uf2`: both were `27a1e24`, matching the table |
 
-Before it, all on 2026-10-15 and all kept: `0c47a23` (the animation key), `1034f2e`,
+Before it: `27a1e24` (2026-10-16, the new space behind the ship). Before that, all on 2026-10-15 and all kept: `0c47a23` (the animation key), `1034f2e`,
 `6c9b28f`, `994a874` (the world layer, lit-on-black at 255), `1008480` (read-backs taken
 first, kept as `readback-{left,right}-2026-10-15c.uf2`). Before those: `a8dc5e6`,
 `934e27c`, `91477af`, `c95356d`, and an unrecorded build — the read-backs of 2026-10-14
@@ -79,12 +79,11 @@ that was not flashed simply stops typing.
 | The ship's outline is one dark pixel | Watch the ship cross Earth | Was up to 4 px. Zero made the ship vanish into the planet on the host; one is the floor. Bloom on glass could eat a one-pixel rim - if the ship loses its edge over Earth, the margin goes to 2 | `space` |
 | The loop is seamless on glass | Watch one full loop at rest, 25.6 s | Arithmetic says the seam cannot show. The test says it does not. The panel is the only thing that can disagree | `space` |
 | `BLD` ends in `OK` | Hold SYS two seconds | Both halves agreeing on the build id. `!=` means the flash did not take on one of them, which otherwise looks exactly like a broken cable | `01174ee` |
-| The mod icons read from your seat | From a normal seated position, name ⊞ ⌥ ⌃ ⌘ ⇧ without leaning in, on Windows and on the Mac | drashna's filled 12x8 icons replace the 16x16 drawings, so they are smaller. **This is stage 1's checkpoint** in `docs/oled-v3.md`: if they do not read, that stage is not done | `v3-1` |
-| The OS logo reads and follows the OS | Windows logo top left on Windows, Apple logo on the Mac. Tap SYS: it flips, with a line under it | It replaces the `Win`/`Mac` text, and its lower half sits in the band's empty top-left corner. Part of the same checkpoint | `v3-1` |
+| The OS logo reads and follows the OS | Tap SYS: it flips between the Windows and the Apple logo, with a line under it. That the logo reads from the seat was settled on 2026-10-21 | It replaces the `Win`/`Mac` text, and its lower half sits in the band's empty top-left corner. Part of the same checkpoint | `v3-1` |
 | The logo survives the alarm | Unplug the TRRS for two seconds. The logo, and the line if SYS set the OS, show dark, cut out of the lit band | Under the alarm that corner is lit with the rest of the band, so the logo is knocked out of it instead of vanishing into it | `v3-1` |
 | The stats page in Ein | Hold SYS two seconds. All eight lines read | The font changed to drashna's Ein, and the stats page is the only text left on the master | `v3-1` |
 | The boot splash is unchanged | `QMK Firmware` on both panels at boot, as before | The logo still comes from QMK's own font, because drashna's does not carry it | `v3-1` |
-| Caps Lock and Scroll Lock read | Turn on Caps Lock, then Scroll Lock (Fun layer), with Caps Word between them | Two of the three are drashna's 6x8 cells now (⇪ over a bar, and his Scroll Lock), replacing the hand-drawn padlock and ring. Caps Word keeps its own glyph. They must still read at 1 px without inverting | `v3-1` |
+| Caps Lock and Scroll Lock read | Turn on Caps Lock (Shift + the Caps Word key, held a moment on the Mac), then Scroll Lock (Fun layer) **on Windows**, with Caps Word between them. On the Mac, Scroll Lock is brightness down and never lights | Two of the three are drashna's 6x8 cells now (⇪ over a bar, and his Scroll Lock), replacing the hand-drawn padlock and ring. Caps Word keeps its own glyph. They must still read at 1 px without inverting | `v3-1` |
 | iOS shows "i" and the Apple logo | Plug into an iPad or iPhone, if one is at hand. Tap SYS: Windows, with a line; again: the "i" and Apple logo back, with the line under both | The "i" is hand-drawn, 2 px wide and 10 rows tall, with a 2 px gap that moves the logo 4 px right; iOS swaps Ctrl and GUI like the Mac | `v3-1` |
 | Linux shows Tux | Plug into a Linux machine, if one is at hand | QMK reports Linux, and the logo follows the new host byte. Behaviour stays Windows-like | `v3-1` |
 | SYS on Linux flips Linux and Mac | On that Linux machine, tap SYS twice | It should go to the Apple logo with a line under it, then back to Tux with the line, not to Windows | `v3-1` |
@@ -104,6 +103,7 @@ than supplying weather: a forced state is also how these get tested.
 
 | Check | Verdict | Date | From |
 |-------|---------|------|------|
+| The mod icons and the host logo read from the seat (stage 1's checkpoint) | Passed. From a normal seated position the five 12x8 icons (⊞ ⌥ ⌃ ⌘ ⇧) and the 12x16 logo can be named without leaning in, although the icons are smaller than the 16x16 glyphs they replaced | 2026-10-21 | `f639c97` |
 | Falling leaves on the slave half | Works, first look 2026-10-15. Six leaves, independent speed and tumble, passing behind Bjorn and reappearing | 2026-10-15 | `994a874` |
 | A misfire chips one cell | Works, and reads correctly once known. Reported first as a fault — "the black outline doesn't disappear, but becomes narrower around the actual icon and stays there" — which is an exact description of the 32 px hold being replaced by the 16 px chip. Kept as drawn; see `docs/layout.md` | 2026-10-15 | `1008480` |
 | Both panels go dark at about 120 s | Works. They had never done this | 2026-10-14 | `0dcfa5b`, `93a2210` |

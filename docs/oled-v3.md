@@ -25,7 +25,7 @@ QMK line numbers refer to `7a1bbf37c5`.
 | Stage | Status |
 |-------|--------|
 | 0. Sources, licence, generators | done 2026-10-21 |
-| 1. Bands: Ein, modifier icons, OS logo | built 2026-10-21, not flashed. Linux logo, the iOS "i" (D14) and drashna's locks added the same day; the checkpoint is on the board |
+| 1. Bands: Ein, modifier icons, OS logo | **done 2026-10-21**, flashed `f639c97`; the checkpoint passed on the board. Linux logo, the iOS "i" (D14) and drashna's locks added the same day |
 | 2. Bootloader screen | open |
 | 3. PAGE key, page framework, the three bands | open |
 | 4. Live layer map, master screen moves over | open |
@@ -91,6 +91,25 @@ Open, with a default, to answer before the stage that needs it:
   - D: a home-indicator bar under the logo.
 
   The "i" is drawn here, because drashna's fonts have only a 1 px one and Ein's is a small capital.
+- D15. **Mac legends on the live layer map (stage 4).** The Mac has no Print Screen, Scroll Lock or
+  Pause: it reads the Fun layer's three keys as F13, F14 and F15, and F14 and F15 are its screen
+  brightness down and up (found on the board, 2026-10-21). Default: on the Mac the map draws what
+  those keys do there, `F13` and drashna's sun cell with ▼ or ▲, and `PSc`, `ScL` and `Pau`
+  everywhere else, the way the mods already follow the host.
+
+  Every keycode on every layer was checked the same day for other keys that behave differently
+  on the Mac. Three more have a legend that would mislead there:
+  - `KC_INS` (Nav): the Mac has no Insert and reads the key as Help.
+  - `KC_APP` (Fun thumb): it does nothing on the Mac.
+  - `KC_ALGR` and the AltGr holds on X and dot: on the Mac it is right Option, which types
+    Option characters, so its legend there is drashna's ⌥ icon.
+
+  Default for these: `Hlp`, a dimmed `App`, and ⌥ on the Mac.
+
+  Two more differ in behaviour, not in what the key is, so their legends stay:
+  - Home, End, PgUp and PgDn scroll the view on the Mac rather than moving the cursor. That is
+    the *OS-aware navigation* experiment in `docs/layout.md`.
+  - Media Stop probably does nothing on the Mac.
 
 ---
 
