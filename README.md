@@ -52,6 +52,11 @@ tests/run_scenarios.sh new   # tap-hold and host OS through real QMK: needs ~/qm
 GitHub Actions builds the firmware on push, through the template's own workflow in
 `.github/workflows/build_binaries.yaml`.
 
+## Licence
+
+GPL-3.0-or-later (`LICENSE`), since 2026-10-21; GPL-2.0 before that. The parts that are other
+people's work keep their own notices, and `VENDORED.md` lists them.
+
 ## Also coming
 
 A splitkb Halcyon Kyria Wireless. It runs ZMK, not QMK, and gets its own repo; the layout

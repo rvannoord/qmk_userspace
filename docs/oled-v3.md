@@ -52,21 +52,15 @@ Decided 2026-10-21, by picking from the renders:
   with its WPM at 2× (decided 2026-10-21, over a 1× one-line version). The bootloader screen gets
   the logo and a label. Encoder feedback as mocked. Glitch for link lost on both halves. Matrix rain as the
   screensaver.
+- D6. **Licence: GPL-3.0-or-later**, decided 2026-10-21 before stage 0. The root `LICENSE` is now
+  the GPL-3.0 text, and other people's notices stay as they are. Two more answers came with it:
+  - **The Mario scene's art is committed** like the rest of `art/`, knowingly, the way drashna
+    publishes it. That was chosen over keeping it out of the public repo.
+  - **Ein is used although its origin is untraced.** drashna credits TinyOLED-Fonts, which has no
+    Ein; `VENDORED.md` has the details.
 
 Open, with a default, to answer before the stage that needs it:
 
-- D6. **Licence (stage 0).** drashna's display code and art are GPL-3.0-or-later: the font file,
-  `oled_assets.h` (kitty, header art, Mario, Yoshi and Bill) and the matrix rain. This repo is GPL-2.0, and
-  its headers say "or later". Taking any of those in makes the firmware GPL-3.0. Every "or later"
-  in here allows that, but it is a one-way move. Bongocats are GPL-2.0-or-later and fine either way.
-  Three things on top of the licence:
-  - The kitty is credited inside drashna's file to j-inc and pixelbenny.
-  - TinyOLED-Fonts' own licence still has to be read.
-  - Mario, Yoshi and Bullet Bill are Nintendo characters drawn as fan art, which matters in a
-    public repo whatever the licence says.
-
-  Default: move to GPL-3.0-or-later, and keep the Mario scene's art out of the public repo until
-  that is settled.
 - D7. **PAGE key position (stage 3).** Default: left half, outer column, middle row, under SYS.
   It's free on every layer, and the pinky reaches it while a thumb holds a layer, which is when it
   toggles the map style.
