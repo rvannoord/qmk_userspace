@@ -10,3 +10,5 @@ fp-info-cache
 _autosave-*
 # Python
 __pycache__/
+# Datasheets and drawings downloaded for checking: link to them instead
+datasheets/
