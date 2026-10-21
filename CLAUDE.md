@@ -50,7 +50,7 @@ Before flashing, read `docs/flash-checklist.md`: it lists what is waiting to be 
 
 Both halves take the same `.uf2`: the Kyria rev3 reads left/right from a pin on the PCB. On the Mac `qmk flash` works directly, because macOS mounts the `RPI-RP2` volume; from Windows the file is copied in Explorer. Flash one half at a time:
 1. Plug USB into that half.
-2. Put it in the bootloader with Miryoku's Boot key (double-tap). If the firmware is broken, hold the SYS key (outer column, top row) while plugging in; that's the Bootmagic key.
+2. Put it in the bootloader with Miryoku's Boot key: hold Space until the master panel shows Nav, then tap Q twice within 0.2 s (`TAPPING_TERM`); slower taps count as two single taps and do nothing. Boot resets the half with the cable, which shows a BOOTLOADER screen. The half's reset button, double-tapped, works too but skips the screen. If the firmware is broken, hold the SYS key (outer column, top row) while plugging in; that's the Bootmagic key.
 3. Copy the `.uf2` to the `RPI-RP2` drive from Windows Explorer. `qmk flash` inside WSL can't see the drive.
 
 Flash size is not a concern on the RP2040. Keep a known-good `.uf2` outside the repo to fall back on.

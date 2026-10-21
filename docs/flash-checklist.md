@@ -15,6 +15,7 @@ while the reason for it is still obvious.
 
 | Build | Commit | Flashed | Notes |
 |-------|--------|---------|-------|
+| `2026-10-22-fd28d30.uf2` | `fd28d30` | 2026-10-22 | Both halves, loaded and verified with `picotool load -v`, built from a clean tree (label `fd28d3`). Stage 2: the bootloader screen. The left half went first; the right half's load caught it in the bootloader still on `0130b8b`. The checkpoint then put each half into the bootloader through Boot, and each was loaded again and verified |
 | `2026-10-22-0130b8b.uf2` | `0130b8b` | 2026-10-22 | Both halves, loaded and verified with `picotool load -v`, built from a clean tree (label `0130b8`). Caps Word lights drashna's Caps Lock glyph; two lock slots. No full read-back, because the board had run `f639c97` since the night before; the right half was identified before loading by reading the start of its flash |
 | `2026-10-21-f639c97.uf2` | `f639c97` | 2026-10-21 | Both halves, loaded and verified with `picotool load -v`, built from a clean tree (label `f639c9`, no `-dirty`). Stage 1 of `docs/oled-v3.md`: Ein, drashna's icons and locks, the host logos with the iOS "i", the 7-byte payload. Read-backs of both halves taken first, `readback-{left,right}-2026-10-21.uf2`: both were `27a1e24`, matching the table |
 
@@ -80,7 +81,6 @@ that was not flashed simply stops typing.
 | The ship's outline is one dark pixel | Watch the ship cross Earth | Was up to 4 px. Zero made the ship vanish into the planet on the host; one is the floor. Bloom on glass could eat a one-pixel rim - if the ship loses its edge over Earth, the margin goes to 2 | `space` |
 | The loop is seamless on glass | Watch one full loop at rest, 25.6 s | Arithmetic says the seam cannot show. The test says it does not. The panel is the only thing that can disagree | `space` |
 | `BLD` ends in `OK` | Hold SYS two seconds | Both halves agreeing on the build id. `!=` means the flash did not take on one of them, which otherwise looks exactly like a broken cable | `01174ee` |
-| Boot shows its screen, and the flash still goes through | With the cable in one half, double-tap Boot. The QMK logo appears over an inverted BOOTLOADER, and the half shows up as `RPI-RP2`. Flash it, then move the cable and do the other half | It is the only frame drawn with no main loop after it: `shutdown_user()` sends it before the jump. Only the half with the cable resets, so each half is checked with the cable in it. **This is stage 2's checkpoint** | `v3-2` |
 | The OS logo reads and follows the OS | Tap SYS: it flips between the Windows and the Apple logo, with a line under it. That the logo reads from the seat was settled on 2026-10-21 | It replaces the `Win`/`Mac` text, and its lower half sits in the band's empty top-left corner. Part of the same checkpoint | `v3-1` |
 | The logo survives the alarm | Unplug the TRRS for two seconds. The logo, and the line if SYS set the OS, show dark, cut out of the lit band | Under the alarm that corner is lit with the rest of the band, so the logo is knocked out of it instead of vanishing into it | `v3-1` |
 | The stats page in Ein | Hold SYS two seconds. All eight lines read | The font changed to drashna's Ein, and the stats page is the only text left on the master | `v3-1` |
@@ -105,6 +105,7 @@ than supplying weather: a forced state is also how these get tested.
 
 | Check | Verdict | Date | From |
 |-------|---------|------|------|
+| Boot shows its screen, and the flash still goes through (stage 2's checkpoint) | Passed on both halves, each with the cable in it. The QMK logo over an inverted BOOTLOADER appears and stays, and the half then loads and verifies a build as usual. Took several tries: Boot needs Space held until Nav shows, then two taps of Q within 0.2 s, and a reset-button double-tap skips the screen entirely | 2026-10-22 | `fd28d30` |
 | The mod icons and the host logo read from the seat (stage 1's checkpoint) | Passed. From a normal seated position the five 12x8 icons (⊞ ⌥ ⌃ ⌘ ⇧) and the 12x16 logo can be named without leaning in, although the icons are smaller than the 16x16 glyphs they replaced | 2026-10-21 | `f639c97` |
 | Falling leaves on the slave half | Works, first look 2026-10-15. Six leaves, independent speed and tumble, passing behind Bjorn and reappearing | 2026-10-15 | `994a874` |
 | A misfire chips one cell | Works, and reads correctly once known. Reported first as a fault — "the black outline doesn't disappear, but becomes narrower around the actual icon and stays there" — which is an exact description of the 32 px hold being replaced by the 16 px chip. Kept as drawn; see `docs/layout.md` | 2026-10-15 | `1008480` |
@@ -119,8 +120,10 @@ than supplying weather: a forced state is also how these get tested.
 ## The procedure itself
 
 1. Build from a clean, committed tree, so the flash can be named by its commit.
-2. Per half: USB into that half, then **double-tap its reset button**. Not Bootmagic —
-   holding SYS while plugging in clears EEPROM.
+2. Per half: USB into that half, then **double-tap its reset button**, or press Boot: hold
+   Space until the panel shows Nav, then tap Q twice within 0.2 s. Boot resets the half with the
+   cable and, since `fd28d30`, shows the BOOTLOADER screen; the reset button skips the screen.
+   Not Bootmagic: holding SYS while plugging in clears EEPROM.
 3. If the build on the board is unknown, read it back first:
    `picotool save -a -v ~/kyria-firmware-backup/readback-<half>-<date>.uf2`
 4. `picotool load -v -x <file>.uf2`, or `qmk flash` on the Mac.

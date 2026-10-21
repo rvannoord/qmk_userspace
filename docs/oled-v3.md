@@ -26,7 +26,7 @@ QMK line numbers refer to `7a1bbf37c5`.
 |-------|--------|
 | 0. Sources, licence, generators | done 2026-10-21 |
 | 1. Bands: Ein, modifier icons, OS logo | **done 2026-10-21**, flashed `f639c97`; the checkpoint passed on the board. Linux logo, the iOS "i" (D14) and drashna's locks added the same day |
-| 2. Bootloader screen | built 2026-10-22, not flashed. The checkpoint is on the board |
+| 2. Bootloader screen | **done 2026-10-22**, flashed `fd28d30`; the checkpoint passed on both halves |
 | 3. PAGE key, page framework, the three bands | open |
 | 4. Live layer map, master screen moves over | open |
 | 5. Status sheet, layer map page, Typing, Event log | open |
@@ -291,7 +291,8 @@ the panel yet at that point.
   checks the logo pixel for pixel, the bar's edges, each letter cut out, a single full flush
   after the commit, and that a soft reset draws and sends nothing. Leaving out the flush, or
   drawing on a soft reset, fails it (both tried and reverted).
-- **Firmware.** Builds with no warnings at 113,544 bytes of text, 232 more than stage 1.
+- **Firmware.** Builds with no warnings at 113,540 bytes of text from a clean tree, 228 more than
+  stage 1. The 113,544 in the commit message was measured on a dirty tree.
   `shutdown_user` links as a strong symbol over QMK's weak default.
 
 ## Stage 3: the PAGE key, the page framework, the three bands
