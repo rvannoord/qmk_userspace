@@ -13,7 +13,7 @@ then regenerate.
 | `bjorn/gen_poses.py` | `art/bjorn_poses.c` / `.h` | infinition's own frames, reduced the way the panel needs them; not in this repo, see `VENDORED.md` |
 | `bjorn/sprites.py` | contact sheets, for looking at | Bjorn's upstream sprite sets, not in this repo |
 | `bjorn/oled_art.py` | nothing on its own | a library: ASCII grid <-> page-format bytes <-> PNG, shared by the generators |
-| `panel/gen_glyphs.py` | `art/panel_glyphs.c` / `.h` | with `--drashna <drashna_font.h>`, as committed: drashna's five 12x8 mod icons, centred at (2, 4) in their 16x16 cells, and his Caps Lock and Scroll Lock cells. Without it, the hand-drawn glyphs in `panel/glyphs.py` and `panel/statusbar.py`. Caps Word and the iOS "i" come from `statusbar.py` either way |
+| `panel/gen_glyphs.py` | `art/panel_glyphs.c` / `.h` | with `--drashna <drashna_font.h>`, as committed: drashna's five 12x8 mod icons, centred at (2, 4) in their 16x16 cells, and his Caps Lock and Scroll Lock cells. Without it, the hand-drawn glyphs in `panel/glyphs.py` and `panel/statusbar.py`, Caps Word's among them. The iOS "i" comes from `statusbar.py` either way |
 | `panel/gen_locks.py` | the lock glyphs on stdout, as C | `panel/statusbar.py`. A check tool: it prints what `gen_glyphs.py` emits, and asserts the gutter column and the underline row stay clear |
 | `panel/gen_font.py` | `art/panel_font.c` / `.h` | with `--drashna <drashna_font.h> --face EIN`, as committed: the Ein face of drashna's font. Without it, QMK's own `drivers/oled/glcdfont.c`. The splash logo comes from QMK's checkout either way |
 | `panel/gen_font_dungeon.py` | `art/panel_font.c` / `.h` | the DUNGEON.mode pack, which is not in this repo. Superseded 2026-10-15; kept in case that face is wanted back |

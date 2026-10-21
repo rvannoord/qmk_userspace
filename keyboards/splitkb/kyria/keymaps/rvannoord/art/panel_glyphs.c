@@ -2,9 +2,10 @@
 //
 // The five mod glyphs are drashna's filled 12x8 icons out of drashna_font.h, each
 // centred at (2, 4) in its 16x16 cell, in page format: one byte a column,
-// bit 0 at the top, page 0 then page 1. Of the lock glyphs, Caps Lock and Scroll
-// Lock are drashna's 6x8 cells, flush left in their 8x8 slots; Caps Word is drawn
-// for this panel, in tools/panel/statusbar.py. Sources and licence in VENDORED.md.
+// bit 0 at the top, page 0 then page 1. The lock glyphs are drashna's Caps Lock and
+// Scroll Lock cells, flush left in their 8x8 slots; Caps Word lights the Caps Lock
+// one, as on his screen. The iOS "i" is drawn for this panel, in
+// tools/panel/statusbar.py. Sources and licence in VENDORED.md.
 //
 // Copyright 2025 Christopher Courtney, aka Drashna Jael're (@drashna) <drashna@live.com>
 // SPDX-License-Identifier: GPL-3.0-or-later
@@ -36,7 +37,6 @@ const uint8_t PROGMEM u_glyph16[U_GLYPH_COUNT][U_GLYPH_BYTES] = {
 
 const uint8_t PROGMEM u_lock8[U_LOCK_COUNT][8] = {
     {0x20, 0x70, 0xd8, 0x88, 0xf8, 0x00, 0xf8, 0x00},  // CAPS_LOCK
-    {0x10, 0x38, 0xfe, 0x10, 0x10, 0x00, 0xf8, 0x00},  // CAPS_WORD
     {0x60, 0x40, 0xc0, 0x00, 0x20, 0x20, 0x38, 0x00},  // SCROLL_LOCK
 };
 

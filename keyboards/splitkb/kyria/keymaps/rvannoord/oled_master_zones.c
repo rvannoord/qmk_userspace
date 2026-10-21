@@ -180,9 +180,9 @@ static void watch_edges(const u_split_state_t *now) {
 // --- status bar -------------------------------------------------------------
 // The OS logo takes the left end (drawn after the band, below); the right end is
 // permanently dark, which is where the latched locks go. One row, so they cannot drift
-// off a shared baseline.
+// off a shared baseline, right-aligned so the last one always sits at the same place.
 
-#    define U_LOCK_X0 100
+#    define U_LOCK_XN 118     // the rightmost slot
 #    define U_LOCK_DX   9
 
 static void render_status(void) {
@@ -193,11 +193,16 @@ static void render_status(void) {
     // this keyboard nor change anything it types. U_FLAG_NUM_LOCK stays on the wire as
     // a reserved bit. Scroll Lock is the opposite case — it sits on the Fun layer's
     // home row and gets hit by accident — so it is shown.
-    const uint8_t on[U_LOCK_COUNT] = {(uint8_t)(panel.flags & U_FLAG_CAPS_LOCK),
-                                      (uint8_t)(panel.flags & U_FLAG_CAPS_WORD),
-                                      (uint8_t)(panel.flags & U_FLAG_SCROLL_LOCK)};
+    //
+    // Caps Word lights the Caps Lock glyph, the way drashna's screen does: there is no
+    // Caps Word glyph in his set. Named, so the art's lock set can change around it.
+    const uint8_t on[U_LOCK_COUNT] = {
+        [U_LOCK_CAPS_LOCK]   = (uint8_t)(panel.flags & (U_FLAG_CAPS_LOCK | U_FLAG_CAPS_WORD)),
+        [U_LOCK_SCROLL_LOCK] = (uint8_t)(panel.flags & U_FLAG_SCROLL_LOCK),
+    };
     for (uint8_t i = 0; i < U_LOCK_COUNT; i++) {
-        if (on[i]) draw_glyph_1x((uint8_t)(U_LOCK_X0 + i * U_LOCK_DX), 0, u_lock8[i]);
+        const uint8_t x = (uint8_t)(U_LOCK_XN - (U_LOCK_COUNT - 1 - i) * U_LOCK_DX);
+        if (on[i]) draw_glyph_1x(x, 0, u_lock8[i]);
     }
 }
 

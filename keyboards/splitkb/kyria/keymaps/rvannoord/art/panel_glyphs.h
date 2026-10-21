@@ -2,9 +2,10 @@
 //
 // The five mod glyphs are drashna's filled 12x8 icons out of drashna_font.h, each
 // centred at (2, 4) in its 16x16 cell, in page format: one byte a column,
-// bit 0 at the top, page 0 then page 1. Of the lock glyphs, Caps Lock and Scroll
-// Lock are drashna's 6x8 cells, flush left in their 8x8 slots; Caps Word is drawn
-// for this panel, in tools/panel/statusbar.py. Sources and licence in VENDORED.md.
+// bit 0 at the top, page 0 then page 1. The lock glyphs are drashna's Caps Lock and
+// Scroll Lock cells, flush left in their 8x8 slots; Caps Word lights the Caps Lock
+// one, as on his screen. The iOS "i" is drawn for this panel, in
+// tools/panel/statusbar.py. Sources and licence in VENDORED.md.
 //
 // Copyright 2025 Christopher Courtney, aka Drashna Jael're (@drashna) <drashna@live.com>
 // SPDX-License-Identifier: GPL-3.0-or-later
@@ -33,8 +34,7 @@ extern const uint8_t PROGMEM u_glyph16[U_GLYPH_COUNT][U_GLYPH_BYTES];
 // are, and which means they must never be inverted in place. Nothing does: the
 // alarm is a different page.
 enum u_lock {
-    U_LOCK_CAPS_LOCK,    // drashna's 0xc9: a caps-lock arrow over a bar
-    U_LOCK_CAPS_WORD,    // latched shift, rule stopping short: it ends at the word
+    U_LOCK_CAPS_LOCK,    // drashna's 0xc9: a caps-lock arrow over a bar. Caps Word lights it too
     U_LOCK_SCROLL_LOCK,    // drashna's 0xcb
     U_LOCK_COUNT,
 };

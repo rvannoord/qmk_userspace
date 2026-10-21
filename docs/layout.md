@@ -167,7 +167,7 @@ Three bands of pictures and no text, modelled on splitkb's own Halcyon TFT panel
 
 | Zone | Origin | Size | Content |
 |------|--------|------|---------|
-| Status bar | (0,0) | 128x8 | drashna's 12x16 host logo at the left (since 2026-10-21; it was `Win`/`Mac` text): Windows, Apple for the Mac, Tux for Linux. iOS is the Apple logo with a small lowercase "i" in front of it, in Apple's own lettering style, so it reads as an i-device (decided 2026-10-21). The "i" is 2 px wide and 10 rows tall, a row shorter than first drawn, with a 2 px gap before the logo, which moves 4 px right for it. The logo is twice the bar's height, so its lower half sits in the band's top-left corner, x 0-15 by y 8-17, which every band keeps dark (in those rows the nearest band pixel is the Kyria emblem at x=18). Underlined at y=16 when SYS set the host by hand, under the "i" too on iOS. The right end is permanently dark, so the latched locks live there at x=100, 109, 118 — one row, so they cannot drift off a shared baseline. Caps Lock and Scroll Lock are drashna's cells there; Caps Word is this panel's own |
+| Status bar | (0,0) | 128x8 | drashna's 12x16 host logo at the left (since 2026-10-21; it was `Win`/`Mac` text): Windows, Apple for the Mac, Tux for Linux. iOS is the Apple logo with a small lowercase "i" in front of it, in Apple's own lettering style, so it reads as an i-device (decided 2026-10-21). The "i" is 2 px wide and 10 rows tall, a row shorter than first drawn, with a 2 px gap before the logo, which moves 4 px right for it. The logo is twice the bar's height, so its lower half sits in the band's top-left corner, x 0-15 by y 8-17, which every band keeps dark (in those rows the nearest band pixel is the Kyria emblem at x=18). Underlined at y=16 when SYS set the host by hand, under the "i" too on iOS. The right end is permanently dark, so the latched locks live there at x=109 and 118 — one row, so they cannot drift off a shared baseline. Both are drashna's cells: Caps Lock, which Caps Word lights too, as on drashna's own screen, and Scroll Lock |
 | Layer band | (0,8) | 128x40 | one picture per layer, from `panel_layer_icons.c`. Three rows under the icon when a held layer is hiding a non-base default. **This band is also the alarm**: the link being down inverts the whole of it and cuts a broken chain out of it. The OS logo's lower half and its underline are cut out of it then too, rather than lost in the lit field |
 | Mod row | (0,48) | 128x16 | four 32 px cells, one per finger, each showing its glyph **always**: drashna's filled 12x8 icon (⊞ ⌥ ⌃ ⌘ ⇧, since 2026-10-21), centred in a 16x16 slot. A held finger fills its whole cell and the glyph is knocked out of it; a finger that just misfired fills only the glyph's own 16 px box. Both fills are chamfered, 3 px off each corner, so a lit cell reads as a key rather than a black rectangle. **The order reverses with the half the panel is on** |
 
@@ -262,9 +262,16 @@ so the next person to move a band finds out immediately if they have spent the r
 **The lock glyphs are 1 px and must never be inverted in place.** Caps Lock and Scroll Lock
 are drashna's font cells since 2026-10-21 (0xC9, a ⇪ over a bar, and 0xCB), which replaced the
 hand-drawn padlock and struck ring. Wherever this panel had a hand-drawn piece and drashna has
-one, his is used. Caps Word has no counterpart in his font, so its glyph is still the one drawn
-here. All three sit in 8x8 cells and leave column 7 empty, so the 1 px channel between neighbours
-cannot close under bloom. drashna's two are 5 px wide and 7 tall. At that size a 2 px stroke
+one, his is used.
+
+**Caps Word lights the Caps Lock glyph.** drashna has no Caps Word glyph: his screen ORs Caps
+Word into the Caps Lock indicator, and this panel does the same since 2026-10-21. That retired
+the hand-drawn Caps Word glyph and the middle of three slots, and the two that are left
+right-align at x=109 and 118. A word in caps and Caps Lock left on now look the same. Caps Word
+ends at the end of the word, so the glyph going out by itself tells them apart.
+
+Both sit in 8x8 cells and leave column 7 empty, so the 1 px channel between neighbours cannot
+close under bloom. drashna's cells are 5 px wide and 7 tall. At that size a 2 px stroke
 leaves no interior, and 1 px is what the font's own symbol cells use anyway. Inverted they would
 become dark hairlines in a lit field, which is the failure the mascot's work already measured.
 Nothing inverts this row: the alarm is a different page. If that ever changes, this set has to be
@@ -430,7 +437,7 @@ the goat later.
 |------|-------|
 | `oled.h` / `oled.c` | the module's interface and its dispatcher. The header holds the slave-animation enum and boot default, `u_anim_get` / `u_anim_next`, the four entry points `oled_render_*` / `oled_*_task` and the pure sleep predicate; the `.c` draws the boot splash and then branches on master or slave. The sleep check itself is in `keymap.c`'s `housekeeping_task_user`, so a stray dirty block can light the panel for one main loop at most |
 | `oled_master_zones.c` | the master panel. Three bands, status bar, 128x40 layer picture and mod row, in raw page bytes composed in the canvas and committed once, never `oled_write`. 1x and 2x glyph blitters; the 2x one doubles each source row, so a 16x16 is two page bytes a column |
-| `art/panel_glyphs.c` | generated. The five mod-row glyphs — four-pane, option mark, caret, command, shift — as drashna's filled 12x8 icons, centred at (2, 4) in 16x16 cells so the cell model did not change (until 2026-10-21 they were hand-drawn at 16x16, in DUNGEON.mode's weight language; `tools/panel/glyphs.py` still holds those). The lock glyphs are drashna's Caps Lock and Scroll Lock cells and this panel's own Caps Word, and the file also holds the 2x16 "i" that stands in front of the Apple logo on iOS. Eight slots are five drawings: shift is one drawing in both sets, and the caret is one drawing that changes cell when the OS does, so the Ctrl/GUI swap is visible as a hop from the middle finger to the pinky |
+| `art/panel_glyphs.c` | generated. The five mod-row glyphs — four-pane, option mark, caret, command, shift — as drashna's filled 12x8 icons, centred at (2, 4) in 16x16 cells so the cell model did not change (until 2026-10-21 they were hand-drawn at 16x16, in DUNGEON.mode's weight language; `tools/panel/glyphs.py` still holds those). The lock glyphs are drashna's Caps Lock and Scroll Lock cells (Caps Word lights the Caps Lock one), and the file also holds the 2x16 "i" that stands in front of the Apple logo on iOS. Eight slots are five drawings: shift is one drawing in both sets, and the caret is one drawing that changes cell when the OS does, so the Ctrl/GUI swap is visible as a hop from the middle finger to the pinky |
 | `art/panel_font.c` | generated. Printable ASCII in Ein, transposed out of drashna's font file, one byte a row, flush left in an 8 px cell; plus the QMK splash logo out of QMK's own `glcdfont.c`. Regenerating it needs the drashna clone as well as the QMK checkout (`VENDORED.md`) |
 | `art/panel_layer_icons.c` | generated. The ten 128x40 layer bands, reduced from splitkb's Halcyon icons and the Kyria logo; see `VENDORED.md` |
 | `oled_slave_bjorn.c` | the mascot: tier hysteresis, idle ladder, ambient clocks, blitter |
@@ -854,7 +861,8 @@ display_menu module. All of it is taken in, generated into `art/` under the name
 **whether or not anything draws it yet**, so a later idea starts from named art rather than from
 another search. Two rules came with it:
 - Where this panel has a hand-drawn piece and drashna has one for the same thing, his is used:
-  the mod glyphs and the badge at stage 1, and now the Caps Lock and Scroll Lock glyphs.
+  the mod glyphs and the badge at stage 1, and now the Caps Lock and Scroll Lock glyphs. Caps
+  Word, which drashna shows as Caps Lock, went the same way.
 - The first round's declined pieces stay out: the train, the small running cat, the full-screen
   logos, the Witcher wolf, the big digits and the plain small QMK chip.
 
@@ -874,7 +882,7 @@ are the same in every face. Page format, one byte a column.
 | `u_icon12[MUTE, SPEAKER]` | e0-e3 | 12x8 | encoder feedback (stage 7) |
 | `u_icon12[BULB]` | f0 f1 | 12x8 | encoder feedback (stage 7) |
 | `u_icon12[BULB_OFF, MOUSE, CLICK_OFF, CLICK, CAT]` | ee ef, f2-f7, f9 fa | 12x8 | — |
-| `u_icon6[CAPS_LOCK, SCROLL_LOCK]` | c9, cb | 6x8 | status bar locks, in place of the hand-drawn ones (2026-10-21) |
+| `u_icon6[CAPS_LOCK, SCROLL_LOCK]` | c9, cb | 6x8 | status bar locks, in place of the hand-drawn ones (2026-10-21). Caps Word lights the Caps Lock cell too, as on drashna's screen |
 | `u_icon6[NUM_LOCK]` | ca | 6x8 | — : Num Lock is not shown (see *Master half*) |
 | `u_icon6[RADIO_FILLED, ARROW_UP, ARROW_DOWN, TRI_RIGHT]` | c2, 18, 19, 10 | 6x8 | what display_menu draws, if it comes |
 | the other `u_icon6` cells, listed below | | 6x8 | — |

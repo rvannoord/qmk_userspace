@@ -367,6 +367,17 @@ int main(int argc, char **argv) {
 
     check("the layer icon is centred", centred(BAND_Y0, BAND_Y1, 4));
     check("caps word shows in the status bar's right end", any_lit_in(100, 127, 0, 7));
+    {
+        // Caps Word lights the Caps Lock glyph itself, the way drashna's screen does.
+        uint8_t word[8], caps[8];
+        frame((u_split_state_t){.layers = U_BASE, .flags = U_FLAG_CAPS_WORD}, false);
+        memcpy(word, &fake_oled[109], 8);
+        frame((u_split_state_t){.layers = U_BASE, .flags = U_FLAG_CAPS_LOCK}, false);
+        memcpy(caps, &fake_oled[109], 8);
+        check("Caps Word lights the Caps Lock glyph", memcmp(word, caps, 8) == 0 && any_lit_in(109, 117, 0, 7));
+        check("and nothing is drawn in the slot Caps Word used to have", !any_lit_in(100, 108, 0, 7));
+        frame(on_nav, false);
+    }
 
     // The ladder: nothing routine may light more of the panel than the alarm. The
     // worst routine frame is four fingers of both hands held at once; the alarm is the
@@ -413,8 +424,8 @@ int main(int argc, char **argv) {
     check("the layer icon survives under the alarm", any_dark_in(48, 79, 16, 39));
 
     // Locks: two of three on, and Num Lock can never be, so its slot is never drawn.
-    check("both latched locks show", any_lit_in(100, 108, 0, 7) && any_lit_in(118, 126, 0, 7));
-    check("the unused lock slot stays dark", !any_lit_in(109, 117, 0, 7));
+    check("both latched locks show", any_lit_in(109, 117, 0, 7) && any_lit_in(118, 126, 0, 7));
+    check("left of them the status bar stays dark", !any_lit_in(U_OS_LOGO_W, 108, 0, 7));
 
     // Set by hand under the alarm: the underline is cut out of the lit band too, and the
     // corner beside it stays lit. On base the band is filled rather than inverted, and
@@ -575,8 +586,8 @@ int main(int argc, char **argv) {
     {
         const u_split_state_t caps = {.layers = U_BASE,
                                       .flags  = U_FLAG_CAPS_LOCK | U_FLAG_SCROLL_LOCK};
-        // Every lock at once, drashna's two and the hand-drawn Caps Word between them.
-        check("all three locks at once, a redraw is free",
+        // Every lock flag at once: Caps Lock and Caps Word share a glyph.
+        check("every lock flag at once, a redraw is free",
               redraw_cost((u_split_state_t){.layers = U_BASE,
                                             .flags = U_FLAG_CAPS_LOCK | U_FLAG_CAPS_WORD | U_FLAG_SCROLL_LOCK},
                           false) == 0);
