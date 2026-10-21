@@ -13,17 +13,19 @@ The design and every tuning decision are in `docs/layout.md`; this file is the m
 |------|-------|
 | `rules.mk` | Miryoku's options (set here, never on the command line), `CONVERT_TO = liatris`, and the `SRC` list |
 | `config.h` | the `LAYOUT_miryoku` wrapper in two variants, one per Miryoku thumb mapping; the custom keycodes; the split transaction id |
-| `keymap.c` | the hooks: `housekeeping_task_user` (sync, link health, OLED tasks, sleep), `process_record_user` (SYS, ANIM, Mac redo), the encoders. QMK compiles it on its own, so it is never in `SRC` |
+| `keymap.c` | the hooks: `housekeeping_task_user` (sync, link health, OLED tasks, sleep), `process_record_user` (SYS, ANIM, PAGE, Mac redo), the encoders. QMK compiles it on its own, so it is never in `SRC` |
 | `host_os.c` / `.h` | `host_is_mac()`, the one switch for everything OS-specific |
 | `tap_hold.c` | the Chordal Hold and Flow Tap callbacks for the home-row mods |
-| `split_state.c` / `.h` | the 6-byte state the master gathers for the other half: modifiers in finger order, layers, locks, Caps Word, host OS, misfires, the chosen animation |
+| `split_state.c` / `.h` | the 7-byte state the master gathers for the other half: modifiers in finger order, layers, locks, Caps Word, host OS, misfires, the chosen animation |
 | `split_sync.c` / `.h` | the custom RPC that carries it: on change plus a 250 ms heartbeat, double-buffered on the slave |
 | `split_health.c` / `.h` | link health: the stats page (hold SYS two seconds), self-reset of a half whose link stays dead, the hardware watchdog |
 | `oled.h` / `oled.c` | the OLED module's interface and its dispatcher: boot splash, then master or slave; and the bootloader screen, painted on the way into the bootloader |
 | `oled_canvas.c` / `.h` | the frame every renderer draws into, committed to the driver once per frame |
-| `oled_master_zones.c` | the master panel: status bar, a 128x40 layer picture, the mod row |
+| `oled_master_zones.c` | the master panel: status bar, a 128x40 layer picture, the mod row; and its pages, turned with PAGE |
+| `oled_settings.c` / `.h` | the one EEPROM word the animation and the page share |
+| `speed_tier.h` | WPM as four speed tiers, for Bjorn and the master's kitty |
 | `oled_slave_select.c` | which slave animation is live: persisted on the master, sent to the slave |
-| `oled_slave_bjorn.c` | Bjorn: typing-speed tiers, the idle ladder, blink, poses, props |
+| `oled_slave_bjorn.c` | Bjorn: the idle ladder, blink, poses, props |
 | `oled_slave_world.c` / `.h` | the weather behind Bjorn, across the whole panel, season from `__DATE__` |
 | `oled_slave_spaceship.c` | the ship over three parallax planes, speed from WPM |
 | `oled_slave_logo.c` | the three static logos |
@@ -39,6 +41,7 @@ aliases under the same prefix, because QMK already uses the short names (`OS_TOG
 |-----|-------|------|
 | SYS (`U_SYS`) | left half, outer column, top row | flips between the Mac and the detected non-Mac host (Windows, or Linux on a Linux machine; an iPad flips iOS and Windows); held two seconds, the stats page; held while plugging in, the bootloader (Bootmagic) |
 | ANIM (`U_ANIM`) | right half, outer column, top row | cycles the other half's animation: Bjorn, spaceship, Kyria logo, Monitor 1, Monitor 2. Persisted across a replug |
+| PAGE (`U_PAGE`) | left half, outer column, middle row, under SYS | cycles the master half's pages: the bands, the bands with the small kitty, with the striped kitty, with the QMK logo, Stats. Dots in the status bar show where you landed. Persisted across a replug |
 
 Thumb arc, five positions per half from the outside in: position 1 is the encoder (left:
 volume, right: screen brightness; its click is unassigned), positions 3 to 5 carry Miryoku's

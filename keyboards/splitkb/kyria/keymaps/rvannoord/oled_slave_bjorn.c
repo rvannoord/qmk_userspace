@@ -16,13 +16,10 @@
 #include "oled_slave_world.h"
 #include "split_sync.h"
 #include "oled_canvas.h"
+#include "speed_tier.h"
 
 // --- tuning -----------------------------------------------------------------
-// WPM tiers. Deliberately low while the Colemak-DH migration is still settling;
-// with higher boundaries the upper postures would simply never be seen.
-static const uint8_t bjorn_tier_up[3]   = {10, 30, 50};
-static const uint8_t bjorn_tier_down[3] = { 6, 24, 42};   // each strictly below its up
-#define BJORN_TIER_DWELL_MS 800                            // a tier hop repaints the column
+// WPM tiers: speed_tier.h, shared with the master's kitty.
 
 #define BJORN_SETTLE_MS  8000                              // drop to the resting posture
 #define BJORN_DOZE_MS   75000                              // eyes shut; OLED_TIMEOUT is 120 s
@@ -67,8 +64,7 @@ typedef struct {
     bool     hard_stale;   // link dead
 } bjorn_in_t;
 
-static uint8_t  bjorn_tier;              // never reinitialised: correct across a sleep
-static uint32_t bjorn_tier_changed;
+static u_speed_tier_t bjorn_speed;       // never reinitialised: correct across a sleep
 static uint16_t bjorn_ticks;
 static uint16_t bjorn_breath_origin;      // latched when he settles, so the first
                                           // thing he does is a full rest, then an inhale
@@ -152,21 +148,11 @@ static void bjorn_gather(bjorn_in_t *in) {
     }
 }
 
-static void bjorn_update_tier(uint8_t wpm) {
-    if (timer_elapsed32(bjorn_tier_changed) < BJORN_TIER_DWELL_MS) return;
-
-    const uint8_t was = bjorn_tier;
-    // while, not if: a jump from nothing to 80 WPM lands on the top tier in one tick.
-    while (bjorn_tier < 3 && wpm >= bjorn_tier_up[bjorn_tier]) bjorn_tier++;
-    while (bjorn_tier > 0 && wpm < bjorn_tier_down[bjorn_tier - 1]) bjorn_tier--;
-    if (bjorn_tier != was) bjorn_tier_changed = timer_read32();
-}
-
 // Runs every main loop on this half, so it cannot miss an edge.
 void u_slave_bjorn_task(void) {
     bjorn_in_t in;
     bjorn_gather(&in);
-    bjorn_update_tier(in.wpm);
+    u_speed_tier_update(&bjorn_speed, in.wpm);
 #ifdef OLED_SLAVE_WORLD
     u_world_task();
 #endif
@@ -402,7 +388,7 @@ static void bjorn_compose(void) {
     bjorn_ticks++;
 
     const bool settled = in.idle_ms >= BJORN_SETTLE_MS;
-    const uint8_t tier = settled ? 1 : bjorn_tier;
+    const uint8_t tier = settled ? 1 : bjorn_speed.tier;
 
     // The tick the waking gesture ends on, so the reschedule happens exactly once.
     const bool woke_from_lids =

@@ -57,7 +57,7 @@ Flash size is not a concern on the RP2040. Keep a known-good `.uf2` outside the 
 
 After changing `tap_hold.c`, `host_os.c`, `keymap.c` or a tap-hold value, run the scenario tests with `tests/run_scenarios.sh new` (see `tests/README.md`). They encode the current values, so a deliberate change updates the matching test too.
 
-After changing any OLED or split file — `oled_canvas.c`, `oled_master_zones.c`, `oled_slave_bjorn.c`, `bjorn_art.c`, `panel_font.c`, `split_state.c`, `split_sync.c` — run `tests/run_unit.sh`. Those are host tests in plain C and need nothing but `cc`. `tests/run_unit.sh --dump` prints the panel's frames, which is how the zones get checked without a flash.
+After changing any OLED or split file — `oled_canvas.c`, `oled_settings.c`, `oled_master_zones.c`, `oled_slave_bjorn.c`, `speed_tier.h`, `bjorn_art.c`, `panel_font.c`, `split_state.c`, `split_sync.c` — run `tests/run_unit.sh`. Those are host tests in plain C and need nothing but `cc`. `tests/run_unit.sh --dump` prints the panel's frames, which is how the zones get checked without a flash.
 
 ## Host OS
 
@@ -79,6 +79,8 @@ Thumb arc, five positions per half, numbered from the outside edge toward the mi
 | Key | Position | Keycode |
 |-----|----------|---------|
 | SYS | left half, outer column, top row (also Bootmagic) | `U_SYS` = `QK_USER_0`, toggles host OS |
+| ANIM | right half, outer column, top row | `U_ANIM` = `QK_USER_1`, cycles the slave's animation |
+| PAGE | left half, outer column, middle row | `U_PAGE` = `QK_USER_2`, cycles the master's page |
 
 ## Rules
 

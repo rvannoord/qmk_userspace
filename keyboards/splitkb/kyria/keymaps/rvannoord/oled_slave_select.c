@@ -14,29 +14,22 @@
 
 #include QMK_KEYBOARD_H
 #include "oled.h"
+#include "oled_settings.h"
 #include "split_state.h"
 #include "split_sync.h"
 
 #ifdef OLED_ENABLE
 
-// eeconfig_read_user() gives a zeroed word on a fresh or cleared EEPROM, and
-// zero is a legitimate animation index, so the stored value carries a tag. An
-// untagged word means "never set" and falls back to the build's default rather
-// than silently selecting the first entry.
-#    define U_ANIM_EE_TAG 0x5ea10000u
-#    define U_ANIM_EE_MASK 0xffff0000u
-
+// The stored byte lives in oled_settings.c, which falls back to the build's default on
+// a fresh EEPROM.
 static uint8_t anim_local = U_ANIM_DEFAULT;
 static bool    anim_loaded;
 
 static void anim_load(void) {
     if (anim_loaded) return;
     anim_loaded = true;
-    const uint32_t raw = eeconfig_read_user();
-    if ((raw & U_ANIM_EE_MASK) == U_ANIM_EE_TAG) {
-        const uint8_t v = (uint8_t)(raw & 0xffu);
-        if (v < U_ANIM_COUNT) anim_local = v;
-    }
+    const uint8_t v = u_setting_get(U_SETTING_ANIM);
+    if (v < U_ANIM_COUNT) anim_local = v;
 }
 
 enum u_slave_anim u_anim_get(void) {
@@ -56,7 +49,7 @@ void u_anim_next(void) {
     if (!is_keyboard_master()) return;
     anim_load();
     anim_local = (uint8_t)((anim_local + 1) % U_ANIM_COUNT);
-    eeconfig_update_user(U_ANIM_EE_TAG | anim_local);
+    u_setting_set(U_SETTING_ANIM, anim_local);
 }
 
 // --- dispatch ---------------------------------------------------------------

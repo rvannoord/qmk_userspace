@@ -42,3 +42,9 @@ static inline bool is_keyboard_left(void) { return fake_is_left; }
 extern uint32_t fake_now;
 static inline uint32_t timer_read32(void) { return fake_now; }
 static inline uint32_t timer_elapsed32(uint32_t then) { return fake_now - then; }
+
+// The few QMK calls the master's pages make: user EEPROM, one word, and the WPM. The
+// tests own both, which is how a replug and a typing speed are staged.
+uint32_t eeconfig_read_user(void);
+void     eeconfig_update_user(uint32_t val);
+uint8_t  get_current_wpm(void);

@@ -27,6 +27,11 @@
 // covering the row would hide live modifiers at that moment. It is now a chip inside
 // the offending finger's own cell — the same drawing as a hold, at half the area, so
 // pressing again visibly grows it to fill the cell.
+//
+// All of that is the first of the master's pages (oled.h, docs/oled-v3.md D1). The next
+// three are the same bands with something else in the base layer's band, one of two
+// kitties or the QMK logo, and the Stats page is the SYS page. The U_PAGE key turns them, and
+// for a moment after it a row of dots in the status bar says where you landed.
 
 #include QMK_KEYBOARD_H
 #include "manna-harbour_miryoku.h"
@@ -38,8 +43,11 @@
 #include "art/panel_glyphs.h"
 #include "art/panel_layer_icons.h"
 #include "art/drashna_icons.h"
+#include "art/kitty_art.h"
 #include "oled_canvas.h"
 #include "split_health.h"
+#include "oled_settings.h"
+#include "speed_tier.h"
 
 // Rebuilt every main loop by oled_master_task. That is a resampling, not a capture:
 // u_sync_build() reports only what is held at the instant it is called, and each build
@@ -133,6 +141,60 @@ static void draw_glyph_16_knockout(uint8_t x, uint8_t page, uint8_t which) {
     }
 }
 
+// A page-format image ORed in at any row. The art is page-aligned and its place on the
+// panel is not, so each source byte lands across two canvas pages.
+static void blit_at(const uint8_t *src, uint8_t w, uint8_t pages, uint8_t x0, uint8_t y0) {
+    const uint8_t sh = y0 & 7;
+    for (uint8_t q = 0; q < pages; q++) {
+        const uint16_t at = (uint16_t)((y0 >> 3) + q) * OLED_DISPLAY_WIDTH + x0;
+        for (uint8_t i = 0; i < w; i++) {
+            const uint16_t b = (uint16_t)(pgm_read_byte(&src[(uint16_t)q * w + i]) << sh);
+            u_canvas[at + i] |= (uint8_t)b;
+            if (sh) u_canvas[at + OLED_DISPLAY_WIDTH + i] |= (uint8_t)(b >> 8);
+        }
+    }
+}
+
+// --- the page ---------------------------------------------------------------
+// The stored value is the page's number in D1's order, not its place in the cycle, so
+// building a page later does not move the others.
+
+#    define U_DOTS_MS 700
+
+static uint8_t  page_now;
+static bool     page_loaded;
+static bool     dots_live;      // a flag, not just the time: the clock starts at 0 too
+static uint32_t dots_at;
+
+static bool page_built(uint8_t p) {
+    return p < U_PAGE_COUNT && ((U_PAGES_BUILT >> p) & 1u);
+}
+
+static void page_load(void) {
+    if (page_loaded) return;
+    page_loaded = true;
+    const uint8_t p = u_setting_get(U_SETTING_VIEW) & U_VIEW_PAGE_MASK;
+    // A page this build does not have, stored by a later one, reads as the first.
+    page_now = page_built(p) ? p : U_PAGE_BANDS;
+}
+
+enum u_master_page u_page_get(void) {
+    page_load();
+    return (enum u_master_page)page_now;
+}
+
+void u_page_next(void) {
+    if (!is_keyboard_master()) return;
+    page_load();
+    do {
+        page_now = (uint8_t)((page_now + 1) % U_PAGE_COUNT);
+    } while (!page_built(page_now));
+    const uint8_t view = u_setting_get(U_SETTING_VIEW);
+    u_setting_set(U_SETTING_VIEW, (uint8_t)((view & ~U_VIEW_PAGE_MASK) | page_now));
+    dots_live = true;
+    dots_at   = timer_read32();
+}
+
 // --- edges, watched every main loop -----------------------------------------
 // The render runs at 20 Hz and only when the screen is awake. Anything that must not
 // be missed is latched here instead.
@@ -148,6 +210,10 @@ static bool     trace_live;
 
 static uint32_t alarm_at;
 static bool     alarm_was;
+
+// Run whatever the page, so the kitty shows the speed you are typing at the moment you
+// turn to her, rather than catching up from wherever she was last seen.
+static u_speed_tier_t kitty_speed;
 
 static void watch_edges(const u_split_state_t *now) {
     static u_split_state_t prev;
@@ -242,6 +308,35 @@ static void knock_chain(uint8_t x) {
     }
 }
 
+// The base band's other three versions. All start right of x=15 or below y=17, or under
+// the OS logo and its underline in the corner. A kitty takes only the emblem's half, so
+// the Kyria wordmark stays; the QMK logo is as wide as the panel and takes the whole band.
+
+#    define U_KITTY_X       18
+#    define U_KITTY_Y       12
+#    define U_KITTY_CLEAR_W 58      // the emblem's columns; the wordmark starts after them
+#    define U_KITTY_MS     500      // a frame
+#    define U_KITTY_FAST_MS 300     // a frame when she bounces
+#    define U_QMK_X          1      // centred: 126 of 128
+#    define U_QMK_Y         21      // centred in y 18-47
+
+// Either kitty, on Bjorn's four tiers in drashna's order. The small one's paw frames are
+// her sleep frames, so in the first tier she looks asleep (D9); the striped one has her own.
+static void base_kitty(const uint8_t (*art)[U_KITTY_BYTES], const u_kitty_run_t *moods) {
+    static const uint8_t mood_of_tier[4] = {U_KITTY_SLEEP, U_KITTY_PAW, U_KITTY_WATCH, U_KITTY_BOUNCE};
+
+    for (uint8_t q = 0; q < U_BAND_PAGES; q++) fill((uint8_t)(U_BAND_PAGE + q), 0, U_KITTY_CLEAR_W, 0x00);
+    const u_kitty_run_t run = moods[mood_of_tier[kitty_speed.tier]];
+    const uint32_t      ms  = kitty_speed.tier == 3 ? U_KITTY_FAST_MS : U_KITTY_MS;
+    const uint8_t       f   = (uint8_t)(run.first + (timer_read32() / ms) % run.count);
+    blit_at(art[f], U_KITTY_W, U_KITTY_BYTES / U_KITTY_W, U_KITTY_X, U_KITTY_Y);
+}
+
+static void base_qmk(void) {
+    for (uint8_t q = 0; q < U_BAND_PAGES; q++) fill((uint8_t)(U_BAND_PAGE + q), 0, OLED_DISPLAY_WIDTH, 0x00);
+    blit_at(u_qmk_logo, U_LOGO_W, U_LOGO_PAGES, U_QMK_X, U_QMK_Y);
+}
+
 // Returns whether the alarm lit the band this frame, which the OS logo needs to know.
 static bool render_band(void) {
     const uint8_t active = panel.layers & 0x0F;
@@ -251,6 +346,15 @@ static bool render_band(void) {
     // is, which on a stock setup is base and its Kyria logo.
     const uint8_t shown = (active == U_BASE && deflt != U_BASE) ? deflt : active;
     blit_band(shown);
+    // Before the alarm, which still fills the base band whichever version it is.
+    if (shown == U_BASE) {
+        switch (u_page_get()) {
+            case U_PAGE_BANDS_KITTY:   base_kitty(u_kitty_small, u_kitty_small_moods); break;
+            case U_PAGE_BANDS_STRIPED: base_kitty(u_kitty_striped, u_kitty_striped_moods); break;
+            case U_PAGE_BANDS_QMK:     base_qmk(); break;
+            default:                   break;
+        }
+    }
 
     // A default that is not base is a standing fact, and a held layer used to hide it.
     // Both halves of the condition earn their place: a base default has nothing to
@@ -419,6 +523,30 @@ static void render_mods(void) {
     }
 }
 
+// --- the page dots ----------------------------------------------------------
+// One per page that PAGE can reach, the current one larger, in the status bar's dark
+// middle (x 41-85 with five pages), the mock's geometry. Drawn last, over any page, the
+// Stats page's first line included: they are only there for 700 ms.
+
+static void render_dots(void) {
+    if (!dots_live) return;
+    uint8_t n = 0, at = 0;
+    for (uint8_t p = 0; p < U_PAGE_COUNT; p++) {
+        if (!page_built(p)) continue;
+        if (p == page_now) at = n;
+        n++;
+    }
+    const uint8_t x0 = (uint8_t)(OLED_DISPLAY_WIDTH / 2 - n * 4);
+    fill(0, (uint8_t)(x0 - 3), (uint8_t)(n * 8 + 5), 0x00);
+    for (uint8_t i = 0; i < n; i++) {
+        if (i == at) {
+            fill_or(0, (uint8_t)(x0 + i * 8), 5, 0x3c);         // 5x4, rows 2-5
+        } else {
+            fill_or(0, (uint8_t)(x0 + i * 8 + 1), 3, 0x18);     // 3x2, rows 3-4
+        }
+    }
+}
+
 // --- the stats page ---------------------------------------------------------
 // Sixteen characters by eight lines at 1x fills the panel exactly. The build has
 // NO_PRINT, so there is no printf here and none is wanted: a handful of numbers do not
@@ -525,18 +653,21 @@ static void render_stats(void) {
 void oled_master_task(void) {
     panel = u_sync_build();
     watch_edges(&panel);
+    u_speed_tier_update(&kitty_speed, get_current_wpm());
+    if (dots_live && timer_elapsed32(dots_at) >= U_DOTS_MS) dots_live = false;
 }
 
 void oled_render_master(void) {
-    // Asked for by holding SYS, and the only thing that ever replaces the zones.
-    if (u_stats_page_open()) {
+    // Holding SYS still opens the stats page from any page, and it still closes itself;
+    // as a page it stays. Either way it carries no alarm, as the SYS page never has: its
+    // FAIL and OUT lines are how it reports the link.
+    if (u_stats_page_open() || u_page_get() == U_PAGE_STATS) {
         render_stats();
-        u_canvas_commit();
-        return;
+    } else {
+        render_status();
+        render_os_logo(render_band());
+        render_mods();
     }
-
-    render_status();
-    render_os_logo(render_band());
-    render_mods();
+    render_dots();
     u_canvas_commit();     // the only point that touches the driver's buffer
 }

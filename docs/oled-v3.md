@@ -27,7 +27,7 @@ QMK line numbers refer to `7a1bbf37c5`.
 | 0. Sources, licence, generators | done 2026-10-21 |
 | 1. Bands: Ein, modifier icons, OS logo | **done 2026-10-21**, flashed `f639c97`; the checkpoint passed on the board. Linux logo, the iOS "i" (D14) and drashna's locks added the same day |
 | 2. Bootloader screen | **done 2026-10-22**, flashed `fd28d30`; the checkpoint passed on both halves |
-| 3. PAGE key, page framework, the three bands | open |
+| 3. PAGE key, page framework, the three bands | **built 2026-10-22**, not yet flashed; its board checkpoint is open |
 | 4. Live layer map, master screen moves over | open |
 | 5. Status sheet, layer map page, Typing, Event log | open |
 | 6. Bongo cat and the Mario scene on the slave | open |
@@ -39,8 +39,10 @@ QMK line numbers refer to `7a1bbf37c5`.
 
 Decided 2026-10-21, by picking from the renders:
 
-- D1. The master gets pages, in this order: Bands, Bands with the small kitty, Bands with the QMK
-  logo, Status sheet, Layer map, Typing, Stats, Event log.
+- D1. The master gets pages, in this order: Bands, Bands with the small kitty, Bands with the
+  striped kitty, Bands with the QMK logo, Status sheet, Layer map, Typing, Stats, Event log. The
+  striped kitty's stop was added on 2026-10-22, during stage 3. It is the kitty idea's variant A,
+  beside the Kyria wordmark: both kitties, since the bands are stops anyway.
 - D2. The live layer map fills the panel on the half the layer's keys are on, Button on both
   halves, with no outlines. Both styles are kept, the big grid and the Kyria-shaped map, and PAGE
   switches between them while a map is showing.
@@ -61,15 +63,15 @@ Decided 2026-10-21, by picking from the renders:
 
 Open, with a default, to answer before the stage that needs it:
 
-- D7. **PAGE key position (stage 3).** Default: left half, outer column, middle row, under SYS.
-  It's free on every layer, and the pinky reaches it while a thumb holds a layer, which is when it
-  toggles the map style.
+- D7. **PAGE key position (stage 3).** Decided 2026-10-22, the default: left half, outer column,
+  middle row, under SYS. It's free on every layer, and the pinky reaches it while a thumb holds a
+  layer, which is when it toggles the map style.
 - D8. **Status sheet footer (stage 5).** The mock carried a keylogger, which was declined as a
   status-bar strip. Default: the layout name, `Colemak-DH`, or the default layer's name when that
   is not Base.
-- D9. **Kitty thresholds (stage 3).** drashna's are 10, 40 and 60 WPM. Default: Bjorn's tiers
-  instead (10 / 30 / 50 up, 6 / 24 / 42 down, 800 ms dwell), so both characters read speed the same
-  way. Found at stage 0: the small kitty's paw frames are byte for byte its sleep frames. So on
+- D9. **Kitty thresholds (stage 3).** drashna's are 10, 40 and 60 WPM. Decided 2026-10-22, the
+  default: Bjorn's tiers instead (10 / 30 / 50 up, 6 / 24 / 42 down, 800 ms dwell), so both
+  characters read speed the same way, paw frames and all. Found at stage 0: the small kitty's paw frames are byte for byte its sleep frames. So on
   the bands it looks asleep in the paw tier, whichever WPM range that tier gets. The striped kitty
   has three paw frames of its own.
 - D10. **Screensaver timing (stage 9).** The mock started at 60 s on both halves. Bjorn settles at
@@ -301,11 +303,12 @@ the panel yet at that point.
   `LAYOUT_miryoku` variants. It acts on release, like SYS and ANIM. Update *Extra keys* from
   "planned" to the real entry.
 - **Persisted** in the existing tagged EEPROM word (`oled_slave_select.c`). Byte 0 stays the
-  animation; byte 1 takes the page in bits 0-2 (eight pages, exactly) and the map style in bit 3
+  animation; byte 1 takes the page in bits 0-3 (nine pages since D1 grew) and the map style in bit 4
   (stage 4). An old word without those bits reads page 0, grid style, so nothing needs migrating.
 - **Pages.** A small dispatcher in front of `oled_render_master()`. The bands become one renderer
   with a base-band hook: the Kyria emblem (today), the small kitty (emblem area cleared, kitty at
-  (18,12), wordmark kept), or the QMK logo (below y=17, see stage 1). The kitty's state comes from
+  (18,12), wordmark kept), the striped kitty the same way, or the QMK logo (below y=17, see
+  stage 1). The kitty's state comes from
   WPM (D9) on the master's own clock. The Stats page is the existing `render_stats()`.
 - **Dots.** For 700 ms after a press, one dot per page in the middle of the status bar, the current
   one larger.
@@ -316,8 +319,67 @@ the panel yet at that point.
 - the cycle wraps
 - a replug keeps the page
 
-**Checkpoint:** cycle through all four pages that exist so far (the three bands and Stats), then
+**Checkpoint:** cycle through all five pages that exist so far (the four bands and Stats), then
 replug.
+
+**As built, 2026-10-22.**
+- **The key.** `U_PAGE = QK_USER_2` at the start of row 1 in both `LAYOUT_miryoku` variants, acting
+  on release. The *Extra keys* row in `docs/layout.md` was already the real entry once D7 was
+  decided.
+- **The settings word** moved out of `oled_slave_select.c` into `oled_settings.c` / `.h`, which
+  both the animation and the page use, so the replug can be tested. Three things it does:
+  - It keeps the tag `0x5ea1`, so the flash that adds the page keeps the stored animation.
+  - Every write is read-modify-write of the whole word. An ANIM press keeps the page, and a PAGE
+    press keeps the animation.
+  - A first PAGE press on a fresh EEPROM stores the build's animation default beside it.
+- **The stored page.** It is the page's number in D1's order (`enum u_master_page` in `oled.h`),
+  not its place in the cycle, so building a page later doesn't move the others. `U_PAGES_BUILT`
+  says which pages exist, and PAGE skips the rest: for now the cycle is Bands, small kitty, striped
+  kitty, QMK, Stats. A stored page this build hasn't got reads as the bands. Byte 1 holds the page
+  in bits 0-3, since D1 grew to nine pages, and PAGE never touches bit 4, the map style's.
+- **Each half keeps its own EEPROM.** After a replug you get the page that was set with the cable
+  in that same half, the same as the animation already worked.
+- **The kitties.** Each clears x 0-57 of the base band and sits at (18,12), with the wordmark
+  kept. One renderer draws both, given the art and its mood table.
+  - The striped one has three paw frames of her own, so her four tiers all look different.
+  - Frames change every 500 ms, or every 300 ms in the top tier.
+  - The tier runs in `oled_master_task` on every main loop, whatever the page, so a kitty shows
+    your current speed the moment you turn to her.
+  - `speed_tier.h` holds the tier code Bjorn had. He now uses it too, his test passes unedited,
+    and the `tiers` preview renders byte for byte as before.
+- **The QMK logo** sits at (1,21), centred in y 18-47. Its ink starts two rows into the art, so
+  y=16 would also have cleared the corner. The test checks the corner itself, which fails from
+  y=12 up.
+- **Both versions are drawn before the alarm**, which still fills the base band whichever version
+  is showing.
+- **The dots** use the mock's geometry: one per page PAGE can reach, so five now and nine after
+  stage 5. They sit at x 41-85, the current one 5x4 and the others 3x2, for 700 ms. They are drawn
+  last, over any page, including the Stats page's first line.
+- **The Stats stop** calls `render_stats()` directly, so no key or timer closes it. Holding SYS
+  still opens the overlay from any page, and a key still closes the overlay.
+- **Neither shows the alarm**, the same as the SYS page never has. While Stats is up, a lost link
+  shows only in its FAIL and OUT lines. Whether stage 8's glitch bursts should reach every page is
+  open.
+- **Tests** in `test_panel.c`:
+  - the cycle, the skip, the wrap and the replug
+  - the old word, an unbuilt page, the map-style bit, and that the slave never turns the page
+  - the dots, where they sit, that they are free to redraw, and that they go
+  - the small kitty, pixel for pixel in all three looks, with Bjorn's hysteresis
+  - the striped kitty asleep, her three paw frames, and bouncing
+  - the QMK logo, and the OS corner with iOS set by hand on all three versions
+  - every other layer, and the alarm, identical to the bands page
+  - Stats as a page and as the overlay
+  - on every page, a free redraw for five busy states, and staying under the alarm
+
+  Seven breakages each failed it: no read-modify-write, the kitty drawn over the alarm, a narrower
+  clear, no skipping, no fast frames, the striped stop drawn with the small kitty, and a three-bit
+  page mask. All were tried and reverted. `--dump` and `--raw` now
+  include the new pages.
+- **Lit pixels**, the most over the busy states and three speeds: Bands 2,935, small kitty 2,392,
+  striped kitty 2,486, QMK 2,651, Stats 994. The alarm frame lights 4,584.
+- **Firmware.** It builds with no warnings at 117,476 bytes of text on the working tree, 3,936 more
+  than stage 2. Most of that is the kitties' frames: ten small and thirteen striped, 2,944 bytes.
+  The clean build's number goes in with the flash record.
 
 ## Stage 4: the live layer map, and the master screen moving over
 
@@ -369,7 +431,7 @@ inverted box, never the whole cell.
 
 **Style.**
 - PAGE switches the style instead of the page whenever a map is showing.
-- Persisted in byte 1 bit 3.
+- Persisted in byte 1 bit 4.
 - Sent to the slave as `world` bit 3: `U_WORLD_MAP_SHAPED 0x08` in `split_state.h`. Rewrite the
   spare-bits comment there: bits 4-7 are left for the daemon.
 

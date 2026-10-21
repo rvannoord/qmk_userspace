@@ -50,6 +50,31 @@ void u_slave_bjorn_task(void);
 void u_slave_spaceship_render(void);
 void u_slave_logo_render(enum u_slave_anim which);
 
+// --- the master's page ----------------------------------------------------------
+// What the master shows, cycled with the U_PAGE key the way U_ANIM cycles the slave, and
+// persisted the same way. Only the master draws pages, so nothing about them crosses the
+// link. The order is docs/oled-v3.md's D1 and the values are what is stored, so a page
+// keeps its number when the ones before it are built. PAGE skips pages not built yet.
+
+enum u_master_page {
+    U_PAGE_BANDS,           // the three bands
+    U_PAGE_BANDS_KITTY,     // the same, the small kitty in the base band
+    U_PAGE_BANDS_STRIPED,   // the same, the striped kitty
+    U_PAGE_BANDS_QMK,       // the same, the QMK logo in the base band
+    U_PAGE_STATUS,          // stage 5
+    U_PAGE_LAYER_MAP,       // stage 4
+    U_PAGE_TYPING,          // stage 5
+    U_PAGE_STATS,           // the SYS page
+    U_PAGE_EVENT_LOG,       // stage 5
+    U_PAGE_COUNT,
+};
+
+#define U_PAGES_BUILT ((1u << U_PAGE_BANDS) | (1u << U_PAGE_BANDS_KITTY) | (1u << U_PAGE_BANDS_STRIPED) | \
+                       (1u << U_PAGE_BANDS_QMK) | (1u << U_PAGE_STATS))
+
+enum u_master_page u_page_get(void);
+void               u_page_next(void);
+
 // --- the two halves -----------------------------------------------------------
 // oled_render_* draw, and run at the panel's update rate - 20 Hz, and not at all
 // while it sleeps. oled_*_task run every main loop on their own half, so they are

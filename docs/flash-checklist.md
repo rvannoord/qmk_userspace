@@ -90,6 +90,12 @@ that was not flashed simply stops typing.
 | Linux shows Tux | Plug into a Linux machine, if one is at hand | QMK reports Linux, and the logo follows the new host byte. Behaviour stays Windows-like | `v3-1` |
 | SYS on Linux flips Linux and Mac | On that Linux machine, tap SYS twice | It should go to the Apple logo with a line under it, then back to Tux with the line, not to Windows | `v3-1` |
 | The other half still types | Any key on the non-USB half | The payload grew from six bytes to seven. The handshake is unchanged, but a half on the old build would drop every state as the wrong size | `v3-1` |
+| PAGE turns five pages | Tap PAGE (left outer column, middle row, under SYS) five times: the bands, the small kitty, the striped kitty, the QMK logo, Stats, then the bands again. Each tap shows five dots for a moment in the middle of the status bar, the current one larger | The key, the cycle and the dots are new. The pages are drawn only by the master, so nothing crosses the link for them | `v3-3` |
+| Both kitties read speed | On either kitty's page, sit still: she sleeps. Type steadily: from about 30 WPM she watches, from about 50 she bounces, faster frames. The striped one paws from about 10; the small one still looks asleep there | Bjorn's tiers, shared code now. The small kitty's paw frames are her sleep frames (D9) | `v3-3` |
+| A replug keeps the page | Leave it on the QMK logo, unplug, and plug the cable back into **the same half**, without holding SYS. It comes back on the QMK logo, and the slave keeps its animation | Each half keeps its own EEPROM, so the other half would show its own page. Holding SYS at plug-in is Bootmagic, which clears the EEPROM | `v3-3` |
+| The animation survived the flash | After flashing, the slave shows the animation it showed before | The animation's byte moved into `oled_settings.c` under the same tag, so the stored choice should carry over | `v3-3` |
+| Only the base band changes | On each bands page, hold Nav, then Sym: the same pictures as on the plain bands. Unplug the TRRS: the alarm fills the base band whichever page | The kitties and the logo replace only the base layer's band, and are drawn before the alarm | `v3-3` |
+| Stats as a page | On Stats, type: it stays, where the SYS page closes. Holding SYS on another page still opens the SYS page, and a key closes it | The page calls the same drawing, without the overlay's closing rules. Neither shows the link alarm | `v3-3` |
 
 ### Only one season can be seen at a time
 

@@ -60,6 +60,10 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             // should be cheap to undo by pressing it again.
             if (!record->event.pressed) u_anim_next();
             return false;
+        case U_PAGE:
+            // On release, for the same reasons as ANIM.
+            if (!record->event.pressed) u_page_next();
+            return false;
         case U_RDO:
             if (host_is_mac()) {
                 if (record->event.pressed) {

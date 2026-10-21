@@ -17,7 +17,7 @@ OS_DETECTION_ENABLE = yes
 # art/ and are never edited by hand; their generators are under tools/.
 SRC += host_os.c tap_hold.c
 SRC += split_state.c split_sync.c split_health.c
-SRC += oled.c oled_canvas.c oled_master_zones.c
+SRC += oled.c oled_canvas.c oled_settings.c oled_master_zones.c
 SRC += oled_slave_select.c oled_slave_bjorn.c oled_slave_world.c oled_slave_spaceship.c oled_slave_logo.c
 SRC += art/bjorn_art.c art/bjorn_poses.c art/world_art.c art/space_art.c
-SRC += art/panel_font.c art/panel_glyphs.c art/panel_layer_icons.c art/drashna_icons.c
+SRC += art/panel_font.c art/panel_glyphs.c art/panel_layer_icons.c art/drashna_icons.c art/kitty_art.c

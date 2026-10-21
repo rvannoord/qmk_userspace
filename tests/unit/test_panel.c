@@ -38,10 +38,25 @@ bool            u_sync_hard_stale(void) { return false; }
 void            u_sync_init(void) {}
 void            u_sync_task(void) {}
 
+// The pages' EEPROM word and the kitty's typing speed, both the test's to set.
+static uint32_t fake_ee;
+static uint8_t  fake_wpm;
+uint32_t        eeconfig_read_user(void) { return fake_ee; }
+void            eeconfig_update_user(uint32_t val) { fake_ee = val; }
+uint8_t         get_current_wpm(void) { return fake_wpm; }
+static bool     is_keyboard_master(void) { return fake_is_master; }
+
 #ifndef QMK_KEYBOARD_H
 #    define QMK_KEYBOARD_H "qmk_keyboard.h"
 #endif
 #include "oled_master_zones.c"
+#include "oled_settings.c"
+
+// A replug, as these two modules see one: RAM forgets what it loaded, EEPROM keeps it.
+static void replug(void) {
+    ee_loaded   = false;
+    page_loaded = false;
+}
 
 // --- looking at the buffer --------------------------------------------------
 
@@ -208,6 +223,45 @@ static bool cell_chamfered(uint8_t cell) {
         && lit((uint8_t)(x0 + CELL_PAD_L), MOD_Y0);   // but not a whole bite out of it
 }
 
+// A kitty exactly as drawn at her place in the base band.
+static bool kitty_is(const uint8_t (*art)[U_KITTY_BYTES], uint8_t f) {
+    for (uint8_t y = 0; y < 32; y++)
+        for (uint8_t x = 0; x < U_KITTY_W; x++)
+            if (lit((uint8_t)(U_KITTY_X + x), (uint8_t)(U_KITTY_Y + y)) !=
+                (bool)((art[f][(y / 8) * U_KITTY_W + x] >> (y % 8)) & 1))
+                return false;
+    return true;
+}
+
+static bool qmk_is(void) {
+    for (uint8_t y = 0; y < U_LOGO_PAGES * 8; y++)
+        for (uint8_t x = 0; x < U_LOGO_W; x++)
+            if (lit((uint8_t)(U_QMK_X + x), (uint8_t)(U_QMK_Y + y)) !=
+                (bool)((u_qmk_logo[(y / 8) * U_LOGO_W + x] >> (y % 8)) & 1))
+                return false;
+    return true;
+}
+
+// Lit pixels in a box, outside another one (pass an empty one to count the lot).
+static int count_in_except(uint8_t x0, uint8_t x1, uint8_t y0, uint8_t y1,
+                           uint8_t ex0, uint8_t ex1, uint8_t ey0, uint8_t ey1) {
+    int n = 0;
+    for (uint8_t y = y0; y <= y1; y++)
+        for (uint8_t x = x0; x <= x1; x++)
+            if (lit(x, y) && !(x >= ex0 && x <= ex1 && y >= ey0 && y <= ey1)) n++;
+    return n;
+}
+
+// A frame to compare against, and whether a box of the panel matches it.
+static uint8_t ref[OLED_MATRIX_SIZE];
+static void    keep(void) { memcpy(ref, fake_oled, OLED_MATRIX_SIZE); }
+static bool    same_in(uint8_t x0, uint8_t x1, uint8_t y0, uint8_t y1) {
+    for (uint8_t y = y0; y <= y1; y++)
+        for (uint8_t x = x0; x <= x1; x++)
+            if (lit(x, y) != (bool)((ref[(y / 8) * OLED_DISPLAY_WIDTH + x] >> (y % 8)) & 1)) return false;
+    return true;
+}
+
 // --- driving ----------------------------------------------------------------
 
 // One main loop, then one render. The buffer is NOT cleared between frames: the
@@ -237,6 +291,16 @@ static uint16_t redraw_cost(u_split_state_t s, bool link) {
 static void frame(u_split_state_t s, bool link) {
     drive           = s;
     drive_link_down = link;
+    step();
+}
+
+// Move the clock forward to the next multiple of `ms`, which pins which frame a kitty is on.
+static void at_multiple_of(uint32_t ms) { fake_now += ms - fake_now % ms; }
+
+// Turn to a page with the key, then let the dots go, so what is checked is the page.
+static void show_page(enum u_master_page p) {
+    while (u_page_get() != p) u_page_next();
+    fake_now += U_DOTS_MS;
     step();
 }
 
@@ -286,7 +350,31 @@ static void each_state(void (*then)(const char *)) {
     drive = at_rest;
     open_stats();
     then("the stats page, asked for by holding SYS");
+    u_stats_note_sys(false);
     u_stats_note_key();
+
+    u_page_next();
+    frame(at_rest, false);    then("PAGE pressed: the small kitty's bands, the dots showing");
+    show_page(U_PAGE_BANDS_KITTY);
+    frame(at_rest, false);    then("the small kitty's bands, base, asleep");
+    for (uint8_t wpm = 35; wpm <= 60; wpm += 25) {
+        fake_wpm = wpm;
+        for (int i = 0; i < 20; i++) { fake_now += 50; step(); }
+        then(wpm < 50 ? "the small kitty's bands, 35 WPM, watching" : "the small kitty's bands, 60 WPM, bouncing");
+    }
+    fake_wpm = 0;
+    for (int i = 0; i < 20; i++) { fake_now += 50; step(); }
+    show_page(U_PAGE_BANDS_STRIPED);
+    frame(at_rest, false);    then("the striped kitty's bands, base, asleep");
+    fake_wpm = 20;
+    for (int i = 0; i < 20; i++) { fake_now += 50; step(); }
+    then("the striped kitty's bands, 20 WPM, pawing");
+    fake_wpm = 0;
+    for (int i = 0; i < 20; i++) { fake_now += 50; step(); }
+    show_page(U_PAGE_BANDS_QMK);
+    frame(at_rest, false);    then("the QMK logo's bands, base");
+    show_page(U_PAGE_STATS);  then("the Stats page");
+    show_page(U_PAGE_BANDS);
 }
 
 static void emit(const char *label) {
@@ -523,7 +611,7 @@ int main(int argc, char **argv) {
 
     // The OS logo's bottom half and its underline live in the band's top-left corner, so
     // every band has to leave it dark. Asserted on the art itself, all ten bands; the
-    // base band's other versions (docs/oled-v3.md stage 3) join this when they exist.
+    // base band's other two versions are checked on their pages, below.
     {
         bool dark = true;
         for (uint8_t b = U_BASE; b <= U_FUN; b++)
@@ -635,6 +723,282 @@ int main(int argc, char **argv) {
         fake_now += 50;
         step();
         check("a trace being shown costs nothing to redraw", fake_dirty == 0);
+    }
+
+    // --- the pages ------------------------------------------------------------
+    {
+        frame(at_rest, false);
+        check("no dots before PAGE is ever pressed", !any_lit_in(41, 85, 0, 7));
+
+        fake_ee = 0;
+        replug();
+        check("a fresh EEPROM shows the bands", u_page_get() == U_PAGE_BANDS);
+        u_page_next();
+        check("PAGE turns to the kitty's bands", u_page_get() == U_PAGE_BANDS_KITTY);
+        check("and stores it under the tag, with the animation's default beside it",
+              fake_ee == (U_SETTINGS_TAG | ((uint32_t)U_PAGE_BANDS_KITTY << 8) | U_ANIM_DEFAULT));
+        u_page_next();
+        check("then the striped kitty's", u_page_get() == U_PAGE_BANDS_STRIPED);
+        u_page_next();
+        check("then the QMK logo's", u_page_get() == U_PAGE_BANDS_QMK);
+        u_page_next();
+        check("then Stats, past the pages not built yet", u_page_get() == U_PAGE_STATS);
+        u_page_next();
+        check("and the cycle wraps to the bands", u_page_get() == U_PAGE_BANDS);
+
+        u_page_next();
+        u_page_next();
+        replug();
+        check("a replug keeps the page", u_page_get() == U_PAGE_BANDS_STRIPED);
+        u_setting_set(U_SETTING_ANIM, U_ANIM_MONITOR1);     // what an ANIM press does
+        replug();
+        check("an ANIM press keeps the page", u_page_get() == U_PAGE_BANDS_STRIPED);
+        u_page_next();
+        replug();
+        check("and a PAGE press keeps the animation", u_setting_get(U_SETTING_ANIM) == U_ANIM_MONITOR1);
+
+        // The word as every build before this one wrote it: the animation, zero above.
+        fake_ee = U_SETTINGS_TAG | U_ANIM_KYRIA;
+        replug();
+        check("a word from before the pages reads as the bands", u_page_get() == U_PAGE_BANDS);
+        check("and keeps its animation", u_setting_get(U_SETTING_ANIM) == U_ANIM_KYRIA);
+
+        // The map style's bit (stage 4) beside the page's four, which must not be read as
+        // part of it; then a page a later build has, the one that needs the fourth bit.
+        fake_ee = U_SETTINGS_TAG | ((uint32_t)(0x10 | U_PAGE_STATS) << 8);
+        replug();
+        check("the map style's bit is not read as part of the page", u_page_get() == U_PAGE_STATS);
+        fake_ee = U_SETTINGS_TAG | ((uint32_t)(0x10 | U_PAGE_EVENT_LOG) << 8);
+        replug();
+        check("a page this build has not got reads as the bands", u_page_get() == U_PAGE_BANDS);
+        u_page_next();
+        check("and PAGE leaves the map style's bit alone",
+              ((fake_ee >> 8) & 0xff) == (0x10 | U_PAGE_BANDS_KITTY));
+
+        fake_is_master = false;
+        u_page_next();
+        fake_is_master = true;
+        check("the slave never turns the page", u_page_get() == U_PAGE_BANDS_KITTY);
+
+        // The dots: five pages, so x 41-85, the small kitty's the second and larger.
+        frame(at_rest, false);
+        check("after a press the dots show, the current one larger",
+              solid_block(52, 56, 2, 5) && solid_block(45, 47, 3, 4) && solid_block(61, 63, 3, 4)
+              && solid_block(69, 71, 3, 4) && solid_block(77, 79, 3, 4)
+              && count_in_except(41, 85, 0, 7, 1, 0, 1, 0) == 20 + 4 * 6);
+        check("between the OS logo and the locks", !any_lit_in(U_OS_LOGO_W, 40, 0, 7) && !any_lit_in(86, 108, 0, 7));
+        fake_dirty = 0;
+        fake_now += 50;
+        step();
+        check("the dots cost nothing to redraw", fake_dirty == 0);
+        fake_now += U_DOTS_MS;
+        step();
+        check("and are gone after 700 ms", !any_lit_in(41, 85, 0, 7));
+
+        // --- the bands, four ways
+        fake_wpm = 0;
+        show_page(U_PAGE_BANDS);
+        frame(at_rest, false);
+        keep();
+        show_page(U_PAGE_BANDS_KITTY);
+        at_multiple_of(1000);
+        frame(at_rest, false);
+        check("the kitty sits in the emblem's place, asleep at rest", kitty_is(u_kitty_small, 0));
+        check("the wordmark is kept", same_in(U_KITTY_CLEAR_W, 127, BAND_Y0, BAND_Y1));
+        check("and the emblem is gone, with nothing else in its half",
+              count_in_except(0, U_KITTY_CLEAR_W - 1, CORNER_Y1 + 1, BAND_Y1, U_KITTY_X, U_KITTY_X + 31, U_KITTY_Y, U_KITTY_Y + 31) == 0
+              && count_in_except(CORNER_X1 + 1, U_KITTY_CLEAR_W - 1, BAND_Y0, CORNER_Y1, U_KITTY_X, U_KITTY_X + 31, U_KITTY_Y, U_KITTY_Y + 31) == 0);
+        check("the status bar and the mod row are the bands page's", same_in(0, 127, 0, 7) && same_in(0, 127, MOD_Y0, MOD_Y1));
+        fake_now += 500;
+        step();
+        check("she breathes: the second sleep frame half a second later", kitty_is(u_kitty_small, 1));
+
+        fake_wpm = 35;
+        for (int i = 0; i < 20; i++) { fake_now += 50; step(); }
+        at_multiple_of(1000);
+        step();
+        check("at 35 WPM she watches", kitty_is(u_kitty_small, 2));
+        fake_wpm = 60;
+        for (int i = 0; i < 20; i++) { fake_now += 50; step(); }
+        at_multiple_of(600);     // an even number of 300 ms frames, so the first bounce frame
+        step();
+        // Four samples 300 ms apart alternate only if the frames are 300 ms: 500 ms ones
+        // cannot change three times in 900 ms.
+        bool bounce = true;
+        for (uint8_t k = 0; k < 4; k++) {
+            bounce = bounce && kitty_is(u_kitty_small, (uint8_t)(4 + (k & 1)));
+            fake_now += 300;
+            step();
+        }
+        check("at 60 WPM she bounces, a frame every 300 ms", bounce);
+        fake_wpm = 20;
+        for (int i = 0; i < 20; i++) { fake_now += 50; step(); }
+        at_multiple_of(1000);
+        step();
+        check("at 20 WPM, the paw tier, she looks asleep again", kitty_is(u_kitty_small, 0));
+        fake_wpm = 45;
+        for (int i = 0; i < 20; i++) { fake_now += 50; step(); }
+        at_multiple_of(1000);
+        step();
+        check("Bjorn's hysteresis: rising to 45 from below 50 is still watching", kitty_is(u_kitty_small, 2));
+        fake_wpm = 0;
+        for (int i = 0; i < 20; i++) { fake_now += 50; step(); }
+
+        // The striped kitty: the same place, tiers and clock, and paw frames of her own.
+        show_page(U_PAGE_BANDS_STRIPED);
+        at_multiple_of(1000);
+        frame(at_rest, false);
+        check("the striped kitty sits in the same place, asleep at rest", kitty_is(u_kitty_striped, 0));
+        check("with the wordmark kept and nothing else in the emblem's half",
+              same_in(U_KITTY_CLEAR_W, 127, BAND_Y0, BAND_Y1)
+              && count_in_except(0, U_KITTY_CLEAR_W - 1, CORNER_Y1 + 1, BAND_Y1, U_KITTY_X, U_KITTY_X + 31, U_KITTY_Y, U_KITTY_Y + 31) == 0
+              && count_in_except(CORNER_X1 + 1, U_KITTY_CLEAR_W - 1, BAND_Y0, CORNER_Y1, U_KITTY_X, U_KITTY_X + 31, U_KITTY_Y, U_KITTY_Y + 31) == 0);
+        fake_wpm = 20;
+        for (int i = 0; i < 20; i++) { fake_now += 50; step(); }
+        at_multiple_of(1500);     // three paw frames of 500 ms, so the first
+        step();
+        const bool paw0 = kitty_is(u_kitty_striped, 2);
+        fake_now += 500;
+        step();
+        const bool paw1 = kitty_is(u_kitty_striped, 3);
+        fake_now += 500;
+        step();
+        check("at 20 WPM she paws, three frames of her own", paw0 && paw1 && kitty_is(u_kitty_striped, 4));
+        fake_wpm = 60;
+        for (int i = 0; i < 20; i++) { fake_now += 50; step(); }
+        at_multiple_of(600);
+        step();
+        check("and bounces at 60 WPM", kitty_is(u_kitty_striped, 7));
+        fake_wpm = 0;
+        for (int i = 0; i < 20; i++) { fake_now += 50; step(); }
+
+        show_page(U_PAGE_BANDS_QMK);
+        frame(at_rest, false);
+        check("the QMK logo takes the base band, centred below the corner", qmk_is());
+        check("and nothing else is in the band",
+              count_in_except(0, 127, CORNER_Y1 + 1, BAND_Y1, U_QMK_X, U_QMK_X + U_LOGO_W - 1, U_QMK_Y, U_QMK_Y + 23) == 0
+              && !any_lit_in(CORNER_X1 + 1, 127, BAND_Y0, CORNER_Y1));
+        check("the status bar and the mod row are the bands page's", same_in(0, 127, 0, 7) && same_in(0, 127, MOD_Y0, MOD_Y1));
+
+        // The corner, on all three versions, with the busiest thing it holds: iOS set by hand.
+        const u_split_state_t ios_hand = {.layers = U_BASE, .flags = U_FLAG_IS_MAC | U_FLAG_OS_MANUAL, .host = U_HOST_IOS};
+        show_page(U_PAGE_BANDS);
+        frame(ios_hand, false);
+        keep();
+        show_page(U_PAGE_BANDS_KITTY);
+        frame(ios_hand, false);
+        bool kitty_corner = same_in(0, CORNER_X1, 0, CORNER_Y1);
+        show_page(U_PAGE_BANDS_STRIPED);
+        frame(ios_hand, false);
+        kitty_corner = kitty_corner && same_in(0, CORNER_X1, 0, CORNER_Y1);
+        show_page(U_PAGE_BANDS_QMK);
+        frame(ios_hand, false);
+        check("all three leave the OS logo's corner as the bands page has it",
+              kitty_corner && same_in(0, CORNER_X1, 0, CORNER_Y1));
+
+        // Every other layer, and the alarm, look the same on all three.
+        const u_split_state_t others[] = {on_nav, latched, {.layers = (uint8_t)(U_NAV | (U_EXTRA << 4))}};
+        bool alike = true;
+        for (uint8_t i = 0; i < 3; i++) {
+            show_page(U_PAGE_BANDS);
+            frame(others[i], false);
+            keep();
+            show_page(U_PAGE_BANDS_KITTY);
+            frame(others[i], false);
+            alike = alike && same_in(0, 127, 0, 63);
+            show_page(U_PAGE_BANDS_STRIPED);
+            frame(others[i], false);
+            alike = alike && same_in(0, 127, 0, 63);
+            show_page(U_PAGE_BANDS_QMK);
+            frame(others[i], false);
+            alike = alike && same_in(0, 127, 0, 63);
+        }
+        check("every other layer looks the same on all four", alike);
+
+        bool alarm_alike = true;
+        show_page(U_PAGE_BANDS);
+        frame(at_rest, true);
+        fake_now += 1000;     // past the entry blink
+        step();
+        keep();
+        show_page(U_PAGE_BANDS_KITTY);
+        frame(at_rest, true);
+        alarm_alike = alarm_alike && same_in(0, 127, 0, 63);
+        show_page(U_PAGE_BANDS_STRIPED);
+        frame(at_rest, true);
+        alarm_alike = alarm_alike && same_in(0, 127, 0, 63);
+        show_page(U_PAGE_BANDS_QMK);
+        frame(at_rest, true);
+        alarm_alike = alarm_alike && same_in(0, 127, 0, 63);
+        check("the alarm still fills the base band, whichever version", alarm_alike);
+        frame(at_rest, false);
+
+        // --- Stats as a page
+        show_page(U_PAGE_STATS);
+        frame(at_rest, false);
+        memset(u_canvas, 0, OLED_MATRIX_SIZE);
+        render_stats();
+        check("the Stats page is the SYS page", memcmp(u_canvas, fake_oled, OLED_MATRIX_SIZE) == 0);
+        check("without the SYS hold's overlay", !u_stats_page_open());
+        u_stats_note_key();
+        fake_now += U_STATS_LINGER_MS + 100;
+        frame(at_rest, false);
+        memset(u_canvas, 0, OLED_MATRIX_SIZE);
+        render_stats();
+        check("and it stays: no key and no timer closes it", memcmp(u_canvas, fake_oled, OLED_MATRIX_SIZE) == 0);
+
+        show_page(U_PAGE_BANDS_KITTY);
+        drive = at_rest;
+        open_stats();
+        memset(u_canvas, 0, OLED_MATRIX_SIZE);
+        render_stats();
+        check("holding SYS still opens it from another page", memcmp(u_canvas, fake_oled, OLED_MATRIX_SIZE) == 0);
+        u_stats_note_sys(false);
+        u_stats_note_key();
+        at_multiple_of(1000);
+        frame(at_rest, false);
+        check("and a key goes back to that page", kitty_is(u_kitty_small, 0));
+
+        // --- every page: a redraw is free, and nothing outshines the alarm
+        const u_split_state_t busy[] = {
+            at_rest, on_nav, latched,
+            {.layers = U_BASE, .fingers = 0xff, .flags = U_FLAG_CAPS_LOCK | U_FLAG_SCROLL_LOCK | U_FLAG_OS_MANUAL},
+            {.layers = U_NAV, .fingers = 0xff, .flags = U_FLAG_IS_MAC | U_FLAG_OS_MANUAL | U_FLAG_CAPS_WORD, .host = U_HOST_IOS},
+        };
+        show_page(U_PAGE_BANDS);
+        frame(latched, true);
+        fake_now += 1000;
+        step();
+        const int alarm = count(0, 63);
+        frame(at_rest, false);
+
+        static const enum u_master_page built[] = {U_PAGE_BANDS, U_PAGE_BANDS_KITTY, U_PAGE_BANDS_STRIPED,
+                                                   U_PAGE_BANDS_QMK, U_PAGE_STATS};
+        bool free = true, under = true;
+        for (uint8_t p = 0; p < 5; p++) {
+            show_page(built[p]);
+            int worst = 0;
+            for (uint8_t i = 0; i < 5; i++) {
+                at_multiple_of(1500);     // 300 and 500 ms frames and the stats second all start here,
+                fake_now += 100;          // so the redraw's 50 ms crosses none of their edges
+                if (redraw_cost(busy[i], false) != 0) free = false;
+                for (uint8_t wpm = 0; wpm <= 60; wpm += 30) {
+                    fake_wpm = wpm;
+                    for (int k = 0; k < 20; k++) { fake_now += 50; step(); }
+                    const int n = count(0, 63);
+                    if (n > worst) worst = n;
+                }
+                fake_wpm = 0;
+            }
+            printf("        page %u lights %d px at most\n", (unsigned)built[p], worst);
+            if (worst >= alarm) under = false;
+        }
+        printf("        the alarm frame lights %d px\n", alarm);
+        check("on every page, a redraw is free", free);
+        check("and every page stays under the alarm", under);
+
+        for (int k = 0; k < 20; k++) { fake_now += 50; step(); }
+        show_page(U_PAGE_BANDS);
     }
 
     // --- the sleep predicate ------------------------------------------------
