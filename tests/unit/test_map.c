@@ -199,22 +199,6 @@ int main(int argc, char **argv) {
     check("and base, Extra and Tap on neither",
           u_map_side(U_BASE) == U_MAP_NONE && u_map_side(U_EXTRA) == U_MAP_NONE && u_map_side(U_TAP) == U_MAP_NONE);
 
-    // The master's screen moves to the other half exactly when a map covers the master's
-    // panel and not that half's: never for Button, which covers both, nor off the map layers.
-    {
-        bool right = true, left = true;
-        for (uint8_t L = U_BASE; L <= U_FUN; L++) {
-            // Cable on the left: the right half is the other one.
-            const bool want_r = L == U_SYM || L == U_NUM || L == U_FUN;
-            // Cable on the right: the left half is.
-            const bool want_l = L == U_NAV || L == U_MOUSE || L == U_MEDIA;
-            if (u_map_moves_master(L, false) != want_r) right = false;
-            if (u_map_moves_master(L, true) != want_l) left = false;
-        }
-        check("with the cable on the left, Sym, Num and Fun move the master's screen right", right);
-        check("with it on the right, Nav, Mouse and Media move it left", left);
-    }
-
     // The right half runs inner to pinky, left to right: its inner column is drawn leftmost.
     legend_at = single;
     only      = TXT('X', 0, 0);
