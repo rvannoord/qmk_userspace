@@ -93,6 +93,8 @@ void               u_page_next(void);
 // An encoder turned: the master shows what it did for 800 ms (docs/layout.md, "Encoder
 // feedback"). Index 0 is the left encoder, volume; 1 the right one, brightness.
 void u_encoder_note(uint8_t index, bool clockwise);
+// Mute pressed: the same toast, saying MUTE.
+void u_mute_note(void);
 
 // --- the two halves -----------------------------------------------------------
 // oled_render_* draw, and run at the panel's update rate - 20 Hz, and not at all

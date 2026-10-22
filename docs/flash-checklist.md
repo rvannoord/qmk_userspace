@@ -85,9 +85,10 @@ that was not flashed simply stops typing.
 | The spaceship flies through new space | Cycle to the spaceship. Three parallax planes - far stars slow, Saturn and the Dipper mid, Earth, the giant and the comet near - and the ship untouched | Loop closure and ship integrity are asserted on the compiled bytes by `tests/unit/test_space.c`; what the host cannot see is bloom on the 2x2 stars and whether 15.9% lit area is comfortable | `space` |
 | The ship's outline is one dark pixel | Watch the ship cross Earth | Was up to 4 px. Zero made the ship vanish into the planet on the host; one is the floor. Bloom on glass could eat a one-pixel rim - if the ship loses its edge over Earth, the margin goes to 2 | `space` |
 | The loop is seamless on glass | Watch one full loop at rest, 25.6 s | Arithmetic says the seam cannot show. The test says it does not. The panel is the only thing that can disagree | `space` |
-| The encoders show what they did | Turn each encoder on the bands | VOL+ / VOL− with the speaker, BRI+ / BRI− with the bulb, in the band, gone 800 ms after the last turn. The OS logo stays whole | `v3-7` |
-| And over the other pages | Turn one on the Status sheet, Layer map, Typing, Stats and the Event log | The same box, centred, with a dark rim | `v3-7` |
-| The toast never hides the alarm | TRRS out on the bands, then turn the left encoder | The alarm, and no box | `v3-7` |
+| The encoders show what they did | Turn each encoder on the bands | VOL+ / VOL− with the speaker, BRI+ / BRI− with the bulb, in the band, gone 800 ms after the last turn. The OS logo stays whole | `915f3b2` |
+| And over the other pages | Turn one on the Status sheet, Layer map, Typing, Stats and the Event log | The same box, centred, with a dark rim | `915f3b2` |
+| Mute shows MUTE | Hold Esc, then the right thumb that is Del on base (Media's Mute) | The struck-through speaker and MUTE, in the same box, on the bands and over the other pages; the sound mutes on both hosts | `v3-7b` |
+| The toast never hides the alarm | TRRS out on the bands, then turn the left encoder | The alarm, and no box | `915f3b2` |
 | ANIM reaches bongo cat and the Mario scene | ANIM on the other half, past the three Monitor screens | Eight animations, all three bits of `world`. A half still on an older build shows Bjorn for the two new ones | `42f140a` |
 | Bongo cat keeps time | Rest, type slowly, then fast | Idle, paws up from 10 WPM, then slapping, faster as WPM climbs | `42f140a` |
 | Bill never hits anyone | The Mario scene, typing at 10 WPM or more for a while | Every few seconds Bill comes from the right and Mario and Yoshi both jump him. The host test says he never touches them; this is whether it reads as a jump | `42f140a` |

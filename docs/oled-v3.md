@@ -31,7 +31,7 @@ QMK line numbers refer to `7a1bbf37c5`.
 | 4. Live layer map, master screen moves over | **done 2026-10-22**, on the board as `e839e27`; the early check passed on `12b236a`, and the screen moving over was tried on `d267d99` and taken out (D3) |
 | 5. Status sheet, layer map page, Typing, Event log | **built 2026-10-22** in `636ba56`; all 18 of the mock's frames match byte for byte. Not flashed yet: the checkpoint waits for the next flash, with D16 |
 | 6. Bongo cat and the Mario scene on the slave | **built 2026-10-22** in `42f140a`, not flashed yet; D13 decided (4 s) |
-| 7. Encoder feedback | **built 2026-10-23**, not flashed yet; D11 decided (the same box, centred, 2 px rim) |
+| 7. Encoder feedback | **built 2026-10-23** in `915f3b2`, not flashed yet; D11 decided (the same box, centred, 2 px rim) |
 | 8. Glitch bursts on link loss | open |
 | 9. Screensaver | open |
 
@@ -662,7 +662,7 @@ Measured on the renders at 2,663 px, so it goes through the alarm-ratio test lik
 
 **Checkpoint, on the board,** with the cable on either half:
 - Turn the left encoder on the bands: VOL+ or VOL− in the band, the OS logo whole, gone 800 ms
-  after the last turn. The right encoder: BRI+ or BRI−.
+  after the last turn. The right encoder: BRI+ or BRI−. Media's Mute: MUTE.
 - On the Status sheet, Layer map, Typing, Stats and the Event log: the same box, centred.
 - With the TRRS out on the bands, the alarm and no box. Holding a layer whose map is on the
   master's half, no box over the map.
@@ -685,7 +685,9 @@ Measured on the renders at 2,663 px, so it goes through the alarm-ratio test lik
 - **The alarm ratio.** The busiest Status sheet with the box lights about 2% more than the alarm
   frame; kept that way on 2026-10-23 over a full-width strip (`docs/layout.md`). Every other page
   and state stays under.
-- **MUTE** is not built: no mute key exists.
+- **MUTE** shows for Miryoku's Mute on the Media layer (`KC_MUTE`, noted in
+  `process_record_user()` on press), with drashna's struck-through speaker. Added on 2026-10-23
+  after the first build had tied it to the encoder's unassigned click only.
 - **Firmware.** It builds with no warnings at 135,668 bytes of text, 412 more than `42f140a`.
 
 ## Stage 8: glitch bursts on link loss

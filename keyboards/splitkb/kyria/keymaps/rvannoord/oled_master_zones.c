@@ -198,26 +198,36 @@ void u_page_next(void) {
 }
 
 // --- the encoder toast ------------------------------------------------------
-// What an encoder just did, for 800 ms after the last turn: drashna's speaker or bulb at 2x
-// and VOL+, VOL-, BRI+ or BRI-, cut out of a box with chamfered corners. In the band on the
+// What an encoder or Mute just did, for 800 ms after: drashna's speaker, bulb or struck-through
+// speaker at 2x and VOL+, VOL-, BRI+, BRI- or MUTE, cut out of a box with chamfered corners. In the band on the
 // bands, centred over any other page with a dark rim (D11). Never over the alarm.
 
 #    define U_TOAST_MS 800
 #    define U_TOAST_W  90
 #    define U_TOAST_H  30
+#    define U_TOAST_MUTE 4
 
-static uint8_t  toast_what;     // bit 1 brightness, bit 0 up
+static uint8_t  toast_what;     // bit 1 brightness, bit 0 up; U_TOAST_MUTE for Mute
 static uint32_t toast_at;
 static bool     toast_live;
 
-void u_encoder_note(uint8_t index, bool clockwise) {
-    toast_what = (uint8_t)((index ? 2u : 0u) | (clockwise ? 1u : 0u));
+static void toast_show(uint8_t what) {
+    toast_what = what;
     toast_at   = timer_read32();
     toast_live = true;
 }
 
+void u_encoder_note(uint8_t index, bool clockwise) {
+    toast_show((uint8_t)((index ? 2u : 0u) | (clockwise ? 1u : 0u)));
+}
+
+void u_mute_note(void) {
+    toast_show(U_TOAST_MUTE);
+}
+
 static void draw_toast(int16_t y0, bool rim) {
-    static const char *const labels[4] = {"VOL-", "VOL+", "BRI-", "BRI+"};
+    static const char *const labels[5]  = {"VOL-", "VOL+", "BRI-", "BRI+", "MUTE"};
+    static const uint8_t     icons[5]   = {U_ICON12_SPEAKER, U_ICON12_SPEAKER, U_ICON12_BULB, U_ICON12_BULB, U_ICON12_MUTE};
     const int16_t            x0        = (OLED_DISPLAY_WIDTH - U_TOAST_W) / 2;
     if (rim) u_rect((int16_t)(x0 - 2), (int16_t)(y0 - 2), U_TOAST_W + 4, U_TOAST_H + 4, false);
     u_rect(x0, y0, U_TOAST_W, U_TOAST_H, true);
@@ -229,7 +239,7 @@ static void draw_toast(int16_t y0, bool rim) {
         u_put((int16_t)(x + dx), y, false);
         u_put(x, (int16_t)(y + dy), false);
     }
-    const u_legend_t icon = {{(toast_what & 2) ? U_ICON12_BULB : U_ICON12_SPEAKER}, U_LEG_ICON12};
+    const u_legend_t icon = {{icons[toast_what]}, U_LEG_ICON12};
     u_legend_at(icon, (int16_t)(x0 + 6), (int16_t)(y0 + 7), 2, false);
     u_text((int16_t)(x0 + 36), (int16_t)(y0 + 7), labels[toast_what], 2, false);
 }

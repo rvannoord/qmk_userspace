@@ -926,9 +926,11 @@ BOOTLOADER label under it, so a successful Boot double-tap is confirmed instead 
 freezing. Only the half that resets shows it.
 
 **Encoder feedback.** Turning the left encoder flashes VOL+ or VOL− in the band for under a second,
-with drashna's speaker icon at 2×. The right encoder shows BRI+ or BRI− with the bulb. A mute key,
-if the left encoder's click ever gets one, shows MUTE. Only the direction is known; the host's
-volume is not. The box is 90x30 with chamfered corners, the icon and the label cut out of it at 2×,
+with drashna's speaker icon at 2×. The right encoder shows BRI+ or BRI− with the bulb. Miryoku's
+Mute on the Media layer (hold Esc, then the right thumb that is Del on base) shows MUTE with his
+struck-through speaker, in the same box, and so would the left encoder's click if it ever gets
+Mute (decided 2026-10-23). Only the press is known; the host's volume and whether it is muted are
+not. The box is 90x30 with chamfered corners, the icon and the label cut out of it at 2×,
 in the band at y=13; the OS logo stays whole in its corner. On any other page the same box shows
 centred, at y=17, with a two-pixel dark rim (D11, decided 2026-10-23). It never hides the alarm:
 while the link is down the bands carry the alarm and no box, and it is not drawn over a live map.

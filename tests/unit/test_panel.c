@@ -1368,6 +1368,20 @@ int main(int argc, char **argv) {
         u_encoder_note(1, false);
         frame(at_rest, false);
         check("the right encoder shows the bulb and BRI- instead", memcmp(vol, fake_oled, sizeof vol) != 0 && solid_block(21, 106, 14, 15));
+        uint8_t bri[OLED_MATRIX_SIZE];
+        memcpy(bri, fake_oled, sizeof bri);
+        u_mute_note();
+        frame(at_rest, false);
+        {
+            // MUTE with the struck-through speaker, cut out where VOL+ has its speaker.
+            bool icon = true;
+            for (uint8_t y = 0; y < 16; y++)
+                for (uint8_t x = 0; x < 24; x++)
+                    icon = icon && lit((uint8_t)(25 + x), (uint8_t)(20 + y)) ==
+                                       !((u_icon12[U_ICON12_MUTE][x / 2] >> (y / 2)) & 1);
+            check("Mute shows the struck-through speaker and MUTE", icon && memcmp(vol, fake_oled, sizeof vol) != 0 &&
+                  memcmp(bri, fake_oled, sizeof bri) != 0 && solid_block(21, 106, 14, 15));
+        }
         fake_now += U_TOAST_MS;
         frame(at_rest, false);
         check("800 ms after the last turn it is gone", same_in(0, 127, 0, 63));

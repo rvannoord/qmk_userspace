@@ -64,6 +64,12 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             // On release, for the same reasons as ANIM.
             if (!record->event.pressed) u_page_next();
             return false;
+#ifdef OLED_ENABLE
+        case KC_MUTE:
+            // Shown like an encoder turn; the key itself goes on to the host.
+            if (record->event.pressed) u_mute_note();
+            break;
+#endif
         case U_RDO:
             if (host_is_mac()) {
                 if (record->event.pressed) {
