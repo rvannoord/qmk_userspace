@@ -72,8 +72,9 @@ void oled_render_slave(void) {
     switch (u_anim_get()) {
         case U_ANIM_SPACESHIP: u_slave_spaceship_render(); break;
         case U_ANIM_KYRIA:
-        case U_ANIM_MONITOR1:
-        case U_ANIM_MONITOR2:  u_slave_logo_render(u_anim_get()); break;
+        case U_ANIM_MONITOR:
+        case U_ANIM_MONITOR_STACKED:
+        case U_ANIM_MONITOR_FUTURE:  u_slave_logo_render(u_anim_get()); break;
         default:               u_slave_bjorn_render(); break;
     }
 }

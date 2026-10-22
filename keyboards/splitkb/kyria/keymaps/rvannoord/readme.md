@@ -30,7 +30,7 @@ The design and every tuning decision are in `docs/layout.md`; this file is the m
 | `oled_slave_bjorn.c` | Bjorn: the idle ladder, blink, poses, props |
 | `oled_slave_world.c` / `.h` | the weather behind Bjorn, across the whole panel, season from `__DATE__` |
 | `oled_slave_spaceship.c` | the ship over three parallax planes, speed from WPM |
-| `oled_slave_logo.c` | the three static logos |
+| `oled_slave_logo.c` | the static screens: the Kyria logo and the three Monitor ERP ones |
 | `art/` | **generated and vendored data only, never edited by hand.** `*_art.c`, `bjorn_poses.c`, `drashna_*.c`, `status_frame.c`, `painter_*.c` and `panel_*.c` come out of `tools/`, whose README says how to regenerate each; the `oled_*.h` are the vendored ship and logos. Where everything came from is in `VENDORED.md`. The art from drashna's userspace is generated ahead of the stages of `docs/oled-v3.md` that draw it, so not all of `art/` is in `SRC` yet |
 
 Naming: `u_` / `U_` is this keymap's prefix, following Miryoku's own `U_` for its keycodes
@@ -42,8 +42,8 @@ aliases under the same prefix, because QMK already uses the short names (`OS_TOG
 | Key | Where | Does |
 |-----|-------|------|
 | SYS (`U_SYS`) | left half, outer column, top row | flips between the Mac and the detected non-Mac host (Windows, or Linux on a Linux machine; an iPad flips iOS and Windows); held two seconds, the stats page; held while plugging in, the bootloader (Bootmagic) |
-| ANIM (`U_ANIM`) | right half, outer column, top row | cycles the other half's animation: Bjorn, spaceship, Kyria logo, Monitor 1, Monitor 2. Saved on both halves, so it follows the cable |
-| PAGE (`U_PAGE`) | left half, outer column, middle row, under SYS | cycles the master half's pages: the bands, the bands with the small kitty, with the striped kitty, with the QMK logo, Stats. Dots in the status bar show where you landed. Saved on both halves, so it follows the cable |
+| ANIM (`U_ANIM`) | right half, outer column, top row | cycles the other half's animation: Bjorn, spaceship, Kyria logo, and three Monitor ERP screens. Saved on both halves, so it follows the cable |
+| PAGE (`U_PAGE`) | left half, outer column, middle row, under SYS | cycles the master half's pages: the bands, the bands with the small kitty, with the striped kitty, with the QMK logo, with the Monitor ERP logo, Stats. Dots in the status bar show where you landed. Saved on both halves, so it follows the cable |
 
 Thumb arc, five positions per half from the outside in: position 1 is the encoder (left:
 volume, right: screen brightness; its click is unassigned), positions 3 to 5 carry Miryoku's

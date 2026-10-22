@@ -40,9 +40,12 @@ QMK line numbers refer to `7a1bbf37c5`.
 Decided 2026-10-21, by picking from the renders:
 
 - D1. The master gets pages, in this order: Bands, Bands with the small kitty, Bands with the
-  striped kitty, Bands with the QMK logo, Status sheet, Layer map, Typing, Stats, Event log. The
-  striped kitty's stop was added on 2026-10-22, during stage 3. It is the kitty idea's variant A,
-  beside the Kyria wordmark: both kitties, since the bands are stops anyway.
+  striped kitty, Bands with the QMK logo, Bands with the Monitor logo, Status sheet, Layer map,
+  Typing, Stats, Event log. The striped kitty's stop was added on 2026-10-22, during stage 3. It
+  is the kitty idea's variant A, beside the Kyria wordmark: both kitties, since the bands are
+  stops anyway. The Monitor logo's stop came the same day, with the Monitor ERP screens on the
+  slave (`docs/layout.md`, *The Monitor ERP screens*); it moves every later page's stored number
+  up by one, so a stored Stats page reads as the bands once.
 - D2. The live layer map fills the panel on the half the layer's keys are on, Button on both
   halves, with no outlines. Both styles are kept, the big grid and the Kyria-shaped map, and PAGE
   switches between them while a map is showing.

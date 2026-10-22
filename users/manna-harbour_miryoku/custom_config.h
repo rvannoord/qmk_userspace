@@ -9,11 +9,11 @@
 // gets a keyboard's own features and tuning without touching the vendored files around
 // it. Key positions are in the keymap folder's config.h; everything else is here.
 
-// The other half's animation at boot, on a fresh EEPROM. All five are compiled in and
+// The other half's animation at boot, on a fresh EEPROM. All six are compiled in and
 // the U_ANIM key cycles through them (see the keymap's oled.h); this names the default.
 //   OLED_SLAVE_ANIMATION_BJORN       the Viking, reacting to typing speed
 //   OLED_SLAVE_ANIMATION_SPACESHIP   the WPM-driven parallax scroll
-//   OLED_SLAVE_ANIMATION_KYRIA / _MONITOR1 / _MONITOR2   the static logos
+//   OLED_SLAVE_ANIMATION_KYRIA / _MONITOR / _MONITOR_STACKED / _MONITOR_FUTURE   the static screens
 #define OLED_SLAVE_ANIMATION_BJORN
 
 /* OLED panel. Both halves sleep together (keyboard.json syncs it). See docs/layout.md.

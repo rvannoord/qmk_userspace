@@ -44,6 +44,7 @@
 #include "art/panel_layer_icons.h"
 #include "art/drashna_icons.h"
 #include "art/kitty_art.h"
+#include "art/monitor_art.h"
 #include "oled_canvas.h"
 #include "split_health.h"
 #include "oled_settings.h"
@@ -320,9 +321,9 @@ static void knock_chain(uint8_t x) {
     }
 }
 
-// The base band's other three versions. All start right of x=15 or below y=17, or under
+// The base band's other four versions. All start right of x=15 or below y=17, or under
 // the OS logo and its underline in the corner. A kitty takes only the emblem's half, so
-// the Kyria wordmark stays; the QMK logo is as wide as the panel and takes the whole band.
+// the Kyria wordmark stays; the QMK and Monitor logos take the whole band.
 
 #    define U_KITTY_X       18
 #    define U_KITTY_Y       12
@@ -349,6 +350,15 @@ static void base_qmk(void) {
     blit_at(u_qmk_logo, U_LOGO_W, U_LOGO_PAGES, U_QMK_X, U_QMK_Y);
 }
 
+// Centred in y 18-47 and across the panel.
+#    define U_MONITOR_X ((OLED_DISPLAY_WIDTH - U_MONITOR_BAND_W) / 2)
+#    define U_MONITOR_Y (18 + (30 - U_MONITOR_BAND_H) / 2)
+
+static void base_monitor(void) {
+    for (uint8_t q = 0; q < U_BAND_PAGES; q++) fill((uint8_t)(U_BAND_PAGE + q), 0, OLED_DISPLAY_WIDTH, 0x00);
+    blit_at(u_monitor_band, U_MONITOR_BAND_W, U_MONITOR_BAND_PAGES, U_MONITOR_X, U_MONITOR_Y);
+}
+
 // Returns whether the alarm lit the band this frame, which the OS logo needs to know.
 static bool render_band(void) {
     const uint8_t active = panel.layers & 0x0F;
@@ -364,6 +374,7 @@ static bool render_band(void) {
             case U_PAGE_BANDS_KITTY:   base_kitty(u_kitty_small, u_kitty_small_moods); break;
             case U_PAGE_BANDS_STRIPED: base_kitty(u_kitty_striped, u_kitty_striped_moods); break;
             case U_PAGE_BANDS_QMK:     base_qmk(); break;
+            case U_PAGE_BANDS_MONITOR: base_monitor(); break;
             default:                   break;
         }
     }
@@ -537,7 +548,7 @@ static void render_mods(void) {
 
 // --- the page dots ----------------------------------------------------------
 // One per page that PAGE can reach, the current one larger, in the status bar's dark
-// middle (x 41-85 with five pages), the mock's geometry. Drawn last, over any page, the
+// middle (x 37-89 with six pages), the mock's geometry. Drawn last, over any page, the
 // Stats page's first line included: they are only there for 700 ms.
 
 static void render_dots(void) {

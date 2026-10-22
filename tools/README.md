@@ -16,6 +16,8 @@ then regenerate.
 | `panel/gen_glyphs.py` | `art/panel_glyphs.c` / `.h` | with `--drashna <drashna_font.h>`, as committed: drashna's five 12x8 mod icons, centred at (2, 4) in their 16x16 cells, and his Caps Lock and Scroll Lock cells. Without it, the hand-drawn glyphs in `panel/glyphs.py` and `panel/statusbar.py`, Caps Word's among them. The iOS "i" comes from `statusbar.py` either way |
 | `panel/gen_locks.py` | the lock glyphs on stdout, as C | `panel/statusbar.py`. A check tool: it prints what `gen_glyphs.py` emits, and asserts the gutter column and the underline row stay clear |
 | `panel/gen_font.py` | `art/panel_font.c` / `.h` | with `--drashna <drashna_font.h> --face EIN`, as committed: the Ein face of drashna's font, with `|` and `*` from his ZXPIX face and `@` from QMK's (`docs/layout.md`). Without it, QMK's own `drivers/oled/glcdfont.c`. The splash logo comes from QMK's checkout either way |
+| `panel/draft_monitor.py` | `panel/monitor/*.txt` | the Monitor ERP brand files in `panel/monitor/src/`, which git ignores. Drafts the four logo bitmaps: an exact two-pixel ring, the inner shapes with exact gaps, and the letters from the hand pass in its `GLYPH_FIX`. Re-running overwrites hand edits to the grids, so a lasting correction goes into `GLYPH_FIX`. Needs Pillow |
+| `panel/gen_monitor.py` | `art/monitor_art.c` / `.h` | `panel/monitor/*.txt`, the finished grids: the slave's three Monitor screens, centred, and the master's band logo |
 | `panel/gen_font_dungeon.py` | `art/panel_font.c` / `.h` | the DUNGEON.mode pack, which is not in this repo. Superseded 2026-10-15; kept in case that face is wanted back |
 | `panel/gen_layer_icons.py` | `art/panel_layer_icons.c` / `.h` | splitkb's Halcyon icons and QMK's Kyria logo, neither in this repo (see `VENDORED.md`), then `panel/icon_overrides.txt` for the hand corrections |
 | `panel/nerd_grids.py` | text grids for `icon_overrides.txt` | a Nerd Font TTF. **The one tool here that needs something installed** (Pillow) |
@@ -34,6 +36,8 @@ cd tools/bjorn && python3 -I gen_poses.py ~/bjorn-src/resources/images ../../key
 cd tools/panel && python3 -I gen_glyphs.py ../../keyboards/splitkb/kyria/keymaps/rvannoord/art/panel_glyphs.c ../../keyboards/splitkb/kyria/keymaps/rvannoord/art/panel_glyphs.h --drashna ~/drashna-src/users/drashna/display/oled/drashna_font.h
 python3 -I tools/panel/gen_font.py ~/qmk_firmware keyboards/splitkb/kyria/keymaps/rvannoord/art --drashna ~/drashna-src/users/drashna/display/oled/drashna_font.h --face EIN
 python3 -I tools/panel/gen_layer_icons.py <halcyon-icons> ~/qmk_firmware/keyboards/splitkb/kyria/keymaps/default/keymap.c keyboards/splitkb/kyria/keymaps/rvannoord/art
+python3 -I tools/panel/draft_monitor.py                 # only with the brand files in tools/panel/monitor/src/
+python3 -I tools/panel/gen_monitor.py keyboards/splitkb/kyria/keymaps/rvannoord/art
 python3 -I tools/world/gen_world.py keyboards/splitkb/kyria/keymaps/rvannoord/art
 python3 -I tools/space/gen_space.py keyboards/splitkb/kyria/keymaps/rvannoord/art
 python3 -I tools/drashna/gen_art.py ~/drashna-src ~/drashna-modules keyboards/splitkb/kyria/keymaps/rvannoord/art

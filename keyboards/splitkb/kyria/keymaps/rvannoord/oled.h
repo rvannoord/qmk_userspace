@@ -9,7 +9,7 @@
 #include <stdint.h>
 
 // --- the slave's animation --------------------------------------------------
-// All five are compiled in and chosen at runtime, because switching between them
+// All six are compiled in and chosen at runtime, because switching between them
 // is the point. OLED_SLAVE_ANIMATION_* in custom_config.h names only the *boot
 // default* - the one you get on a fresh EEPROM. Defining none means Bjorn, and
 // defining more than one takes the first in this order.
@@ -18,8 +18,9 @@ enum u_slave_anim {
     U_ANIM_BJORN,
     U_ANIM_SPACESHIP,
     U_ANIM_KYRIA,
-    U_ANIM_MONITOR1,
-    U_ANIM_MONITOR2,
+    U_ANIM_MONITOR,           // the Monitor ERP logo, horizontal
+    U_ANIM_MONITOR_STACKED,   // the same, stacked
+    U_ANIM_MONITOR_FUTURE,    // "Monitor your future"
     U_ANIM_COUNT,
 };
 
@@ -29,10 +30,12 @@ enum u_slave_anim {
 #    define U_ANIM_DEFAULT U_ANIM_SPACESHIP
 #elif defined(OLED_SLAVE_ANIMATION_KYRIA)
 #    define U_ANIM_DEFAULT U_ANIM_KYRIA
-#elif defined(OLED_SLAVE_ANIMATION_MONITOR1)
-#    define U_ANIM_DEFAULT U_ANIM_MONITOR1
-#elif defined(OLED_SLAVE_ANIMATION_MONITOR2)
-#    define U_ANIM_DEFAULT U_ANIM_MONITOR2
+#elif defined(OLED_SLAVE_ANIMATION_MONITOR)
+#    define U_ANIM_DEFAULT U_ANIM_MONITOR
+#elif defined(OLED_SLAVE_ANIMATION_MONITOR_STACKED)
+#    define U_ANIM_DEFAULT U_ANIM_MONITOR_STACKED
+#elif defined(OLED_SLAVE_ANIMATION_MONITOR_FUTURE)
+#    define U_ANIM_DEFAULT U_ANIM_MONITOR_FUTURE
 #else
 #    define U_ANIM_DEFAULT U_ANIM_BJORN
 #endif
@@ -61,6 +64,7 @@ enum u_master_page {
     U_PAGE_BANDS_KITTY,     // the same, the small kitty in the base band
     U_PAGE_BANDS_STRIPED,   // the same, the striped kitty
     U_PAGE_BANDS_QMK,       // the same, the QMK logo in the base band
+    U_PAGE_BANDS_MONITOR,   // the same, the Monitor ERP logo
     U_PAGE_STATUS,          // stage 5
     U_PAGE_LAYER_MAP,       // stage 4
     U_PAGE_TYPING,          // stage 5
@@ -70,7 +74,7 @@ enum u_master_page {
 };
 
 #define U_PAGES_BUILT ((1u << U_PAGE_BANDS) | (1u << U_PAGE_BANDS_KITTY) | (1u << U_PAGE_BANDS_STRIPED) | \
-                       (1u << U_PAGE_BANDS_QMK) | (1u << U_PAGE_STATS))
+                       (1u << U_PAGE_BANDS_QMK) | (1u << U_PAGE_BANDS_MONITOR) | (1u << U_PAGE_STATS))
 
 enum u_master_page u_page_get(void);
 void               u_page_next(void);

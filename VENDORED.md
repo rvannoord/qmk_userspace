@@ -87,7 +87,7 @@ The art for the drashna round (`docs/layout.md`, *The drashna round* and *drashn
 | the same | the same | `users/drashna/display/painter/fonts/font_proggy_clean.qff.c`, `font_proggy_tiny.qff.c`, `font_thintel15.qff.c` | GPL-3.0-or-later for the generated code; each says the "font retains original copyright". Converted from `ProggyCleanNerdFont-Regular.ttf` (Tristan Grimmer's Proggy Clean, as patched by Nerd Fonts), `ProggyTiny.ttf`, and for Thintel 15 a file it does not name. The original fonts' licences were not read |
 | [drashna/qmk_modules](https://github.com/drashna/qmk_modules) | **`ee2c35bcbb7d8b8be108c93c5b8715ea1a2c020c`** (2026-10-16) | `bongocats/bongocat_assets.c` | GPL-2.0-or-later, "Copyright 2022 HorrorTroll" and "2025 Christopher Courtney". The file's tag is misspelled `SPD-License-Identifier`; the generated file spells it right |
 
-**The licence moved with it.** drashna's display art is GPL-3.0-or-later, so on 2026-10-21 this repo moved from GPL-2.0 to GPL-3.0-or-later (`docs/oled-v3.md`, D6). That was allowed because everything recorded in this file was "or later" (Miryoku, JBaguley's ship, QMK's font) or permissive (Bjorn, MIT; the Material Symbols, Apache-2.0). Their own notices stay as they are: it is their "or later" that allows the move. It cannot be undone while any of this art is in the repo. The slave's three logos (`art/oled_kyria.h`, `oled_monitor1.h`, `oled_monitor2.h`) have no section here yet. They are logos rather than code, and the move changes nothing about them either way.
+**The licence moved with it.** drashna's display art is GPL-3.0-or-later, so on 2026-10-21 this repo moved from GPL-2.0 to GPL-3.0-or-later (`docs/oled-v3.md`, D6). That was allowed because everything recorded in this file was "or later" (Miryoku, JBaguley's ship, QMK's font) or permissive (Bjorn, MIT; the Material Symbols, Apache-2.0). Their own notices stay as they are: it is their "or later" that allows the move. It cannot be undone while any of this art is in the repo. The slave's Kyria logo (`art/oled_kyria.h`) has no section here yet. It is a logo rather than code, and the move changes nothing about it either way. The Monitor ERP screens have their own section below.
 
 Credits beyond the licence, carried into the generated files:
 - **The kitties.** drashna's file credits the images to **j-inc (James Incandenza) and pixelbenny**, and the animation approach to obosob.
@@ -119,3 +119,22 @@ What the sources turned out to hold, checked on 2026-10-21. The renderers depend
 - **Yoshi's five sets have 3, 5, 3, 3 and 2 drawn frames** (idle, ready, fly, hide, run). The empty slots are dropped, and `mario_art.h` names where each set starts.
 - **`yoshi_animation` puts `PROGMEM` after the declarator**, so it is defined empty on the command line rather than in a stub header.
 - **Every array's trailing pad byte** (`[32+1]`, `[1024+1]`) was checked to be zero before it was dropped.
+
+## `keyboards/splitkb/kyria/keymaps/rvannoord/art/monitor_art.c`
+
+Monitor ERP's logos, the author's workplace's: the horizontal and stacked "Monitor ERP" logos and the
+"Monitor your future" wordmark, since 2026-10-22, in place of the two Monitor logos the slave had
+(`oled_monitor1.h` and `oled_monitor2.h`, origin unrecorded). The logos are Monitor ERP System's;
+they are on this keyboard as the author's own workplace's, the way the old ones were.
+
+- **The sources are not in this repo.** The brand files (the logos as PNG, the placement guide,
+  the corporate identity guideline, and DM Sans) live in `tools/panel/monitor/src/`, which
+  `.gitignore` keeps out, because the repo is public and they are a company's brand material.
+- **What is in the repo is a drawing of them, not a copy.** `tools/panel/draft_monitor.py`
+  drafts each logo at panel size from those files, and the hand pass it carries (`GLYPH_FIX`)
+  redraws every letter. The finished grids are `tools/panel/monitor/*.txt`, and
+  `tools/panel/gen_monitor.py` makes `art/monitor_art.c` from them alone, so regenerating the
+  art needs only the grids.
+- **DM Sans** (SIL Open Font License, Google Fonts), the wordmark's face, was downloaded on
+  2026-10-22 to draw a comparison version, which was not picked. Nothing of it is in the repo.
+

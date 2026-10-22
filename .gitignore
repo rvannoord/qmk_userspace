@@ -21,3 +21,6 @@ __pycache__/
 
 # preview output
 tests/preview/out/
+
+# Monitor ERP brand files: the sources for tools/panel/monitor/, kept out of a public repo
+tools/panel/monitor/src/

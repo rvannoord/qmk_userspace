@@ -23,7 +23,7 @@ cc "${cc_flags[@]}" -Wno-unused-parameter -o "$out/split_sync" \
    "$here/unit/test_split_sync.c" "$keymap/split_sync.c" "$keymap/split_health.c"
 cc "${cc_flags[@]}" -o "$out/panel" \
    "$here/unit/test_panel.c" "$keymap/art/panel_font.c" "$keymap/art/panel_glyphs.c" "$keymap/art/panel_layer_icons.c" "$keymap/art/drashna_icons.c" \
-   "$keymap/art/kitty_art.c" "$keymap/oled_canvas.c" "$keymap/split_health.c" "$keymap/oled_map.c"
+   "$keymap/art/kitty_art.c" "$keymap/art/monitor_art.c" "$keymap/oled_canvas.c" "$keymap/split_health.c" "$keymap/oled_map.c"
 
 cc "${cc_flags[@]}" -DOLED_SLAVE_ANIMATION_BJORN -o "$out/bjorn" \
    "$here/unit/test_bjorn.c" "$keymap/art/bjorn_art.c" "$keymap/art/bjorn_poses.c" "$keymap/oled_canvas.c"

@@ -96,6 +96,9 @@ that was not flashed simply stops typing.
 | The other half still types | Any key on the non-USB half | The payload grew from six bytes to seven. The handshake is unchanged, but a half on the old build would drop every state as the wrong size | `v3-1` |
 | `@`, `|` and `*` read on the Sym map | Hold Enter (Sym): the `@` is whole, the `|` is one line, and the `*` is a small star, not the sun. Both styles | The `|` and `*` are ZXPIX's now, out of the same font file, placed in Ein's slot, and the `@` is QMK's (`docs/layout.md`) | `v3-4b` |
 | Bjorn comes back awake | After releasing a layer whose map covered his panel (Button, or a map on his half), Bjorn is awake, not mid-doze | His clocks pause while he is not drawn | `v3-4` |
+| The three Monitor screens | Tap ANIM until each comes round: the horizontal Monitor ERP logo, the stacked one, "MONITOR YOUR FUTURE". The ring is even, the two slants in the mark are clean, every letter reads | Drawn by hand at panel size from the brand files (`docs/layout.md`, *The Monitor ERP screens*), in place of the two old Monitor logos | `monitor` |
+| The Monitor stop on the master | PAGE through the bands: after the QMK logo comes the horizontal Monitor logo in the base band, 28 px tall, clear of the OS logo. Six dots now | The fifth version of the bands (D1) | `monitor` |
+| A stored choice may move once | If the slave showed Monitor 1 or 2 before, it now shows the horizontal or stacked logo; a master left on Stats comes back on the bands once | The animation list and the page numbers changed shape | `monitor` |
 
 ### Only one season can be seen at a time
 
