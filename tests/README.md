@@ -6,7 +6,7 @@ Two mechanisms, because they cover different things:
 |--------|------|-------|
 | `tests/run_scenarios.sh` | tap-hold timing and host OS, as scenarios through stock QMK's tapping code | a `qmk_firmware` tree |
 | `tests/run_unit.sh` | the split transport's master half, the master panel, the spaceship's background, Bjorn, the bootloader screen, and that every art file compiles | just `cc` |
-| `tests/preview/run_preview.sh` | Bjorn's idle show, rendered on the host into a GIF to watch before flashing | `cc` and Python 3 |
+| `tests/preview/run_preview.sh` | Bjorn's idle show, bongo cat and the Mario scene, rendered on the host into a GIF to watch before flashing | `cc` and Python 3 |
 
 ## Scenario tests
 
@@ -62,6 +62,7 @@ exist for what the scenario tests cannot reach:
 | File | What |
 |------|------|
 | `unit/test_split_sync.c` | the master send path. The scenario tests build `split_sync.c`'s non-`SPLIT_KEYBOARD` branch, where every function is a stub, so nothing there covers it — and a regression is silent and total: no sends at all, which on the keyboard looks like the other half's mascot going inert for no reason. Boot, the heartbeat, the hard window and recovery, on a clock that is a variable |
+| `unit/test_scenes.c` | bongo cat and the Mario scene, from their own files. Bongo's frames by WPM and his slap rate; then the scene over scripted WPM curves, steady, ramping and stopping, about a hundred of Bill's passes: on every tick his pixels never meet Mario's or Yoshi's, no sprite enters the WPM corner (x 84-127, y 0-25) or goes above the top edge, and the scene's ink constants match the art. Also Yoshi curling up at 4 s and back, and a scene at rest costing nothing to redraw. A jump 1.5 ticks early or late fails it |
 | `unit/test_bjorn.c` | the mascot. Compiles the real `oled_slave_bjorn.c` and `bjorn_art.c` on a fake clock. Two things with teeth: that he keeps blinking after a doze and after a dead link — a figure that moves but never blinks is this design's way of saying the link died, so losing the blink reports a fault that is not there — and that whenever two consecutive composed frames are identical, the commit writes no block at all |
 | `unit/test_panel.c` | the master panel's three bands. Compiles the real `oled_master_zones.c` against a buffer laid out like the driver's, then measures what was drawn: that the band carries the layer's picture and the mod row every finger's glyph, that a held finger fills its cell while a misfire chips only the glyph box, which side the handedness bar takes and whether it is drawn or cut out, that the alarm inverts the whole band and the chain is knocked out of it, that the default-layer rule appears in exactly the two cases it should, and the pages: the cycle and its replug through a fake EEPROM word, the dots, the other half saving what the master sends, the master's map, the style toggle and the alarm rule, both kitties', the QMK logo's and the Monitor logo's base bands, the Stats stop, and on every page a free redraw and staying under the alarm. For stage 5's pages also the link-down rule, the Status sheet's striped kitty, Typing sampling on every page, and the event ring's wrap, order, stamp and cut, with every event the watcher logs. `--dump` prints the frames and `--raw` the buffers, which is how the bands get looked at without a flash |
 | `unit/test_sync_slave.c` | the other half's side of the transport, from boot: that nothing counts as fresh before a state arrives, not even inside the first 600 ms, when the clock alone would say so; that the first real state does, with its `view` byte; that a wrong-sized state is dropped; and that silence makes it stale again. The other half saves the master's page and animation only from a fresh state, so this is what keeps zeros from overwriting a real choice |
@@ -90,7 +91,7 @@ with it — one asserting the ratio survives the move and still fails if the run
 # Preview
 
 ```bash
-tests/preview/run_preview.sh [idle|wake|tiers|props] [--invert]
+tests/preview/run_preview.sh [idle|wake|tiers|props|bongo|mario] [--invert]
 ```
 
 Compiles the real `oled_slave_bjorn.c` on a fake clock, like the unit test, but records every

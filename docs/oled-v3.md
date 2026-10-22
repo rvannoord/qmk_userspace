@@ -29,8 +29,8 @@ QMK line numbers refer to `7a1bbf37c5`.
 | 2. Bootloader screen | **done 2026-10-22**, flashed `fd28d30`; the checkpoint passed on both halves |
 | 3. PAGE key, page framework, the three bands | **done 2026-10-22**, flashed `657fb8e`, then `70f3bc0` so the page and the animation follow the cable; the checkpoint passed on the board |
 | 4. Live layer map, master screen moves over | **done 2026-10-22**, on the board as `e839e27`; the early check passed on `12b236a`, and the screen moving over was tried on `d267d99` and taken out (D3) |
-| 5. Status sheet, layer map page, Typing, Event log | **built 2026-10-22**; all 18 of the mock's frames match byte for byte. Waiting for the checkpoint |
-| 6. Bongo cat and the Mario scene on the slave | open |
+| 5. Status sheet, layer map page, Typing, Event log | **built 2026-10-22** in `636ba56`; all 18 of the mock's frames match byte for byte. Not flashed yet: the checkpoint waits for the next flash, with D16 |
+| 6. Bongo cat and the Mario scene on the slave | **built 2026-10-22**, not flashed yet; D13 decided (4 s) |
 | 7. Encoder feedback | open |
 | 8. Glitch bursts on link loss | open |
 | 9. Screensaver | open |
@@ -88,7 +88,8 @@ Open, with a default, to answer before the stage that needs it:
   director, so they can go before v2's open stages. Stages 8 and 9 touch the slave's idle time and
   should follow v2 stage 4 (the director). Default: v3 0-7, then v2 resumes, then v3 8-9.
 - D13. **When Yoshi curls up (stage 6).** The mock used 4 s after the last key. Default: at
-  Bjorn's doze, 75 s, so the two slave scenes rest on the same clock.
+  Bjorn's doze, 75 s, so the two slave scenes rest on the same clock. **Decided 2026-10-22: 4 s
+  after the last key**, as the mock had it.
 - D14. **How iOS is told from the Mac (stage 1).** Decided 2026-10-21: a small lowercase "i" in
   front of the Apple logo, in Apple's lettering style, so it reads as an i-device. Roel's own
   design, after these four were rendered over the real Mac frames:
@@ -586,8 +587,8 @@ All four draw in Ein and go through the dispatcher from stage 3.
 
 ## Stage 6: bongo cat and the Mario scene on the slave
 
-- `enum u_slave_anim` gains `U_ANIM_BONGO` and `U_ANIM_MARIO`: seven in all, still within
-  `U_WORLD_ANIM_MASK`. ANIM's row in *Extra keys* lists them.
+- `enum u_slave_anim` gains `U_ANIM_BONGO` and `U_ANIM_MARIO`: eight in all with the Monitor
+  screens, exactly `U_WORLD_ANIM_MASK`. ANIM's row in *Extra keys* lists them.
 - **Bongo cat.** The cat at y 32-63, WPM at 2× top right. Idle frames at 300 ms below 10 WPM, the
   prep frame from 10 to 20, tap frames above that at max(100, 450 − 2.5 × WPM) ms.
 - **Mario, Yoshi and Bullet Bill.** The scene in *The drashna round*, in `oled_slave_mario.c`.
@@ -610,8 +611,8 @@ All four draw in Ein and go through the dispatcher from stage 3.
     frames' (x 3-26 of the sprite), because those are what is in the air.
   - **Draw order:** floor, tufts, Mario, Yoshi, Bill, then the WPM at 2×, right-aligned at (90,1)
     with `wpm` at (108,18).
-  - **D13, when Yoshi curls up.** Default: at Bjorn's doze, 75 s. He uncurls on the next key, back
-    through *hide* reversed, then *idle*.
+  - **D13, when Yoshi curls up:** 4 s after the last key (decided 2026-10-22). He uncurls on the
+    next key, back through *hide* reversed, then *idle*.
 - **Tests.**
   - A host test runs the scene over a scripted WPM curve and asserts, for every tick, that Bill's
     lit pixels never meet Mario's or Yoshi's. The mock this was decided from passed that, 0 of 216
@@ -620,6 +621,36 @@ All four draw in Ein and go through the dispatcher from stage 3.
   - Nothing reaches y < 0.
   - At WPM 0 with no Bill, an unchanged frame writes nothing.
 - Add a scenario to `tests/preview/` for each animation, now that the preview builds again.
+
+**Checkpoint, on the board:**
+- ANIM through all eight on the other half: bongo cat and the Mario scene come after the Monitor
+  screens.
+- Bongo cat idles at rest, holds his paws up typing slowly, and slaps faster as you speed up.
+- The Mario scene: at rest Mario stands and Yoshi idles; typing slowly Mario steps and Yoshi is
+  ready; from 10 WPM they walk and run, the floor scrolls, and Bill comes by every few seconds and
+  both jump him. Stop typing: Yoshi curls up after 4 s and uncurls on the next key.
+
+**As built, 2026-10-22.**
+- **Files.** `oled_slave_bongo.c` (with the WPM corner both scenes share) and
+  `oled_slave_mario.c`; `oled_draw.c` gained a clipped sprite blit for Bill and the jumpers.
+  `oled_slave_select.c` runs the Mario scene's task only while it is shown, as it does Bjorn's.
+- **Measured from the art,** and checked against it by the test: both stand with their feet on
+  y=62 at y0 = 31, so a 31 px lift puts Yoshi's apex at y=0 exactly; Bill's ink is x 2-29 and,
+  at y0 = 39, y 41-61. Yoshi's fly frames ink x 2-26 of the sprite (frame 10 starts at 2, so the
+  plan's 3 became 2), Mario's jump frame all 16 columns.
+- **The jump** is planned in quarter ticks at Bill's speed, 60 + WPM fifteenths of a pixel a tick:
+  when his nose reaches a character's right edge (rounded down) and his tail clears its left edge
+  (rounded up). Over about a hundred passes Bill never touched either of them; a jump 1.5 ticks
+  early or late does.
+- **Resting** waits for Bill: Yoshi curls up only once nobody is in the air or on the way, and Bill
+  stops coming 4 s after the last key, so a pass in flight finishes first.
+- **Not in the plan, and chosen while building:** Yoshi's *idle* and *ready* sets at 300 ms a
+  frame, his flutter at 100 ms, a curl step every 150 ms, Mario's step at bongo cat's rate from the
+  first key, and three tufts at x 9, 51 and 94 of the scrolling floor. Uncurling goes back through
+  *hide* and then to whatever the WPM says: *idle* at 0, *ready* if the key left any WPM.
+- **Previews:** `tests/preview/run_preview.sh bongo` and `mario`, from `tests/preview/scenes.c`.
+- **Firmware.** It builds with no warnings at 135,256 bytes of text, 8,228 more than `636ba56`,
+  most of it the two scenes' art.
 
 ## Stage 7: encoder feedback
 

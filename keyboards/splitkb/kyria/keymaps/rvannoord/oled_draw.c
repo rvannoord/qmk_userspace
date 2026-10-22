@@ -36,6 +36,16 @@ void u_blit(const uint8_t *src, uint8_t w, uint8_t pages, uint8_t x0, uint8_t y0
     }
 }
 
+void u_sprite(const uint8_t *src, uint8_t w, uint8_t pages, int16_t x0, int16_t y0) {
+    for (uint8_t q = 0; q < pages; q++) {
+        for (uint8_t i = 0; i < w; i++) {
+            const uint8_t b = pgm_read_byte(&src[(uint16_t)q * w + i]);
+            for (uint8_t k = 0; b >> k; k++)
+                if ((b >> k) & 1u) u_put((int16_t)(x0 + i), (int16_t)(y0 + q * 8 + k), true);
+        }
+    }
+}
+
 // --- legends -----------------------------------------------------------------------
 
 static const uint8_t *glyph(uint8_t c) {
@@ -126,6 +136,13 @@ void u_text(int16_t x, int16_t y, const char *s, uint8_t k, bool on) {
     for (uint8_t i = 0; s[i]; i++) {
         u_legend_at((u_legend_t){{(uint8_t)s[i]}, 0}, (int16_t)(x + 6 * k * i), y, k, on);
     }
+}
+
+void u_num3(char *b, uint8_t v) {
+    b[0] = v >= 100 ? (char)('0' + v / 100) : ' ';
+    b[1] = v >= 10 ? (char)('0' + v / 10 % 10) : ' ';
+    b[2] = (char)('0' + v % 10);
+    b[3] = 0;
 }
 
 void u_text_bar(int16_t x, int16_t y, const char *s) {

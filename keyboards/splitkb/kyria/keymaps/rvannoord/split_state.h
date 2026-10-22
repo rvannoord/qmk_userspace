@@ -57,7 +57,7 @@ typedef struct {
 //
 // The upper bits are deliberately spare: the weather and time-of-day the host
 // daemon will send belong here too, and this is the byte they go in.
-#define U_WORLD_ANIM_MASK  0x07     // which slave animation, 0-4
+#define U_WORLD_ANIM_MASK  0x07     // which slave animation, 0-7
 #define U_WORLD_ANIM(w)    ((w) & U_WORLD_ANIM_MASK)
 
 // Call from process_record_user on the master. Tracks which finger holds which

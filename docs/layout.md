@@ -24,7 +24,7 @@ The source of truth for my layout. A change goes here first, then into the firmw
 | Key | Where | Does |
 |-----|-------|------|
 | SYS (`U_SYS`) | left half, outer pinky column, top row | flips between the Mac and the detected non-Mac host (Windows, or Linux on a Linux machine) by hand when detection guesses wrong; the left OLED shows the result. Held two seconds, the stats page. Held while plugging in, it enters the bootloader (Bootmagic) |
-| ANIM (`U_ANIM`) | right half, outer pinky column, top row, mirroring SYS | cycles the other half's animation: Bjorn, spaceship, Kyria logo, and three Monitor ERP screens (the horizontal logo, the stacked logo, "Monitor your future"). Persisted on both halves, so it follows the cable. See *Switching the slave's animation* |
+| ANIM (`U_ANIM`) | right half, outer pinky column, top row, mirroring SYS | cycles the other half's animation: Bjorn, spaceship, Kyria logo, three Monitor ERP screens (the horizontal logo, the stacked logo, "Monitor your future"), bongo cat, and Mario with Yoshi and Bullet Bill. Persisted on both halves, so it follows the cable. See *Switching the slave's animation* |
 | PAGE (`U_PAGE`) | left half, outer pinky column, middle row, under SYS (decided 2026-10-22: free on every layer, and the pinky reaches it while a thumb holds a layer) | cycles the master's pages, on release like SYS and ANIM. While a layer map is showing it switches the map between the big grid and the Kyria-shaped one instead. Persisted on both halves, so it follows the cable. See *The drashna round* under OLED; build order in `docs/oled-v3.md` |
 
 ## Home-row mods
@@ -453,12 +453,14 @@ the goat later.
 | `speed_tier.h` | WPM as four tiers with hysteresis and an 800 ms dwell, shared by Bjorn and the master's kitty so both read speed the same way. Each keeps its own state |
 | `oled_settings.c` / `.h` | the one tagged word of user EEPROM: byte 0 the slave's animation, byte 1 the master's page (bits 0-3) and map style (bit 4). Read-modify-write, so neither key's press resets the other's byte. `u_settings_follow` is the other half's side: it saves what the master sent, in one write, only when something differs |
 | `oled_slave_world.c` | the weather behind Bjorn, across the whole panel, season from `__DATE__` until a host daemon supplies it |
-| `oled_slave_select.c` | which slave animation is live: `oled_settings.c` on the master, the `world` byte of the sync on the slave, which also saves what the master sent once a fresh state has arrived. Ahead of the animation, from a fresh state only: this half's map; Bjorn's clocks pause while it is up |
+| `oled_slave_select.c` | which slave animation is live: `oled_settings.c` on the master, the `world` byte of the sync on the slave, which also saves what the master sent once a fresh state has arrived. Ahead of the animation, from a fresh state only: this half's map; Bjorn's clocks and the Mario scene's pause while it is up |
 | `split_state.c` / `.h` | the 8-byte payload the master gathers: modifiers in finger order, the active and default layers, locks and Caps Word, the host and whether it is a Mac, a misfire count, the chosen animation, and the stored page and map style. Built fresh every main loop; a modifier it reports is one that is held at that instant |
 | `split_sync.c` / `.h` | the transport for that payload. Double-buffered on the slave because the callback runs on a HIGHPRIO thread; heartbeat 250 ms, minimum interval 20 ms, soft stale 600 ms, hard stale 1250 ms. `u_sync_link_down()` answers for both halves — the master from its own failed sends, the slave from the sequence number standing still |
 | `split_health.c` / `.h` | link health: the stats page behind a long SYS press, self-reset of a half whose link stays dead, the hardware watchdog. Every guard is explained in the header |
 | `oled_slave_spaceship.c` | the ship, JBaguley's and byte-identical, over three parallax planes of my own; speed from WPM |
 | `oled_slave_logo.c` | the static screens: the Kyria logo and the three Monitor ERP ones |
+| `oled_slave_bongo.c` | bongo cat along the bottom, idle, paws up or slapping by WPM, and the WPM corner (2x digits from x=90, `wpm` under them) that the Mario scene shares |
+| `oled_slave_mario.c` | Mario, Yoshi and Bullet Bill: a scene on its own 50 ms tick, run by `oled_slave_select.c` only while it is shown. Bill's jumps are planned from his speed each tick; Yoshi curls up 4 s after the last key (D13) |
 | `art/bjorn_art.c` / `.h` | generated: base, patch table, frame index |
 | `art/bjorn_poses.c` / `.h` | generated: the idle poses, six of infinition's frames |
 | `art/world_art.c` / `.h` | generated: the weather sprites |
@@ -878,8 +880,8 @@ the half under the fingers that use it:
 **Two more slave animations** behind `U_ANIM`, after today's five. **Bongo cat** is drashna's
 bongocats module (HorrorTroll's art): 128x32 along the bottom, WPM at 2× top right, and it slaps
 faster as WPM climbs, with a frame time of max(100, 450 − 2.5 × WPM) ms. **Mario, Yoshi and
-Bullet Bill** is a small scene rather than a loop, described below. That makes seven, which still
-fits the three bits of `world` the animation index has.
+Bullet Bill** is a small scene rather than a loop, described below. With the three Monitor screens
+that makes eight, exactly the three bits of `world` the animation index has.
 
 **Mario, Yoshi and Bullet Bill, driven by WPM.** All of it is drashna's art from `oled_assets.h`:
 - Mario: four 16x32 frames, two standing, a step and a jump.
@@ -914,8 +916,8 @@ least 16 ticks and long enough that the whole time Bill overlaps it horizontally
 half of the arc, where the lift clears Bill's top. So it works at every speed. Checked on the host
 renders: Bill touched neither of them in any frame. Yoshi's flutter apex reaches y=0 exactly.
 
-When Yoshi curls up is open (D13 in `docs/oled-v3.md`). The demo used 4 s, and on the board it
-would follow Bjorn's doze. This scene moves while you type, which Bjorn's never does. That is the
+Yoshi curls up 4 s after the last key, as the demo had it (D13 in `docs/oled-v3.md`, decided
+2026-10-22), rather than at Bjorn's doze. This scene moves while you type, which Bjorn's never does. That is the
 point of it, and the spaceship already works the same way; ANIM is how you get the quiet one back.
 
 **A screen for the bootloader.** `reset_keyboard()` calls `shutdown_quantum()` (`quantum.c:208`),

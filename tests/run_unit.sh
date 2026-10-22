@@ -3,7 +3,7 @@
 # transport's master half, which only exists under SPLIT_KEYBOARD, and the panel's
 # drawing, which needs a buffer to draw into. No QMK tree and no toolchain beyond cc.
 #
-#   tests/run_unit.sh            build and run all seven
+#   tests/run_unit.sh            build and run all eight
 #   tests/run_unit.sh --dump     print the panel's frames instead of checking them
 #   tests/run_unit.sh --raw      the panel's frames as raw buffers; --raw-map the live maps
 set -euo pipefail
@@ -38,6 +38,11 @@ cc "${cc_flags[@]}" -Wno-unused-parameter -o "$out/sync_slave" \
 # The live layer map, from oled_map.c itself.
 cc "${cc_flags[@]}" -o "$out/map" \
    "$here/unit/test_map.c" "$keymap/art/panel_font.c" "$keymap/art/drashna_icons.c" "$keymap/oled_canvas.c" "$keymap/oled_draw.c" "$keymap/oled_layer_page.c"
+
+# Bongo cat and the Mario scene, from their own files.
+cc "${cc_flags[@]}" -o "$out/scenes" \
+   "$here/unit/test_scenes.c" "$keymap/art/bongo_art.c" "$keymap/art/mario_art.c" "$keymap/art/panel_font.c" \
+   "$keymap/art/drashna_icons.c" "$keymap/oled_canvas.c" "$keymap/oled_draw.c"
 
 # The bootloader screen, from oled.c itself.
 cc "${cc_flags[@]}" -o "$out/boot" \
@@ -76,6 +81,8 @@ echo
 "$out/space" || fails=1
 echo
 "$out/bjorn" || fails=1
+echo
+"$out/scenes" || fails=1
 echo
 "$out/boot" || fails=1
 exit $fails

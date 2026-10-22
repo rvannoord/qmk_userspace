@@ -14,14 +14,6 @@
 #include "art/panel_glyphs.h"
 #include "art/status_frame.h"
 
-// Right-aligned in three places, the way WPM is printed.
-static void num3(char *b, uint8_t v) {
-    b[0] = v >= 100 ? (char)('0' + v / 100) : ' ';
-    b[1] = v >= 10 ? (char)('0' + v / 10 % 10) : ' ';
-    b[2] = (char)('0' + v % 10);
-    b[3] = 0;
-}
-
 // --- the Status sheet ----------------------------------------------------------------
 
 static const char *const host_names[] = {[U_HOST_WINDOWS] = "Win", [U_HOST_MAC] = "Mac", [U_HOST_IOS] = "iOS",
@@ -64,7 +56,7 @@ void u_status_draw(const u_split_state_t *s, uint8_t wpm, uint8_t kitty) {
     u_blit(u_kitty_striped[kitty], U_KITTY_W, U_KITTY_BYTES / U_KITTY_W, 4, 9);
 
     char b[8] = "WPM ";
-    num3(b + 4, wpm);
+    u_num3(b + 4, wpm);
     u_text(40, 10, b, 1, true);
 
     const uint8_t active = s->layers & 0x0F, deflt = s->layers >> 4;
@@ -127,10 +119,10 @@ void u_typing_task(uint8_t wpm) {
 void u_typing_draw(uint8_t wpm) {
     memset(u_canvas, 0, OLED_MATRIX_SIZE);
     char b[12];
-    num3(b, wpm);
+    u_num3(b, wpm);
     u_text(2, 2, b, 2, true);
     u_text(2, 20, "wpm", 1, true);
-    num3(b, peak);
+    u_num3(b, peak);
     const char *digits = b[0] != ' ' ? b : b[1] != ' ' ? b + 1 : b + 2;
     char        line[8] = "max ";
     strcpy(line + 4, digits);

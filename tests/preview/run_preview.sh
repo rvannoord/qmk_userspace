@@ -3,7 +3,8 @@
 #
 #   tests/preview/run_preview.sh [scenario] [--invert]
 #
-# Scenarios: idle (type, settle, doze, switch off) · wake · tiers · props.
+# Scenarios: idle (type, settle, doze, switch off) · wake · tiers · props, for Bjorn;
+# bongo · mario, for the stage 6 scenes (scenes.c).
 # Output lands in tests/preview/out/<scenario>/ — strip.png, anim.gif, frames.bin,
 # events.csv — which is git-ignored.
 set -euo pipefail
@@ -19,6 +20,19 @@ out=$here/out/$scenario
 mkdir -p "$out"
 bin=$(mktemp -d)/preview
 trap 'rm -rf "$(dirname "$bin")"' EXIT
+
+# Bongo cat and the Mario scene have a harness of their own, scenes.c.
+case $scenario in
+    bongo|mario)
+        cc -std=c11 -Wall -Wextra -Werror \
+           -I "$repo/tests/unit" -I "$repo/tests/unit/stub" -I "$keymap" \
+           -DQMK_KEYBOARD_H='"qmk_keyboard.h"' -DOLED_ENABLE \
+           -o "$bin" "$here/scenes.c" "$keymap/art/bongo_art.c" "$keymap/art/mario_art.c" "$keymap/art/panel_font.c" \
+           "$keymap/art/drashna_icons.c" "$keymap/oled_canvas.c" "$keymap/oled_draw.c"
+        "$bin" "$scenario" "$out"
+        python3 -I "$repo/tools/preview.py" "$out" $invert
+        exit 0 ;;
+esac
 
 # OLED_SLAVE_WORLD as in custom_config.h, so the weather he stands in on the board is in
 # the preview too.

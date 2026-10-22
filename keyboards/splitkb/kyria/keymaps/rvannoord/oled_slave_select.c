@@ -75,6 +75,8 @@ void oled_render_slave(void) {
         case U_ANIM_MONITOR:
         case U_ANIM_MONITOR_STACKED:
         case U_ANIM_MONITOR_FUTURE:  u_slave_logo_render(u_anim_get()); break;
+        case U_ANIM_BONGO:           u_slave_bongo_render(); break;
+        case U_ANIM_MARIO:           u_slave_mario_render(); break;
         default:               u_slave_bjorn_render(); break;
     }
 }
@@ -87,11 +89,13 @@ void oled_slave_task(void) {
         u_settings_follow(U_WORLD_ANIM(s.world), s.view);
     }
 
-    // Only Bjorn keeps state between frames. Running his task while another
-    // animation is showing would let his idle clocks advance unseen, so he would
-    // come back mid-doze; letting it run only while he is drawn means he always
-    // returns awake, which is the honest reading - you just arrived.
-    if (u_anim_get() == U_ANIM_BJORN && !map_here()) u_slave_bjorn_task();
+    // Only Bjorn and the Mario scene keep state between frames. Running a task while
+    // another animation is showing would let its clocks advance unseen, so Bjorn would
+    // come back mid-doze; letting it run only while it is drawn means he always returns
+    // awake, which is the honest reading - you just arrived.
+    if (map_here()) return;
+    if (u_anim_get() == U_ANIM_BJORN) u_slave_bjorn_task();
+    if (u_anim_get() == U_ANIM_MARIO) u_slave_mario_task();
 }
 
 #endif     // OLED_ENABLE

@@ -9,7 +9,7 @@
 #include <stdint.h>
 
 // --- the slave's animation --------------------------------------------------
-// All six are compiled in and chosen at runtime, because switching between them
+// All eight are compiled in and chosen at runtime, because switching between them
 // is the point. OLED_SLAVE_ANIMATION_* in custom_config.h names only the *boot
 // default* - the one you get on a fresh EEPROM. Defining none means Bjorn, and
 // defining more than one takes the first in this order.
@@ -21,7 +21,9 @@ enum u_slave_anim {
     U_ANIM_MONITOR,           // the Monitor ERP logo, horizontal
     U_ANIM_MONITOR_STACKED,   // the same, stacked
     U_ANIM_MONITOR_FUTURE,    // "Monitor your future"
-    U_ANIM_COUNT,
+    U_ANIM_BONGO,             // bongo cat, slapping faster as WPM climbs
+    U_ANIM_MARIO,             // Mario, Yoshi and Bullet Bill, driven by WPM
+    U_ANIM_COUNT,             // eight: all three bits of U_WORLD_ANIM_MASK
 };
 
 #if defined(OLED_SLAVE_ANIMATION_BJORN)
@@ -36,6 +38,10 @@ enum u_slave_anim {
 #    define U_ANIM_DEFAULT U_ANIM_MONITOR_STACKED
 #elif defined(OLED_SLAVE_ANIMATION_MONITOR_FUTURE)
 #    define U_ANIM_DEFAULT U_ANIM_MONITOR_FUTURE
+#elif defined(OLED_SLAVE_ANIMATION_BONGO)
+#    define U_ANIM_DEFAULT U_ANIM_BONGO
+#elif defined(OLED_SLAVE_ANIMATION_MARIO)
+#    define U_ANIM_DEFAULT U_ANIM_MARIO
 #else
 #    define U_ANIM_DEFAULT U_ANIM_BJORN
 #endif
@@ -46,12 +52,18 @@ enum u_slave_anim u_anim_get(void);
 void              u_anim_next(void);
 
 // Each animation's own entry points. The dispatcher in oled_slave_select.c picks
-// between them; only Bjorn needs a per-loop task, and the rest are static or
-// drive themselves from the render.
+// between them; Bjorn and the Mario scene keep state on a per-loop task, and the rest
+// are static or drive themselves from the render.
 void u_slave_bjorn_render(void);
 void u_slave_bjorn_task(void);
 void u_slave_spaceship_render(void);
 void u_slave_logo_render(enum u_slave_anim which);
+void u_slave_bongo_render(void);
+void u_slave_mario_render(void);
+void u_slave_mario_task(void);
+// The WPM at 2x in the top right corner, x 90-124 and y 1-25, that both bongo cat and the
+// Mario scene draw.
+void u_slave_wpm_corner(uint8_t wpm);
 
 // --- the master's page ----------------------------------------------------------
 // What the master shows, cycled with the U_PAGE key the way U_ANIM cycles the slave, and
