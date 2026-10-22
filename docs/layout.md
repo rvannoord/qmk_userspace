@@ -438,7 +438,7 @@ the goat later.
 | File | Holds |
 |------|-------|
 | `oled.h` / `oled.c` | the module's interface and its dispatcher. The header holds the slave-animation enum and boot default, `u_anim_get` / `u_anim_next`, the master's page enum in D1's order with `U_PAGES_BUILT`, `u_page_get` / `u_page_next`, the four entry points `oled_render_*` / `oled_*_task` and the pure sleep predicate; the `.c` draws the boot splash and then branches on master or slave, and paints the bootloader screen in `shutdown_user()` on the way into the bootloader. The sleep check itself is in `keymap.c`'s `housekeeping_task_user`, so a stray dirty block can light the panel for one main loop at most |
-| `oled_master_zones.c` | the master panel. Three bands, status bar, 128x40 layer picture and mod row, in raw page bytes composed in the canvas and committed once, never `oled_write`. Also the pages: which one is showing, the dots, the kitty, QMK and Monitor versions of the base band, the Stats stop, and which of the stage 5 pages to draw, with the bands in their place while the link is down. 1x and 2x glyph blitters; the 2x one doubles each source row, so a 16x16 is two page bytes a column |
+| `oled_master_zones.c` | the master panel. Three bands, status bar, 128x40 layer picture and mod row, in raw page bytes composed in the canvas and committed once, never `oled_write`. Also the pages: which one is showing, the dots, the kitty, QMK and Monitor versions of the base band, the Stats stop, which of the stage 5 pages to draw, with the bands in their place while the link is down, and the encoder toast. 1x and 2x glyph blitters; the 2x one doubles each source row, so a 16x16 is two page bytes a column |
 | `oled_draw.c` / `.h` | pixel drawing into the canvas at any row, for the live map and the stage 5 pages: boxes, page-format art, legends (tight ones included), and Ein text at 1x or 2x, lit or cut out |
 | `oled_layer_page.c` / `.h` | the Layer map page, drawn from a layer's keycodes in slot order alone, so the scenario tests draw every Miryoku layer through it. A cell a key, the thumbs' full legends, the held layer key's base legend |
 | `oled_pages.c` / `.h` | the Status sheet and Typing pages, and Typing's 62 samples, one every 300 ms whatever the page |
@@ -928,7 +928,13 @@ freezing. Only the half that resets shows it.
 **Encoder feedback.** Turning the left encoder flashes VOL+ or VOL− in the band for under a second,
 with drashna's speaker icon at 2×. The right encoder shows BRI+ or BRI− with the bulb. A mute key,
 if the left encoder's click ever gets one, shows MUTE. Only the direction is known; the host's
-volume is not.
+volume is not. The box is 90x30 with chamfered corners, the icon and the label cut out of it at 2×,
+in the band at y=13; the OS logo stays whole in its corner. On any other page the same box shows
+centred, at y=17, with a two-pixel dark rim (D11, decided 2026-10-23). It never hides the alarm:
+while the link is down the bands carry the alarm and no box, and it is not drawn over a live map.
+The rim stays two pixels, decided 2026-10-23 over a full-width strip: so the Status sheet with all
+eight mods held and all three locks on lights about 2% more than the alarm frame while the box is
+up, the one known exception to *everything stays under the alarm*.
 
 **Glitch bursts, for the alarms only.** While the link is down, the master breaks up in short
 random bursts (row shifts, noise, a sliced inversion) over its alarm frame. Bjorn does the same

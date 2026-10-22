@@ -197,6 +197,43 @@ void u_page_next(void) {
     dots_at   = timer_read32();
 }
 
+// --- the encoder toast ------------------------------------------------------
+// What an encoder just did, for 800 ms after the last turn: drashna's speaker or bulb at 2x
+// and VOL+, VOL-, BRI+ or BRI-, cut out of a box with chamfered corners. In the band on the
+// bands, centred over any other page with a dark rim (D11). Never over the alarm.
+
+#    define U_TOAST_MS 800
+#    define U_TOAST_W  90
+#    define U_TOAST_H  30
+
+static uint8_t  toast_what;     // bit 1 brightness, bit 0 up
+static uint32_t toast_at;
+static bool     toast_live;
+
+void u_encoder_note(uint8_t index, bool clockwise) {
+    toast_what = (uint8_t)((index ? 2u : 0u) | (clockwise ? 1u : 0u));
+    toast_at   = timer_read32();
+    toast_live = true;
+}
+
+static void draw_toast(int16_t y0, bool rim) {
+    static const char *const labels[4] = {"VOL-", "VOL+", "BRI-", "BRI+"};
+    const int16_t            x0        = (OLED_DISPLAY_WIDTH - U_TOAST_W) / 2;
+    if (rim) u_rect((int16_t)(x0 - 2), (int16_t)(y0 - 2), U_TOAST_W + 4, U_TOAST_H + 4, false);
+    u_rect(x0, y0, U_TOAST_W, U_TOAST_H, true);
+    // Three pixels off each corner, the mod row's chamfer.
+    for (uint8_t c = 0; c < 4; c++) {
+        const int16_t x = c & 1 ? (int16_t)(x0 + U_TOAST_W - 1) : x0, dx = c & 1 ? -1 : 1;
+        const int16_t y = c & 2 ? (int16_t)(y0 + U_TOAST_H - 1) : y0, dy = c & 2 ? -1 : 1;
+        u_put(x, y, false);
+        u_put((int16_t)(x + dx), y, false);
+        u_put(x, (int16_t)(y + dy), false);
+    }
+    const u_legend_t icon = {{(toast_what & 2) ? U_ICON12_BULB : U_ICON12_SPEAKER}, U_LEG_ICON12};
+    u_legend_at(icon, (int16_t)(x0 + 6), (int16_t)(y0 + 7), 2, false);
+    u_text((int16_t)(x0 + 36), (int16_t)(y0 + 7), labels[toast_what], 2, false);
+}
+
 // --- edges, watched every main loop -----------------------------------------
 // The render runs at 20 Hz and only when the screen is awake. Anything that must not
 // be missed is latched here instead.
@@ -394,7 +431,13 @@ static bool render_band(void) {
         fill_or(5, x0, (uint8_t)(x1 - x0 + 1), 0xe0);     // rows 45-47
     }
 
-    if (!u_sync_link_down()) return false;
+    if (!u_sync_link_down()) {
+        if (toast_live) {
+            for (uint8_t q = 0; q < U_BAND_PAGES; q++) fill((uint8_t)(U_BAND_PAGE + q), 0, OLED_DISPLAY_WIDTH, 0x00);
+            draw_toast(13, false);
+        }
+        return false;
+    }
 
     // Three blinks over 600 ms on entry, which no routine change ever does. After that
     // it is steady: a fault that stayed is not news any more, but it is still true.
@@ -673,6 +716,7 @@ void oled_master_task(void) {
     u_typing_task(get_current_wpm());
     u_log_watch(&panel);
     if (dots_live && timer_elapsed32(dots_at) >= U_DOTS_MS) dots_live = false;
+    if (toast_live && timer_elapsed32(toast_at) >= U_TOAST_MS) toast_live = false;
 }
 
 static void render_bands(void) {
@@ -699,13 +743,15 @@ void oled_render_master(void) {
     // The Event log reports the link too. The other pages give way to the bands while the
     // link is down, so the alarm is never hidden (docs/layout.md, "Pages give way to the
     // alarm").
-    const enum u_master_page p = u_page_get();
+    const enum u_master_page p     = u_page_get();
+    bool                     bands = false;
     if (u_stats_page_open() || p == U_PAGE_STATS) {
         render_stats();
     } else if (p == U_PAGE_EVENT_LOG) {
         u_log_draw();
     } else if (u_sync_link_down() || p < U_PAGE_STATUS) {
         render_bands();
+        bands = true;
     } else if (p == U_PAGE_STATUS) {
         u_status_draw(&panel, get_current_wpm(), kitty_frame(u_kitty_striped_moods));
     } else if (p == U_PAGE_LAYER_MAP) {
@@ -713,6 +759,9 @@ void oled_render_master(void) {
     } else {
         u_typing_draw(get_current_wpm());
     }
+    // The bands carry the toast in the band, or the alarm and no toast; any other page has it
+    // centred over it.
+    if (toast_live && !bands) draw_toast((OLED_DISPLAY_HEIGHT - U_TOAST_H) / 2, true);
     render_dots();
     u_canvas_commit();     // the only point that touches the driver's buffer
 }

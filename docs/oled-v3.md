@@ -30,8 +30,8 @@ QMK line numbers refer to `7a1bbf37c5`.
 | 3. PAGE key, page framework, the three bands | **done 2026-10-22**, flashed `657fb8e`, then `70f3bc0` so the page and the animation follow the cable; the checkpoint passed on the board |
 | 4. Live layer map, master screen moves over | **done 2026-10-22**, on the board as `e839e27`; the early check passed on `12b236a`, and the screen moving over was tried on `d267d99` and taken out (D3) |
 | 5. Status sheet, layer map page, Typing, Event log | **built 2026-10-22** in `636ba56`; all 18 of the mock's frames match byte for byte. Not flashed yet: the checkpoint waits for the next flash, with D16 |
-| 6. Bongo cat and the Mario scene on the slave | **built 2026-10-22**, not flashed yet; D13 decided (4 s) |
-| 7. Encoder feedback | open |
+| 6. Bongo cat and the Mario scene on the slave | **built 2026-10-22** in `42f140a`, not flashed yet; D13 decided (4 s) |
+| 7. Encoder feedback | **built 2026-10-23**, not flashed yet; D11 decided (the same box, centred, 2 px rim) |
 | 8. Glitch bursts on link loss | open |
 | 9. Screensaver | open |
 
@@ -83,7 +83,8 @@ Open, with a default, to answer before the stage that needs it:
   8 s and dozes at 75 s, and v2's director owns the slave's idle time. Default: the master rains
   from 60 s, the slave keeps Bjorn's idle show and rains from 100 s, and both go dark at 120 s.
 - D11. **Encoder feedback off the bands (stage 7).** Default: on any page it shows as the same box,
-  centred.
+  centred. **Decided 2026-10-23, the default**, from renders of the box over the Status sheet, the
+  Layer map, Typing and the Event log.
 - D12. **Order against `docs/oled-v2.md`.** Stages 0-7 here touch neither Bjorn's idle show nor the
   director, so they can go before v2's open stages. Stages 8 and 9 touch the slave's idle time and
   should follow v2 stage 4 (the director). Default: v3 0-7, then v2 resumes, then v3 8-9.
@@ -658,6 +659,34 @@ All four draw in Ein and go through the dispatcher from stage 3.
 or bulb icon at 2× with `VOL+`, `VOL−`, `BRI+` or `BRI−` (D11 for pages other than the bands). MUTE
 shows only if a mute key exists; the encoder click stays an open experiment in `docs/layout.md`.
 Measured on the renders at 2,663 px, so it goes through the alarm-ratio test like a page.
+
+**Checkpoint, on the board,** with the cable on either half:
+- Turn the left encoder on the bands: VOL+ or VOL− in the band, the OS logo whole, gone 800 ms
+  after the last turn. The right encoder: BRI+ or BRI−.
+- On the Status sheet, Layer map, Typing, Stats and the Event log: the same box, centred.
+- With the TRRS out on the bands, the alarm and no box. Holding a layer whose map is on the
+  master's half, no box over the map.
+
+**As built, 2026-10-23.**
+- **Where.** `encoder_update_user()` in `keymap.c` calls `u_encoder_note()`, which latches what
+  and when; `oled_master_zones.c` draws it. QMK runs both encoders' callbacks on the master, so the
+  other half's encoder shows there too.
+- **The box,** from the October mock, now in Ein: 90x30 with the mod row's chamfer, the icon and
+  the four-letter label cut out at 2×. The mock's chamfer helper also notched the box's sides
+  halfway down, an artefact of reusing a 16-row helper; the firmware chamfers the corners only.
+  The OS logo stays whole: the band is cleared and the toast drawn before the logo, which the D11
+  render had the other way round.
+- **D11.** Over any other page the same box at y=17 with a two-pixel dark rim. It matches the D11
+  render byte for byte over the Status sheet, Typing and the Event log
+  (`tests/run_unit.sh --raw-pages`).
+- **Never over the alarm,** following *Pages give way to the alarm*: on the bands with the link
+  down there is no box, and the pages that give way show the bands. Stats and the Event log keep
+  it, having no alarm to hide. It is not drawn over a live map.
+- **The alarm ratio.** The busiest Status sheet with the box lights about 2% more than the alarm
+  frame; kept that way on 2026-10-23 over a full-width strip (`docs/layout.md`). Every other page
+  and state stays under.
+- **MUTE** is not built: no mute key exists.
+- **Firmware.** It builds with no warnings at 135,668 bytes of text, 412 more than `42f140a`.
 
 ## Stage 8: glitch bursts on link loss
 

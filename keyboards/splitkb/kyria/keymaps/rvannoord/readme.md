@@ -21,7 +21,7 @@ The design and every tuning decision are in `docs/layout.md`; this file is the m
 | `split_health.c` / `.h` | link health: the stats page (hold SYS two seconds), self-reset of a half whose link stays dead, the hardware watchdog |
 | `oled.h` / `oled.c` | the OLED module's interface and its dispatcher: boot splash, then master or slave; and the bootloader screen, painted on the way into the bootloader |
 | `oled_canvas.c` / `.h` | the frame every renderer draws into, committed to the driver once per frame |
-| `oled_master_zones.c` | the master panel: status bar, a 128x40 layer picture, the mod row; and its pages, turned with PAGE. |
+| `oled_master_zones.c` | the master panel: status bar, a 128x40 layer picture, the mod row; its pages, turned with PAGE; and what an encoder just did. |
 | `oled_map.c` / `.h` | the live layer map: while a thumb layer is held, the panel over its keys shows what they do, in a big grid or shaped like the Kyria |
 | `map_legend.c` / `.h` | what each key's legend is on the map, on Windows and on the Mac, and its one-cell form for the Layer map page |
 | `oled_draw.c` / `.h` | drawing at any row: boxes, art, legends and text, for the map and the pages |

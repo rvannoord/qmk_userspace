@@ -90,6 +90,10 @@ enum u_master_page {
 enum u_master_page u_page_get(void);
 void               u_page_next(void);
 
+// An encoder turned: the master shows what it did for 800 ms (docs/layout.md, "Encoder
+// feedback"). Index 0 is the left encoder, volume; 1 the right one, brightness.
+void u_encoder_note(uint8_t index, bool clockwise);
+
 // --- the two halves -----------------------------------------------------------
 // oled_render_* draw, and run at the panel's update rate - 20 Hz, and not at all
 // while it sleeps. oled_*_task run every main loop on their own half, so they are

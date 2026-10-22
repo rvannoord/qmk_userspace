@@ -442,6 +442,26 @@ static void raw_pages(const char *series) {
     }
     u_log_draw();
     canvas_out();
+
+    // Then D11's renders: the toast centred over the first Status sheet, Typing and the log.
+    u_status_draw(&sheets[0].s, sheets[0].wpm, sheets[0].kitty);
+    toast_what = 1;
+    draw_toast(17, true);
+    canvas_out();
+    u_typing_draw(last);
+    toast_what = 0;
+    draw_toast(17, true);
+    canvas_out();
+    u_log_draw();
+    toast_what = 1;
+    draw_toast(17, true);
+    canvas_out();
+
+    // And the bands with VOL+ through the whole renderer, the OS logo drawn after the band.
+    drive = at_rest;
+    u_encoder_note(0, true);
+    step();
+    fwrite(fake_oled, 1, OLED_MATRIX_SIZE, stdout);
 }
 
 static bool newest_is(const char *what) {
@@ -1325,6 +1345,97 @@ int main(int argc, char **argv) {
         show_page(U_PAGE_EVENT_LOG);
         frame(at_rest, false);
         check("the Event log draws its eight lines", any_lit_in(0, 30, 0, 6) && any_lit_in(0, 30, 56, 62));
+        show_page(U_PAGE_BANDS);
+        frame(at_rest, false);
+    }
+
+    // --- stage 7: the encoder toast ------------------------------------------
+    {
+        show_page(U_PAGE_BANDS);
+        frame(at_rest, false);
+        keep();
+        u_encoder_note(0, true);
+        frame(at_rest, false);
+        check("a turn of the left encoder puts the toast in the band",
+              solid_block(21, 106, 14, 15) && !lit(19, 13) && !lit(20, 13) && !lit(19, 14) && lit(19, 15));
+        check("with nothing else in the band beside it", !any_lit_in(16, 18, 8, 47) && !any_lit_in(109, 127, 8, 47));
+        check("and the OS logo whole in its corner", logo_is(U_OS_LOGO_WINDOWS, false));
+        check("the status bar and the mod row stay", same_in(0, 127, 0, 7) && same_in(0, 127, 48, 63));
+        check("the toast lights less than the alarm frame", count(0, 63) < 4584);
+        check("and costs nothing to redraw", redraw_cost(at_rest, false) == 0);
+        uint8_t vol[OLED_MATRIX_SIZE];
+        memcpy(vol, fake_oled, sizeof vol);
+        u_encoder_note(1, false);
+        frame(at_rest, false);
+        check("the right encoder shows the bulb and BRI- instead", memcmp(vol, fake_oled, sizeof vol) != 0 && solid_block(21, 106, 14, 15));
+        fake_now += U_TOAST_MS;
+        frame(at_rest, false);
+        check("800 ms after the last turn it is gone", same_in(0, 127, 0, 63));
+
+        u_encoder_note(0, false);
+        fake_now += 1000;
+        frame(at_rest, true);
+        u_encoder_note(0, false);
+        frame(at_rest, true);
+        check("with the link down the band carries the alarm, not the toast", row_solid_from(CORNER_X1 + 1, BAND_Y0) && solid_block(16, 127, 13, 15));
+        fake_now += U_TOAST_MS;
+        frame(at_rest, false);
+
+        // Any other page: the same box, centred, with a dark rim.
+        const u_split_state_t busy = {.layers = U_BASE, .fingers = 0xff, .host = U_HOST_MAC,
+                                      .flags = U_FLAG_CAPS_LOCK | U_FLAG_SCROLL_LOCK | U_FLAG_CAPS_WORD |
+                                               U_FLAG_IS_MAC | U_FLAG_OS_MANUAL};
+        static const enum u_master_page over[] = {U_PAGE_STATUS, U_PAGE_LAYER_MAP, U_PAGE_TYPING, U_PAGE_STATS, U_PAGE_EVENT_LOG};
+        bool centred = true, rimmed = true, dim = true, free = true;
+        int  status_busy = 0;
+        for (uint8_t i = 0; i < sizeof over / sizeof over[0]; i++) {
+            show_page(over[i]);
+            u_encoder_note(0, true);
+            frame(busy, false);
+            centred = centred && solid_block(21, 106, 18, 19) && !lit(19, 17) && lit(19, 19);
+            rimmed  = rimmed && !any_lit_in(17, 18, 15, 48) && !any_lit_in(109, 110, 15, 48);
+            // The one exception, decided 2026-10-23: the Status sheet with every finger held and
+            // every lock on goes about 2% over for the 800 ms the toast is up.
+            if (over[i] == U_PAGE_STATUS) {
+                status_busy = count(0, 63);
+            } else {
+                dim = dim && count(0, 63) < 4584;
+            }
+            free    = free && redraw_cost(busy, false) == 0;
+            fake_now += U_TOAST_MS;
+            frame(at_rest, false);
+        }
+        check("over every other page the toast is centred at y 17", centred);
+        check("with a dark rim round it", rimmed);
+        check("lighting less than the alarm frame on the busiest state", dim);
+        check("except the busiest Status sheet, within 3% of it", status_busy < 4584 * 103 / 100);
+        show_page(U_PAGE_STATUS);
+        u_encoder_note(0, true);
+        frame(on_nav, false);
+        check("which at an ordinary moment is under it too", count(0, 63) < 4584);
+        fake_now += U_TOAST_MS;
+        frame(at_rest, false);
+        check("and costing nothing to redraw", free);
+
+        show_page(U_PAGE_EVENT_LOG);
+        u_encoder_note(0, true);
+        fake_now += 1000;
+        frame(at_rest, true);
+        u_encoder_note(0, true);
+        frame(at_rest, true);
+        check("with the link down the Event log still shows it, having no alarm to hide", solid_block(21, 106, 18, 19));
+        fake_now += U_TOAST_MS;
+        frame(at_rest, false);
+
+        // Never over a live map.
+        show_page(U_PAGE_STATUS);
+        const u_split_state_t sym = {.layers = U_SYM};
+        frame(sym, false);
+        keep();
+        u_encoder_note(0, true);
+        frame(sym, false);
+        check("and never over a live map", same_in(0, 127, 0, 63));
+        fake_now += U_TOAST_MS;
         show_page(U_PAGE_BANDS);
         frame(at_rest, false);
     }

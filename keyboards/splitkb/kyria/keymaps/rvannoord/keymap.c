@@ -79,6 +79,9 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
 #ifdef ENCODER_ENABLE
 bool encoder_update_user(uint8_t index, bool clockwise) {
 
+#    ifdef OLED_ENABLE
+    u_encoder_note(index, clockwise);
+#    endif
     if (index == 0) {
         // Volume control
         if (clockwise) {
