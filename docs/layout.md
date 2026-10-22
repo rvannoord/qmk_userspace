@@ -24,8 +24,8 @@ The source of truth for my layout. A change goes here first, then into the firmw
 | Key | Where | Does |
 |-----|-------|------|
 | SYS (`U_SYS`) | left half, outer pinky column, top row | flips between the Mac and the detected non-Mac host (Windows, or Linux on a Linux machine) by hand when detection guesses wrong; the left OLED shows the result. Held two seconds, the stats page. Held while plugging in, it enters the bootloader (Bootmagic) |
-| ANIM (`U_ANIM`) | right half, outer pinky column, top row, mirroring SYS | cycles the other half's animation: Bjorn, spaceship, Kyria logo, Monitor 1, Monitor 2. Persisted across a replug. See *Switching the slave's animation* |
-| PAGE (`U_PAGE`) | left half, outer pinky column, middle row, under SYS (decided 2026-10-22: free on every layer, and the pinky reaches it while a thumb holds a layer) | cycles the master's pages, on release like SYS and ANIM. While a layer map is showing it switches the map between the big grid and the Kyria-shaped one instead. Persisted across a replug. See *The drashna round* under OLED; build order in `docs/oled-v3.md` |
+| ANIM (`U_ANIM`) | right half, outer pinky column, top row, mirroring SYS | cycles the other half's animation: Bjorn, spaceship, Kyria logo, Monitor 1, Monitor 2. Persisted on both halves, so it follows the cable. See *Switching the slave's animation* |
+| PAGE (`U_PAGE`) | left half, outer pinky column, middle row, under SYS (decided 2026-10-22: free on every layer, and the pinky reaches it while a thumb holds a layer) | cycles the master's pages, on release like SYS and ANIM. While a layer map is showing it switches the map between the big grid and the Kyria-shaped one instead. Persisted on both halves, so it follows the cable. See *The drashna round* under OLED; build order in `docs/oled-v3.md` |
 
 ## Home-row mods
 
@@ -311,17 +311,19 @@ on, and one side of that comparison is misleading on its own.
 
 ### Split sync
 
-One custom 7-byte RPC, master to slave, on change plus a 250 ms heartbeat and a 20 ms minimum
-interval. Seven bytes rather than a packed four because the wire cost is 13 bytes of fixed overhead
+One custom 8-byte RPC, master to slave, on change plus a 250 ms heartbeat and a 20 ms minimum
+interval. Eight bytes rather than a packed four because the wire cost is 13 bytes of fixed overhead
 against 43 us per payload byte — width is about 3% of a send, so the bytes go on clarity
 rather than packing. The seventh, `host`, came on 2026-10-21 with the Linux and iOS logos: the
 flags byte had no bit left. `U_FLAG_IS_MAC` stays in flags, because the mod row's order follows
-it and iOS counts as a Mac there. Widening a payload adds no transaction, so the handshake
+it and iOS counts as a Mac there. The eighth, `view`, came on 2026-10-22: the master's page and
+map style as it stores them, so the other half can store the same (*Switching the slave's
+animation*). Widening a payload adds no transaction, so the handshake
 constant is unchanged. Not `SPLIT_LAYER_STATE_ENABLE` / `SPLIT_MODS_ENABLE` / `SPLIT_LED_STATE_ENABLE`: those
 re-send every 100 ms whether or not anything changed, and they cannot carry Caps Word (QMK has no
 sync for it) or the host OS (`SPLIT_DETECTED_OS_ENABLE` ignores the SYS override). Layout: layer,
 finger-ordered mods, locks, flags, the `world` byte (the chosen animation, with spare bits for
-weather and time of day), the `host` byte (Windows, Mac, iOS or Linux), and a sequence counter
+weather and time of day), the `host` byte (Windows, Mac, iOS or Linux), the `view` byte, and a sequence counter
 the slave uses as its staleness clock.
 The slave's callback may only `memcpy` into a volatile struct — it runs in a HIGHPRIO thread
 holding the shared-memory lock, and blocking there costs up to 200 ms of frozen scanning.
@@ -442,10 +444,10 @@ the goat later.
 | `art/panel_layer_icons.c` | generated. The ten 128x40 layer bands, reduced from splitkb's Halcyon icons and the Kyria logo; see `VENDORED.md` |
 | `oled_slave_bjorn.c` | the mascot: idle ladder, ambient clocks, blitter; his speed tiers come from `speed_tier.h` |
 | `speed_tier.h` | WPM as four tiers with hysteresis and an 800 ms dwell, shared by Bjorn and the master's kitty so both read speed the same way. Each keeps its own state |
-| `oled_settings.c` / `.h` | the one tagged word of user EEPROM: byte 0 the slave's animation, byte 1 the master's page (bits 0-3) and map style (bit 4). Read-modify-write, so neither key's press resets the other's byte |
+| `oled_settings.c` / `.h` | the one tagged word of user EEPROM: byte 0 the slave's animation, byte 1 the master's page (bits 0-3) and map style (bit 4). Read-modify-write, so neither key's press resets the other's byte. `u_settings_follow` is the other half's side: it saves what the master sent, in one write, only when something differs |
 | `oled_slave_world.c` | the weather behind Bjorn, across the whole panel, season from `__DATE__` until a host daemon supplies it |
-| `oled_slave_select.c` | which slave animation is live: `oled_settings.c` on the master, the `world` byte of the sync on the slave |
-| `split_state.c` / `.h` | the 7-byte payload the master gathers: modifiers in finger order, the active and default layers, locks and Caps Word, the host and whether it is a Mac, a misfire count, and the chosen animation. Built fresh every main loop; a modifier it reports is one that is held at that instant |
+| `oled_slave_select.c` | which slave animation is live: `oled_settings.c` on the master, the `world` byte of the sync on the slave, which also saves what the master sent once a fresh state has arrived |
+| `split_state.c` / `.h` | the 8-byte payload the master gathers: modifiers in finger order, the active and default layers, locks and Caps Word, the host and whether it is a Mac, a misfire count, the chosen animation, and the stored page and map style. Built fresh every main loop; a modifier it reports is one that is held at that instant |
 | `split_sync.c` / `.h` | the transport for that payload. Double-buffered on the slave because the callback runs on a HIGHPRIO thread; heartbeat 250 ms, minimum interval 20 ms, soft stale 600 ms, hard stale 1250 ms. `u_sync_link_down()` answers for both halves — the master from its own failed sends, the slave from the sequence number standing still |
 | `split_health.c` / `.h` | link health: the stats page behind a long SYS press, self-reset of a half whose link stays dead, the hardware watchdog. Every guard is explained in the header |
 | `oled_slave_spaceship.c` | the ship, JBaguley's and byte-identical, over three parallax planes of my own; speed from WPM |
@@ -646,9 +648,23 @@ XORed into every handshake — change it and a mismatched pair stops typing enti
 bits of `world` are deliberately spare, because the weather and time-of-day a host daemon
 would send belong in the same byte.
 
-**It is persisted, and only the master persists it.** A setting you re-make every morning is
-not a setting. The slave has no opinion and takes what it is told, so the two halves cannot
-disagree after a replug. The stored word carries a tag, because `eeconfig_read_user()` returns
+**It is persisted on both halves, and the master's copy wins.** A setting you re-make every
+morning is not a setting, and neither is one that changes when the cable moves to the other half.
+So both halves keep it (decided 2026-10-22, with the master's page, after the replug check showed
+each half bringing back its own):
+- The master saves what you pick, as before.
+- The other half saves what the master sends: the animation from `world`, and the page and map
+  style from a `view` byte that carries the master's stored byte as it is. Whichever half gets
+  the cable next shows the same animation and page.
+- It writes only when a fresh state from the master differs from what it holds. Nothing is saved
+  before the first state since boot arrives, and nothing from a stale one, because a zeroed or
+  frozen state would read as the first animation and the first page.
+- So it writes on the same presses the master does, and once when two halves that disagree are
+  joined. Then the half with the cable wins.
+- A change made while the halves are apart stays with the half that had the cable, until they
+  are joined again.
+
+The stored word carries a tag, because `eeconfig_read_user()` returns
 zero on a fresh or cleared EEPROM and zero is a legitimate animation index — an untagged word
 means "never set" rather than "the first one".
 

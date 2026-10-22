@@ -8,9 +8,9 @@
 // its own - see split_state.h for why widening the payload is safe where adding
 // a transaction would not be.
 //
-// **A setting you re-make every morning is not a setting**, so it is persisted.
-// Only the master persists it: the slave has no opinion and takes what it is
-// told, which also means the two halves cannot disagree after a replug.
+// **A setting you re-make every morning is not a setting**, so it is persisted,
+// and on both halves: the slave saves what the master sends, so the animation and
+// the page follow the cable. The master's copy wins when the two disagree.
 
 #include QMK_KEYBOARD_H
 #include "oled.h"
@@ -65,6 +65,13 @@ void oled_render_slave(void) {
 }
 
 void oled_slave_task(void) {
+    // Only from a fresh state: before the first one arrives the slots are zeros, and a
+    // stale one may be a master that has gone. Either would overwrite a real choice.
+    if (u_sync_fresh()) {
+        const u_split_state_t s = u_sync_state();
+        u_settings_follow(U_WORLD_ANIM(s.world), s.view);
+    }
+
     // Only Bjorn keeps state between frames. Running his task while another
     // animation is showing would let his idle clocks advance unseen, so he would
     // come back mid-doze; letting it run only while he is drawn means he always

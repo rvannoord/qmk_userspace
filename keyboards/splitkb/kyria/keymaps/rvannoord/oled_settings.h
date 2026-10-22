@@ -2,8 +2,9 @@
 // the slave's animation and the master's page. Kept apart from both so neither can
 // write the word without the other's byte, and so the tests can replug it.
 //
-// Each half has its own EEPROM and only the master writes, so what you get after a
-// replug is what was last set with the cable in that same half.
+// Each half has its own EEPROM. The master writes what you pick, and the other half
+// writes what the master sends (u_settings_follow), so the settings follow the cable to
+// whichever half has it next. See docs/layout.md, "Switching the slave's animation".
 
 #pragma once
 
@@ -18,3 +19,7 @@ enum u_setting {
 
 uint8_t u_setting_get(enum u_setting which);
 void    u_setting_set(enum u_setting which, uint8_t value);
+
+// On the slave, with what a fresh state from the master carried. One write, and only when
+// something differs.
+void u_settings_follow(uint8_t anim, uint8_t view);

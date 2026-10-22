@@ -4,6 +4,7 @@
 #include "split_state.h"
 #include "host_os.h"
 #include "oled.h"
+#include "oled_settings.h"
 
 #define U_ANOMALY_MS 500         // a hold this long with nothing typed is a misfire
 #define U_HOLDS       4          // deepest chord worth tracking
@@ -171,5 +172,7 @@ u_split_state_t u_sync_build(void) {
         // The slave cannot see keypresses, so the chosen animation crosses here.
         .world   = (uint8_t)u_anim_get(),
         .host    = (uint8_t)host_kind(),
+        // As stored, not as shown, so the other half stores exactly what this one does.
+        .view    = u_setting_get(U_SETTING_VIEW),
     };
 }

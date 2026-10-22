@@ -27,6 +27,7 @@ static bool     primed;
 
 static uint32_t last_seen_at;          // when the sequence number last changed
 static uint8_t  last_seen_seq;
+static bool     heard;                 // the sequence number has changed since boot
 
 static void u_sync_slave_cb(uint8_t m2s_size, const void *m2s, uint8_t s2m_size, void *s2m) {
     // Length first, always. It arrives off the wire protected only by a CRC8 over three
@@ -60,7 +61,8 @@ u_split_state_t u_sync_state(void) {
                              .flags   = slots[i].flags,
                              .anomaly = slots[i].anomaly,
                              .world   = slots[i].world,
-                             .host    = slots[i].host};
+                             .host    = slots[i].host,
+                             .view    = slots[i].view};
 }
 
 uint32_t u_sync_age_ms(void) {
@@ -73,6 +75,10 @@ bool u_sync_soft_stale(void) {
 
 bool u_sync_hard_stale(void) {
     return u_sync_age_ms() >= U_SYNC_HARD_MS;
+}
+
+bool u_sync_fresh(void) {
+    return heard && !u_sync_soft_stale();
 }
 
 // Asked by both panels, and it means the same thing on each: this half has not heard
@@ -121,6 +127,7 @@ static void u_sync_slave_task(void) {
     if (seq != last_seen_seq) {
         last_seen_seq = seq;
         last_seen_at  = timer_read32();
+        heard         = true;
     }
 }
 
@@ -140,6 +147,7 @@ u_split_state_t u_sync_state(void) { return u_sync_build(); }
 uint32_t        u_sync_age_ms(void) { return 0; }
 bool            u_sync_soft_stale(void) { return false; }
 bool            u_sync_hard_stale(void) { return false; }
+bool            u_sync_fresh(void) { return false; }
 bool            u_sync_link_down(void) { return false; }
 
 #endif

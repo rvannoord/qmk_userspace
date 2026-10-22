@@ -57,6 +57,7 @@ TEST_F(SplitState, SlotsDoNotMoveWithTheOs) {
     EXPECT_NE(mac.flags & U_FLAG_OS_MANUAL, 0);     // and it was set by hand, not detected
     EXPECT_EQ(win.host, U_HOST_WINDOWS);            // the logo crosses as its own byte
     EXPECT_EQ(mac.host, U_HOST_MAC);
+    EXPECT_EQ(win.view, 0x13);                      // and the stored page byte as it is
 
     release(a, 350);
 }

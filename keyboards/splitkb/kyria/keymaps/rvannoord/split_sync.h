@@ -25,6 +25,11 @@ uint32_t        u_sync_age_ms(void);
 bool u_sync_soft_stale(void);
 bool u_sync_hard_stale(void);
 
+// Slave side: a state has arrived since boot and the latest is not soft stale, so what it
+// says can be acted on, not only drawn. Before the first one the slots are zeros, which
+// read as real values.
+bool u_sync_fresh(void);
+
 // Either half: the other one has gone quiet for U_SYNC_HARD_MS. The master knows it
 // from its own failed sends, the slave from the sequence number standing still.
 bool u_sync_link_down(void);

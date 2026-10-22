@@ -15,6 +15,7 @@ while the reason for it is still obvious.
 
 | Build | Commit | Flashed | Notes |
 |-------|--------|---------|-------|
+| `2026-10-22-657fb8e.uf2` | `657fb8e` | 2026-10-22 | Both halves, loaded and verified with `picotool load -v`, built from a clean tree (label `657fb8`, no `-dirty`). Stage 3: the PAGE key, five master pages, the dots, both kitties. Each half was identified before loading by reading the start of its flash: both were `fd28d30`. Left first, then right |
 | `2026-10-22-fd28d30.uf2` | `fd28d30` | 2026-10-22 | Both halves, loaded and verified with `picotool load -v`, built from a clean tree (label `fd28d3`). Stage 2: the bootloader screen. The left half went first; the right half's load caught it in the bootloader still on `0130b8b`. The checkpoint then put each half into the bootloader through Boot, and each was loaded again and verified |
 | `2026-10-22-0130b8b.uf2` | `0130b8b` | 2026-10-22 | Both halves, loaded and verified with `picotool load -v`, built from a clean tree (label `0130b8`). Caps Word lights drashna's Caps Lock glyph; two lock slots. No full read-back, because the board had run `f639c97` since the night before; the right half was identified before loading by reading the start of its flash |
 | `2026-10-21-f639c97.uf2` | `f639c97` | 2026-10-21 | Both halves, loaded and verified with `picotool load -v`, built from a clean tree (label `f639c9`, no `-dirty`). Stage 1 of `docs/oled-v3.md`: Ein, drashna's icons and locks, the host logos with the iOS "i", the 7-byte payload. Read-backs of both halves taken first, `readback-{left,right}-2026-10-21.uf2`: both were `27a1e24`, matching the table |
@@ -96,6 +97,9 @@ that was not flashed simply stops typing.
 | The animation survived the flash | After flashing, the slave shows the animation it showed before | The animation's byte moved into `oled_settings.c` under the same tag, so the stored choice should carry over | `v3-3` |
 | Only the base band changes | On each bands page, hold Nav, then Sym: the same pictures as on the plain bands. Unplug the TRRS: the alarm fills the base band whichever page | The kitties and the logo replace only the base layer's band, and are drawn before the alarm | `v3-3` |
 | Stats as a page | On Stats, type: it stays, where the SYS page closes. Holding SYS on another page still opens the SYS page, and a key closes it | The page calls the same drawing, without the overlay's closing rules. Neither shows the link alarm | `v3-3` |
+| The page and animation follow the cable | With the cable in the left half, pick a page and an animation you don't normally use. Unplug, put the cable in the right half: the same page and animation. Then pick others there and move back | The other half now saves what the master sends, so whichever half has the cable shows the last choice. The first time after this flash, the half that gets the cable first wins | `follow` |
+| The other half keeps its choice at boot | Plug in and watch the slave for the first second: it shows the animation you chose, never Bjorn by default first | It saves only from a fresh state. The guard that stops it saving the zeros it holds before the first state arrives is the one line no host test compiles | `follow` |
+| Both halves still talk | Any key on the half without the cable, and no link alarm | The payload grew from seven bytes to eight. A half left on the old build drops every state as the wrong size, which shows as the link alarm | `follow` |
 
 ### Only one season can be seen at a time
 

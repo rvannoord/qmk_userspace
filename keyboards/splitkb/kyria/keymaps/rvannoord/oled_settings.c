@@ -36,3 +36,13 @@ void u_setting_set(enum u_setting which, uint8_t value) {
     ee_word = (ee_word & ~(0xffu << shift)) | ((uint32_t)value << shift);
     eeconfig_update_user(ee_word);
 }
+
+// Called every main loop on the slave, so the comparison is the whole cost there; the
+// write happens on a press of ANIM or PAGE, or once when two halves that disagree meet.
+void u_settings_follow(uint8_t anim, uint8_t view) {
+    ee_load();
+    const uint32_t want = U_SETTINGS_TAG | ((uint32_t)view << 8) | anim;
+    if ((ee_word & 0xffffu) == (want & 0xffffu)) return;
+    ee_word = want;
+    eeconfig_update_user(ee_word);
+}

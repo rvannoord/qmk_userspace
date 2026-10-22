@@ -41,8 +41,9 @@ void            u_sync_task(void) {}
 // The pages' EEPROM word and the kitty's typing speed, both the test's to set.
 static uint32_t fake_ee;
 static uint8_t  fake_wpm;
+static int      ee_writes;
 uint32_t        eeconfig_read_user(void) { return fake_ee; }
-void            eeconfig_update_user(uint32_t val) { fake_ee = val; }
+void            eeconfig_update_user(uint32_t val) { fake_ee = val; ee_writes++; }
 uint8_t         get_current_wpm(void) { return fake_wpm; }
 static bool     is_keyboard_master(void) { return fake_is_master; }
 
@@ -779,6 +780,39 @@ int main(int argc, char **argv) {
         u_page_next();
         fake_is_master = true;
         check("the slave never turns the page", u_page_get() == U_PAGE_BANDS_KITTY);
+
+        // The other half keeps what the master sends, so the next half to get the cable
+        // shows the same. One write when something differs, none when nothing does.
+        {
+            const uint32_t keep_ee = fake_ee;
+            fake_ee = U_SETTINGS_TAG | ((uint32_t)U_PAGE_BANDS_QMK << 8) | U_ANIM_SPACESHIP;
+            replug();
+            ee_writes = 0;
+            u_settings_follow(U_ANIM_KYRIA, U_PAGE_STATS);
+            check("the other half saves what the master sent, in one write",
+                  ee_writes == 1 && fake_ee == (U_SETTINGS_TAG | ((uint32_t)U_PAGE_STATS << 8) | U_ANIM_KYRIA));
+            u_settings_follow(U_ANIM_KYRIA, U_PAGE_STATS);
+            u_settings_follow(U_ANIM_KYRIA, U_PAGE_STATS);
+            check("and writes nothing while it already holds it", ee_writes == 1);
+            u_settings_follow(U_ANIM_KYRIA, 0x10 | U_PAGE_STATS);
+            check("the map style's bit is kept with the page", ee_writes == 2 && ((fake_ee >> 8) & 0xff) == (0x10 | U_PAGE_STATS));
+            replug();
+            check("so that half, given the cable, shows the master's page",
+                  u_page_get() == U_PAGE_STATS && u_setting_get(U_SETTING_ANIM) == U_ANIM_KYRIA);
+
+            // A fresh EEPROM, joined to a master that sends the defaults: nothing to save.
+            fake_ee = 0;
+            replug();
+            ee_writes = 0;
+            u_settings_follow(U_ANIM_DEFAULT, 0);
+            check("defaults onto a fresh EEPROM write nothing", ee_writes == 0);
+            u_settings_follow(U_ANIM_DEFAULT, U_PAGE_BANDS_KITTY);
+            check("and a real choice is written with the tag", ee_writes == 1
+                  && fake_ee == (U_SETTINGS_TAG | ((uint32_t)U_PAGE_BANDS_KITTY << 8) | U_ANIM_DEFAULT));
+
+            fake_ee = keep_ee;
+            replug();
+        }
 
         // The dots: five pages, so x 41-85, the small kitty's the second and larger.
         frame(at_rest, false);

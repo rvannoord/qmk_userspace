@@ -27,7 +27,7 @@ QMK line numbers refer to `7a1bbf37c5`.
 | 0. Sources, licence, generators | done 2026-10-21 |
 | 1. Bands: Ein, modifier icons, OS logo | **done 2026-10-21**, flashed `f639c97`; the checkpoint passed on the board. Linux logo, the iOS "i" (D14) and drashna's locks added the same day |
 | 2. Bootloader screen | **done 2026-10-22**, flashed `fd28d30`; the checkpoint passed on both halves |
-| 3. PAGE key, page framework, the three bands | **built 2026-10-22**, not yet flashed; its board checkpoint is open |
+| 3. PAGE key, page framework, the three bands | **built 2026-10-22**, flashed `657fb8e`; its board checkpoint is open |
 | 4. Live layer map, master screen moves over | open |
 | 5. Status sheet, layer map page, Typing, Event log | open |
 | 6. Bongo cat and the Mario scene on the slave | open |
@@ -337,8 +337,19 @@ replug.
   says which pages exist, and PAGE skips the rest: for now the cycle is Bands, small kitty, striped
   kitty, QMK, Stats. A stored page this build hasn't got reads as the bands. Byte 1 holds the page
   in bits 0-3, since D1 grew to nine pages, and PAGE never touches bit 4, the map style's.
-- **Each half keeps its own EEPROM.** After a replug you get the page that was set with the cable
-  in that same half, the same as the animation already worked.
+- **Both halves keep it**, since 2026-10-22, after the replug check. The page came back on a
+  replug into the same half, but the other half brought back its own, the same as the animation
+  always had.
+  - The payload grew to eight bytes. Its `view` byte carries the master's stored byte 1.
+  - The other half saves that and the animation through `u_settings_follow()`, once a fresh state
+    has arrived and only when something differs.
+  - The design is in `docs/layout.md`, *Switching the slave's animation*.
+  - Tests: the new `test_sync_slave.c` checks, from boot, that nothing is fresh before a state
+    arrives, even inside the first 600 ms. `test_panel.c` checks the save: one write when
+    something differs, none when nothing does, the map-style bit kept, and the page showing after
+    a replug. The scenarios check that `view` carries the stored byte. Five breakages each failed
+    them. The one line in `oled_slave_select.c` that saves only from a fresh state isn't compiled
+    by any host test, so the board checks it.
 - **The kitties.** Each clears x 0-57 of the base band and sits at (18,12), with the wordmark
   kept. One renderer draws both, given the art and its mood table.
   - The striped one has three paw frames of her own, so her four tiers all look different.
@@ -377,9 +388,8 @@ replug.
   include the new pages.
 - **Lit pixels**, the most over the busy states and three speeds: Bands 2,935, small kitty 2,392,
   striped kitty 2,486, QMK 2,651, Stats 994. The alarm frame lights 4,584.
-- **Firmware.** It builds with no warnings at 117,476 bytes of text on the working tree, 3,936 more
+- **Firmware.** It builds with no warnings at 117,468 bytes of text from a clean tree, 3,928 more
   than stage 2. Most of that is the kitties' frames: ten small and thirteen striped, 2,944 bytes.
-  The clean build's number goes in with the flash record.
 
 ## Stage 4: the live layer map, and the master screen moving over
 
@@ -432,8 +442,8 @@ inverted box, never the whole cell.
 **Style.**
 - PAGE switches the style instead of the page whenever a map is showing.
 - Persisted in byte 1 bit 4.
-- Sent to the slave as `world` bit 3: `U_WORLD_MAP_SHAPED 0x08` in `split_state.h`. Rewrite the
-  spare-bits comment there: bits 4-7 are left for the daemon.
+- It already crosses to the slave in `view` bit 4, the stored byte 1 sent since 2026-10-22, so
+  `world` keeps bits 3-7 for the daemon.
 
 **Master screen moves over.** While the map covers the master's panel and not the slave's, the
 slave draws the bands page from `u_sync_state()` instead of Bjorn. That page reads only what the

@@ -3,7 +3,7 @@
 # transport's master half, which only exists under SPLIT_KEYBOARD, and the panel's
 # drawing, which needs a buffer to draw into. No QMK tree and no toolchain beyond cc.
 #
-#   tests/run_unit.sh            build and run all five
+#   tests/run_unit.sh            build and run all six
 #   tests/run_unit.sh --dump     print the panel's frames instead of checking them
 set -euo pipefail
 
@@ -27,6 +27,10 @@ cc "${cc_flags[@]}" -o "$out/panel" \
 
 cc "${cc_flags[@]}" -DOLED_SLAVE_ANIMATION_BJORN -o "$out/bjorn" \
    "$here/unit/test_bjorn.c" "$keymap/art/bjorn_art.c" "$keymap/art/bjorn_poses.c" "$keymap/oled_canvas.c"
+
+# The other half's side of the transport, from boot.
+cc "${cc_flags[@]}" -Wno-unused-parameter -o "$out/sync_slave" \
+   "$here/unit/test_sync_slave.c" "$keymap/split_sync.c" "$keymap/split_health.c"
 
 # The bootloader screen, from oled.c itself.
 cc "${cc_flags[@]}" -o "$out/boot" \
@@ -53,6 +57,8 @@ done
 if [ $art_ok = 1 ]; then echo "art: all good"; else echo "art: FAILED"; fails=1; fi
 echo
 "$out/split_sync" || fails=1
+echo
+"$out/sync_slave" || fails=1
 echo
 "$out/panel" || fails=1
 echo
