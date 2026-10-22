@@ -27,7 +27,7 @@ QMK line numbers refer to `7a1bbf37c5`.
 | 0. Sources, licence, generators | done 2026-10-21 |
 | 1. Bands: Ein, modifier icons, OS logo | **done 2026-10-21**, flashed `f639c97`; the checkpoint passed on the board. Linux logo, the iOS "i" (D14) and drashna's locks added the same day |
 | 2. Bootloader screen | **done 2026-10-22**, flashed `fd28d30`; the checkpoint passed on both halves |
-| 3. PAGE key, page framework, the three bands | **built 2026-10-22**, flashed `657fb8e`; its board checkpoint is open |
+| 3. PAGE key, page framework, the three bands | **done 2026-10-22**, flashed `657fb8e`, then `70f3bc0` so the page and the animation follow the cable; the checkpoint passed on the board |
 | 4. Live layer map, master screen moves over | open |
 | 5. Status sheet, layer map page, Typing, Event log | open |
 | 6. Bongo cat and the Mario scene on the slave | open |

@@ -15,6 +15,7 @@ while the reason for it is still obvious.
 
 | Build | Commit | Flashed | Notes |
 |-------|--------|---------|-------|
+| `2026-10-22-70f3bc0.uf2` | `70f3bc0` | 2026-10-22 | Both halves, loaded and verified with `picotool load -v`, built from a clean tree (label `70f3bc`, no `-dirty`, 117,580 bytes of text). The page and the animation follow the cable; the payload is eight bytes. Each half read as `657fb8e` before loading |
 | `2026-10-22-657fb8e.uf2` | `657fb8e` | 2026-10-22 | Both halves, loaded and verified with `picotool load -v`, built from a clean tree (label `657fb8`, no `-dirty`). Stage 3: the PAGE key, five master pages, the dots, both kitties. Each half was identified before loading by reading the start of its flash: both were `fd28d30`. Left first, then right |
 | `2026-10-22-fd28d30.uf2` | `fd28d30` | 2026-10-22 | Both halves, loaded and verified with `picotool load -v`, built from a clean tree (label `fd28d3`). Stage 2: the bootloader screen. The left half went first; the right half's load caught it in the bootloader still on `0130b8b`. The checkpoint then put each half into the bootloader through Boot, and each was loaded again and verified |
 | `2026-10-22-0130b8b.uf2` | `0130b8b` | 2026-10-22 | Both halves, loaded and verified with `picotool load -v`, built from a clean tree (label `0130b8`). Caps Word lights drashna's Caps Lock glyph; two lock slots. No full read-back, because the board had run `f639c97` since the night before; the right half was identified before loading by reading the start of its flash |
@@ -91,15 +92,6 @@ that was not flashed simply stops typing.
 | Linux shows Tux | Plug into a Linux machine, if one is at hand | QMK reports Linux, and the logo follows the new host byte. Behaviour stays Windows-like | `v3-1` |
 | SYS on Linux flips Linux and Mac | On that Linux machine, tap SYS twice | It should go to the Apple logo with a line under it, then back to Tux with the line, not to Windows | `v3-1` |
 | The other half still types | Any key on the non-USB half | The payload grew from six bytes to seven. The handshake is unchanged, but a half on the old build would drop every state as the wrong size | `v3-1` |
-| PAGE turns five pages | Tap PAGE (left outer column, middle row, under SYS) five times: the bands, the small kitty, the striped kitty, the QMK logo, Stats, then the bands again. Each tap shows five dots for a moment in the middle of the status bar, the current one larger | The key, the cycle and the dots are new. The pages are drawn only by the master, so nothing crosses the link for them | `v3-3` |
-| Both kitties read speed | On either kitty's page, sit still: she sleeps. Type steadily: from about 30 WPM she watches, from about 50 she bounces, faster frames. The striped one paws from about 10; the small one still looks asleep there | Bjorn's tiers, shared code now. The small kitty's paw frames are her sleep frames (D9) | `v3-3` |
-| A replug keeps the page | Leave it on the QMK logo, unplug, and plug the cable back into **the same half**, without holding SYS. It comes back on the QMK logo, and the slave keeps its animation | Each half keeps its own EEPROM, so the other half would show its own page. Holding SYS at plug-in is Bootmagic, which clears the EEPROM | `v3-3` |
-| The animation survived the flash | After flashing, the slave shows the animation it showed before | The animation's byte moved into `oled_settings.c` under the same tag, so the stored choice should carry over | `v3-3` |
-| Only the base band changes | On each bands page, hold Nav, then Sym: the same pictures as on the plain bands. Unplug the TRRS: the alarm fills the base band whichever page | The kitties and the logo replace only the base layer's band, and are drawn before the alarm | `v3-3` |
-| Stats as a page | On Stats, type: it stays, where the SYS page closes. Holding SYS on another page still opens the SYS page, and a key closes it | The page calls the same drawing, without the overlay's closing rules. Neither shows the link alarm | `v3-3` |
-| The page and animation follow the cable | With the cable in the left half, pick a page and an animation you don't normally use. Unplug, put the cable in the right half: the same page and animation. Then pick others there and move back | The other half now saves what the master sends, so whichever half has the cable shows the last choice. The first time after this flash, the half that gets the cable first wins | `follow` |
-| The other half keeps its choice at boot | Plug in and watch the slave for the first second: it shows the animation you chose, never Bjorn by default first | It saves only from a fresh state. The guard that stops it saving the zeros it holds before the first state arrives is the one line no host test compiles | `follow` |
-| Both halves still talk | Any key on the half without the cable, and no link alarm | The payload grew from seven bytes to eight. A half left on the old build drops every state as the wrong size, which shows as the link alarm | `follow` |
 
 ### Only one season can be seen at a time
 
@@ -115,6 +107,15 @@ than supplying weather: a forced state is also how these get tested.
 
 | Check | Verdict | Date | From |
 |-------|---------|------|------|
+| PAGE turns five pages, with the dots (stage 3's checkpoint) | Passed. The bands, the small kitty, the striped kitty, the QMK logo and Stats, then back to the bands, with five dots after each press | 2026-10-22 | `657fb8e` |
+| Both kitties read speed | Passed, both on Bjorn's tiers | 2026-10-22 | `657fb8e` |
+| A replug keeps the page | Passed into the same half. The other half brought back its own page at first, which is what `70f3bc0` changed | 2026-10-22 | `657fb8e` |
+| The animation survived the flash | Passed: the stored animation carried over under the same tag | 2026-10-22 | `657fb8e` |
+| Only the base band changes | Passed: other layers and the alarm look the same on every bands page | 2026-10-22 | `657fb8e` |
+| Stats as a page | Passed: it stays up while typing, and holding SYS still opens the SYS page from any page | 2026-10-22 | `657fb8e` |
+| The page and animation follow the cable | Passed: moving the cable to the other half shows the same page and animation | 2026-10-22 | `70f3bc0` |
+| The other half keeps its choice at boot | Passed: no flash of the default animation when plugging in | 2026-10-22 | `70f3bc0` |
+| Both halves still talk on eight bytes | Passed: the half without the cable types and the link stays up | 2026-10-22 | `70f3bc0` |
 | Boot shows its screen, and the flash still goes through (stage 2's checkpoint) | Passed on both halves, each with the cable in it. The QMK logo over an inverted BOOTLOADER appears and stays, and the half then loads and verifies a build as usual. Took several tries: Boot needs Space held until Nav shows, then two taps of Q within 0.2 s, and a reset-button double-tap skips the screen entirely | 2026-10-22 | `fd28d30` |
 | The mod icons and the host logo read from the seat (stage 1's checkpoint) | Passed. From a normal seated position the five 12x8 icons (⊞ ⌥ ⌃ ⌘ ⇧) and the 12x16 logo can be named without leaning in, although the icons are smaller than the 16x16 glyphs they replaced | 2026-10-21 | `f639c97` |
 | Falling leaves on the slave half | Works, first look 2026-10-15. Six leaves, independent speed and tumble, passing behind Bjorn and reappearing | 2026-10-15 | `994a874` |
