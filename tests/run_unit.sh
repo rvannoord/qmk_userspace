@@ -3,7 +3,7 @@
 # transport's master half, which only exists under SPLIT_KEYBOARD, and the panel's
 # drawing, which needs a buffer to draw into. No QMK tree and no toolchain beyond cc.
 #
-#   tests/run_unit.sh            build and run all six
+#   tests/run_unit.sh            build and run all seven
 #   tests/run_unit.sh --dump     print the panel's frames instead of checking them
 set -euo pipefail
 
@@ -15,7 +15,7 @@ trap 'rm -rf "$out"' EXIT
 # QMK_KEYBOARD_H and OLED_ENABLE on the command line, because oled_canvas.c is its own
 # translation unit here and never sees the test file that would otherwise define them.
 cc_flags=(-std=c11 -Wall -Wextra -Werror -I "$here/unit" -I "$here/unit/stub" -I "$keymap"
-          -DQMK_KEYBOARD_H='"qmk_keyboard.h"' -DOLED_ENABLE)
+          -DQMK_KEYBOARD_H='"qmk_keyboard.h"' -DOLED_ENABLE -DMIRYOKU_MAPPING_EXTENDED_THUMBS)
 
 # -Wno-unused-parameter only for the transport: QMK's RPC callback signature has two
 # parameters a master-to-slave transaction never uses, and that is QMK's shape, not ours.
@@ -23,7 +23,7 @@ cc "${cc_flags[@]}" -Wno-unused-parameter -o "$out/split_sync" \
    "$here/unit/test_split_sync.c" "$keymap/split_sync.c" "$keymap/split_health.c"
 cc "${cc_flags[@]}" -o "$out/panel" \
    "$here/unit/test_panel.c" "$keymap/art/panel_font.c" "$keymap/art/panel_glyphs.c" "$keymap/art/panel_layer_icons.c" "$keymap/art/drashna_icons.c" \
-   "$keymap/art/kitty_art.c" "$keymap/oled_canvas.c" "$keymap/split_health.c"
+   "$keymap/art/kitty_art.c" "$keymap/oled_canvas.c" "$keymap/split_health.c" "$keymap/oled_map.c"
 
 cc "${cc_flags[@]}" -DOLED_SLAVE_ANIMATION_BJORN -o "$out/bjorn" \
    "$here/unit/test_bjorn.c" "$keymap/art/bjorn_art.c" "$keymap/art/bjorn_poses.c" "$keymap/oled_canvas.c"
@@ -31,6 +31,10 @@ cc "${cc_flags[@]}" -DOLED_SLAVE_ANIMATION_BJORN -o "$out/bjorn" \
 # The other half's side of the transport, from boot.
 cc "${cc_flags[@]}" -Wno-unused-parameter -o "$out/sync_slave" \
    "$here/unit/test_sync_slave.c" "$keymap/split_sync.c" "$keymap/split_health.c"
+
+# The live layer map, from oled_map.c itself.
+cc "${cc_flags[@]}" -o "$out/map" \
+   "$here/unit/test_map.c" "$keymap/art/panel_font.c" "$keymap/art/drashna_icons.c" "$keymap/oled_canvas.c"
 
 # The bootloader screen, from oled.c itself.
 cc "${cc_flags[@]}" -o "$out/boot" \
@@ -61,6 +65,8 @@ echo
 "$out/sync_slave" || fails=1
 echo
 "$out/panel" || fails=1
+echo
+"$out/map" || fails=1
 echo
 "$out/space" || fails=1
 echo

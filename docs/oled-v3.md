@@ -28,7 +28,7 @@ QMK line numbers refer to `7a1bbf37c5`.
 | 1. Bands: Ein, modifier icons, OS logo | **done 2026-10-21**, flashed `f639c97`; the checkpoint passed on the board. Linux logo, the iOS "i" (D14) and drashna's locks added the same day |
 | 2. Bootloader screen | **done 2026-10-22**, flashed `fd28d30`; the checkpoint passed on both halves |
 | 3. PAGE key, page framework, the three bands | **done 2026-10-22**, flashed `657fb8e`, then `70f3bc0` so the page and the animation follow the cable; the checkpoint passed on the board |
-| 4. Live layer map, master screen moves over | open |
+| 4. Live layer map, master screen moves over | **in progress**: the maps draw on both halves; waiting on the early board check of the other half's presses before the master screen moves over |
 | 5. Status sheet, layer map page, Typing, Event log | open |
 | 6. Bongo cat and the Mario scene on the slave | open |
 | 7. Encoder feedback | open |
@@ -107,6 +107,10 @@ Open, with a default, to answer before the stage that needs it:
     Option characters, so its legend there is drashna's ⌥ icon.
 
   Default for these: `Hlp`, a dimmed `App`, and ⌥ on the Mac.
+
+  **Decided 2026-10-22, the default**, after renders of the Fun and Nav maps in both styles on
+  both hosts, against a words-only version (`Br-` and `Br+`, App blank). The sun reads best at 2×
+  in the big grid; at 1× in the Kyria-shaped map words would read a little better.
 
   Two more differ in behaviour, not in what the key is, so their legends stay:
   - Home, End, PgUp and PgDn scroll the view on the Mac rather than moving the cursor. That is
@@ -447,7 +451,7 @@ inverted box, never the whole cell.
 
 **Master screen moves over.** While the map covers the master's panel and not the slave's, the
 slave draws the bands page from `u_sync_state()` instead of Bjorn. That page reads only what the
-six bytes carry (layers, fingers, flags, misfire count), and it already mirrors the mod row by
+eight bytes carry (layers, fingers, flags, misfire count, host), and it already mirrors the mod row by
 `is_keyboard_left()`. `oled_master_zones.c` needs to take its state from either source instead of
 calling `u_sync_build()` itself. Bjorn's task does not run while he isn't drawn, which is the
 existing rule, so he comes back awake.

@@ -17,6 +17,8 @@
 #include "oled_settings.h"
 #include "split_state.h"
 #include "split_sync.h"
+#include "oled_map.h"
+#include "oled_canvas.h"
 
 #ifdef OLED_ENABLE
 
@@ -54,7 +56,19 @@ void u_anim_next(void) {
 
 // --- dispatch ---------------------------------------------------------------
 
+// A held layer's map, when its keys are under this panel. Only from a fresh state: a stale
+// one may be a layer that was held when the cable came out, and it would stay on screen.
+static bool map_here(void) {
+    return u_sync_fresh() && u_map_here(u_sync_state().layers & 0x0F, is_keyboard_left());
+}
+
 void oled_render_slave(void) {
+    if (map_here()) {
+        const u_split_state_t s = u_sync_state();
+        u_map_render(s.layers & 0x0F, is_keyboard_left(), s.flags & U_FLAG_IS_MAC, s.view & U_VIEW_MAP_SHAPED);
+        u_canvas_commit();
+        return;
+    }
     switch (u_anim_get()) {
         case U_ANIM_SPACESHIP: u_slave_spaceship_render(); break;
         case U_ANIM_KYRIA:
@@ -76,7 +90,7 @@ void oled_slave_task(void) {
     // animation is showing would let his idle clocks advance unseen, so he would
     // come back mid-doze; letting it run only while he is drawn means he always
     // returns awake, which is the honest reading - you just arrived.
-    if (u_anim_get() == U_ANIM_BJORN) u_slave_bjorn_task();
+    if (u_anim_get() == U_ANIM_BJORN && !map_here()) u_slave_bjorn_task();
 }
 
 #endif     // OLED_ENABLE

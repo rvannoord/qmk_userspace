@@ -92,6 +92,11 @@ that was not flashed simply stops typing.
 | Linux shows Tux | Plug into a Linux machine, if one is at hand | QMK reports Linux, and the logo follows the new host byte. Behaviour stays Windows-like | `v3-1` |
 | SYS on Linux flips Linux and Mac | On that Linux machine, tap SYS twice | It should go to the Apple logo with a line under it, then back to Tux with the line, not to Windows | `v3-1` |
 | The other half still types | Any key on the non-USB half | The payload grew from six bytes to seven. The handshake is unchanged, but a half on the old build would drop every state as the wrong size | `v3-1` |
+| The other half lights its own presses | With the cable in the left half, hold Space (Nav): the right panel shows the Nav map. Press a few of its keys: each one's legend turns into a small inverted box while it is down. Then with the cable in the right half, hold Enter (Sym) and do the same on the left | Each half reads its own matrix with `matrix_is_on()`. The plan asks for this early: if the half without the cable cannot see its presses, the design changes before the master screen moves over | `v3-4a` |
+| Every map sits over its keys | Hold each thumb layer key, and Z or slash for Button: Nav, Mouse and Media on the right panel, Sym, Num and Fun on the left, Button on both. Each legend sits over the key it names | Positions come from `LAYOUT_miryoku`, the same macro `keymaps[]` is built with | `v3-4a` |
+| PAGE turns the map's style | While a map is up, tap PAGE: big grid and Kyria-shaped swap, on both halves, and the page underneath does not change. It stays after a replug | The style is stored with the page and crosses in `view` bit 4 | `v3-4a` |
+| The Mac's legends | On the Mac, hold Del (Fun): `F13`, the sun with ▼ and ▲, a dimmed App. Hold Space (Nav): `Hlp` where Insert is | D15 | `v3-4a` |
+| No map over the alarm | Hold Z (Button), pull the TRRS: the master shows the alarm, not the map | The master shows its map only while the link is up | `v3-4a` |
 
 ### Only one season can be seen at a time
 

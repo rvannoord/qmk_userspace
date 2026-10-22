@@ -22,6 +22,8 @@ The design and every tuning decision are in `docs/layout.md`; this file is the m
 | `oled.h` / `oled.c` | the OLED module's interface and its dispatcher: boot splash, then master or slave; and the bootloader screen, painted on the way into the bootloader |
 | `oled_canvas.c` / `.h` | the frame every renderer draws into, committed to the driver once per frame |
 | `oled_master_zones.c` | the master panel: status bar, a 128x40 layer picture, the mod row; and its pages, turned with PAGE |
+| `oled_map.c` / `.h` | the live layer map: while a thumb layer is held, the panel over its keys shows what they do, in a big grid or shaped like the Kyria |
+| `map_legend.c` / `.h` | what each key's legend is on the map, on Windows and on the Mac |
 | `oled_settings.c` / `.h` | the one EEPROM word the animation and the page share; the other half saves what the master sends |
 | `speed_tier.h` | WPM as four speed tiers, for Bjorn and the master's kitty |
 | `oled_slave_select.c` | which slave animation is live: persisted on the master, sent to the slave |

@@ -48,3 +48,21 @@ static inline uint32_t timer_elapsed32(uint32_t then) { return fake_now - then; 
 uint32_t eeconfig_read_user(void);
 void     eeconfig_update_user(uint32_t val);
 uint8_t  get_current_wpm(void);
+
+// What the live layer map asks of QMK: where a key is, what it does on a layer, and
+// whether it is down. Each test that draws a map answers the last two itself.
+typedef struct {
+    uint8_t col;
+    uint8_t row;
+} keypos_t;
+
+#define KC_NO     0x0000
+#define QK_USER_0 0x7E40
+#define QK_USER_1 0x7E41
+#define QK_USER_2 0x7E42
+
+#include "kyria_layout.h"
+#include "config.h"          // the keymap's: LAYOUT_miryoku, as the build force-includes it
+
+uint16_t keymap_key_to_keycode(uint8_t layer, keypos_t key);
+bool     matrix_is_on(uint8_t row, uint8_t col);

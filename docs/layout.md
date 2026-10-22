@@ -439,6 +439,8 @@ the goat later.
 |------|-------|
 | `oled.h` / `oled.c` | the module's interface and its dispatcher. The header holds the slave-animation enum and boot default, `u_anim_get` / `u_anim_next`, the master's page enum in D1's order with `U_PAGES_BUILT`, `u_page_get` / `u_page_next`, the four entry points `oled_render_*` / `oled_*_task` and the pure sleep predicate; the `.c` draws the boot splash and then branches on master or slave, and paints the bootloader screen in `shutdown_user()` on the way into the bootloader. The sleep check itself is in `keymap.c`'s `housekeeping_task_user`, so a stray dirty block can light the panel for one main loop at most |
 | `oled_master_zones.c` | the master panel. Three bands, status bar, 128x40 layer picture and mod row, in raw page bytes composed in the canvas and committed once, never `oled_write`. Also the pages: which one is showing, the dots, the kitty and QMK versions of the base band, and the Stats stop. 1x and 2x glyph blitters; the 2x one doubles each source row, so a 16x16 is two page bytes a column |
+| `oled_map.c` / `.h` | the live layer map: which halves a layer's map fills (`u_map_side`, the one answer both the drawing and PAGE use), and the two styles. A key's matrix position comes from `LAYOUT_miryoku` given slot numbers in place of keycodes, so the map and `keymaps[]` agree by construction; its legend from `keymap_key_to_keycode()` and `map_legend.c`; a press from this half's own matrix |
+| `map_legend.c` / `.h` | keycode to legend, on both hosts: up to three cells of Ein or drashna's 6x8 icons, or one of his 12x8 mod icons, dimmed or not. The Mac's legends are D15's. Unknown keycodes are flagged, and the scenario tests fail on any key a map draws that has none |
 | `art/panel_glyphs.c` | generated. The five mod-row glyphs — four-pane, option mark, caret, command, shift — as drashna's filled 12x8 icons, centred at (2, 4) in 16x16 cells so the cell model did not change (until 2026-10-21 they were hand-drawn at 16x16, in DUNGEON.mode's weight language; `tools/panel/glyphs.py` still holds those). The lock glyphs are drashna's Caps Lock and Scroll Lock cells (Caps Word lights the Caps Lock one), and the file also holds the 2x16 "i" that stands in front of the Apple logo on iOS. Eight slots are five drawings: shift is one drawing in both sets, and the caret is one drawing that changes cell when the OS does, so the Ctrl/GUI swap is visible as a hop from the middle finger to the pinky |
 | `art/panel_font.c` | generated. Printable ASCII in Ein, transposed out of drashna's font file, one byte a row, flush left in an 8 px cell; plus the QMK splash logo out of QMK's own `glcdfont.c`. Regenerating it needs the drashna clone as well as the QMK checkout (`VENDORED.md`) |
 | `art/panel_layer_icons.c` | generated. The ten 128x40 layer bands, reduced from splitkb's Halcyon icons and the Kyria logo; see `VENDORED.md` |
@@ -782,14 +784,26 @@ the half under the fingers that use it:
   wanted at that moment, so the key is free for it. The **big grid** has five columns of 25.6 px,
   rows of 16 and single symbols at 2×. The **Kyria-shaped** map uses 1× legends on the board's own
   column stagger (0.75, 0.25, 0, 0.25 and 0.5 units, pinky to inner) and thumb arc, both from
-  `keyboard.json`. The style is persisted with the page and crosses the link as bit 3 of `world`,
-  which leaves bits 4-7 for the weather and the time of day.
+  `keyboard.json`. The style is persisted with the page and crosses the link with it, in bit 4 of
+  the `view` byte, which leaves bits 3-7 of `world` for the weather and the time of day.
+- **On the Mac, a key that is something else there says so** (D15, decided 2026-10-22 from renders
+  of the Fun and Nav maps on both hosts). Print Screen draws `F13`. Scroll Lock and Pause draw
+  drashna's sun with ▼ and ▲, because the Mac reads them as F14 and F15, its screen brightness
+  down and up. App is dimmed to every other pixel, because it does nothing there. Insert draws
+  `Hlp`, because the Mac reads it as Help. AltGr draws drashna's ⌥, because it is right Option.
+  Everywhere else the legends are the same on both hosts, and the mods follow the host the way the
+  mod row does.
 - **The master's screen moves over.** While a map covers the master's panel and not the slave's,
   the master's own bands page takes Bjorn's place on the other half: the OS logo, the layer icon
   and the mod row, mirrored for that hand by the code that already mirrors it. So the layer icon
   never disappears. With the cable on the left that happens for Sym, Num and Fun; with it on the
   right, for Nav, Mouse and Media. Button covers both panels, so for that one layer there is
-  nowhere for it to go. The six bytes the slave already receives carry everything that page draws.
+  nowhere for it to go. The eight bytes the slave already receives carry everything that page draws.
+- **Never over the alarm** (decided 2026-10-22, while building stage 4). The master shows its map
+  only while the link is up. With the link down it shows the bands, so holding Button can't hide
+  the alarm on both panels at once. The other half shows a map, or the master's screen moved over,
+  only from a fresh state, and its animation otherwise. So a layer that was held when the cable
+  came out doesn't stay frozen on screen.
 
 **Two more slave animations** behind `U_ANIM`, after today's five. **Bongo cat** is drashna's
 bongocats module (HorrorTroll's art): 128x32 along the bottom, WPM at 2× top right, and it slaps

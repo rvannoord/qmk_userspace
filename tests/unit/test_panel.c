@@ -9,6 +9,7 @@
 #include "split_state.h"
 #include "split_sync.h"
 #include "split_health.h"
+#include "map_legend.h"
 
 #include "driver.h"
 
@@ -46,6 +47,11 @@ uint32_t        eeconfig_read_user(void) { return fake_ee; }
 void            eeconfig_update_user(uint32_t val) { fake_ee = val; ee_writes++; }
 uint8_t         get_current_wpm(void) { return fake_wpm; }
 static bool     is_keyboard_master(void) { return fake_is_master; }
+
+// The map's questions to QMK. Every key reads as an F-key here; test_map.c draws the maps.
+uint16_t   keymap_key_to_keycode(uint8_t layer, keypos_t key) { (void)layer; (void)key; return 1; }
+bool       matrix_is_on(uint8_t row, uint8_t col) { (void)row; (void)col; return false; }
+u_legend_t u_map_legend(uint16_t keycode, bool mac) { (void)keycode; (void)mac; return (u_legend_t){{'F', '1'}, 0}; }
 
 #ifndef QMK_KEYBOARD_H
 #    define QMK_KEYBOARD_H "qmk_keyboard.h"
@@ -300,7 +306,10 @@ static void at_multiple_of(uint32_t ms) { fake_now += ms - fake_now % ms; }
 
 // Turn to a page with the key, then let the dots go, so what is checked is the page.
 static void show_page(enum u_master_page p) {
-    while (u_page_get() != p) u_page_next();
+    // From the base layer: with a map's layer held, PAGE turns the map's style instead.
+    drive.layers = U_BASE;
+    step();
+    for (int k = 0; u_page_get() != p && k < 2 * U_PAGE_COUNT; k++) u_page_next();
     fake_now += U_DOTS_MS;
     step();
 }
@@ -1033,6 +1042,57 @@ int main(int argc, char **argv) {
 
         for (int k = 0; k < 20; k++) { fake_now += 50; step(); }
         show_page(U_PAGE_BANDS);
+    }
+
+    // --- the live layer map ---------------------------------------------------
+    // The map itself is test_map.c's; here, when the master shows one, and what PAGE does.
+    {
+        show_page(U_PAGE_BANDS);
+        const u_split_state_t fun = {.layers = U_FUN};
+        const bool shaped = u_setting_get(U_SETTING_VIEW) & U_VIEW_MAP_SHAPED;
+        frame(fun, false);
+        memset(u_canvas, 0, OLED_MATRIX_SIZE);
+        u_map_render(U_FUN, true, false, shaped);
+        check("holding Fun on a left master shows the Fun map", memcmp(u_canvas, fake_oled, OLED_MATRIX_SIZE) == 0);
+
+        frame((u_split_state_t){.layers = U_FUN, .flags = U_FLAG_IS_MAC}, false);
+        memset(u_canvas, 0, OLED_MATRIX_SIZE);
+        u_map_render(U_FUN, true, true, shaped);
+        check("with the Mac's legends on the Mac", memcmp(u_canvas, fake_oled, OLED_MATRIX_SIZE) == 0);
+
+        frame(on_nav, false);
+        check("holding Nav leaves it on the bands: that map is the other half's",
+              any_lit(BAND_Y0, BAND_Y1) && cell_drawn(0) && logo_is(U_OS_LOGO_APPLE, false));
+
+        // PAGE turns the map's style while a map is up, on either half, and not the page.
+        const uint8_t view = u_setting_get(U_SETTING_VIEW);
+        frame(fun, false);
+        u_page_next();
+        check("PAGE with a map up turns its style",
+              u_setting_get(U_SETTING_VIEW) == (view ^ U_VIEW_MAP_SHAPED) && u_page_get() == U_PAGE_BANDS);
+        frame(fun, false);
+        memset(u_canvas, 0, OLED_MATRIX_SIZE);
+        u_map_render(U_FUN, true, false, !shaped);
+        check("and the map is drawn in it", memcmp(u_canvas, fake_oled, OLED_MATRIX_SIZE) == 0);
+        frame(on_nav, false);
+        u_page_next();
+        check("the same while the map is on the other half", u_setting_get(U_SETTING_VIEW) == view && u_page_get() == U_PAGE_BANDS);
+        replug();
+        check("the style is kept across a replug", u_setting_get(U_SETTING_VIEW) == view);
+
+        // Never over the alarm: with the link down there is no map, so PAGE pages again.
+        frame((u_split_state_t){.layers = U_BUTTON}, true);
+        fake_now += 1000;
+        step();
+        check("with the link down, holding Button shows the alarm, not the map", row_solid_from(CORNER_X1 + 1, BAND_Y0));
+        u_page_next();
+        check("and PAGE turns the page", u_page_get() == U_PAGE_BANDS_KITTY && u_setting_get(U_SETTING_VIEW) == (uint8_t)((view & ~U_VIEW_PAGE_MASK) | U_PAGE_BANDS_KITTY));
+        frame(at_rest, false);
+        show_page(U_PAGE_BANDS);
+
+        // A map redraws for free, like every page.
+        check("holding Fun, a redraw is free", redraw_cost(fun, false) == 0);
+        frame(at_rest, false);
     }
 
     // --- the sleep predicate ------------------------------------------------

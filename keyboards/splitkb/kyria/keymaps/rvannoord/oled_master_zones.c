@@ -48,6 +48,7 @@
 #include "split_health.h"
 #include "oled_settings.h"
 #include "speed_tier.h"
+#include "oled_map.h"
 
 // Rebuilt every main loop by oled_master_task. That is a resampling, not a capture:
 // u_sync_build() reports only what is held at the instant it is called, and each build
@@ -183,8 +184,19 @@ enum u_master_page u_page_get(void) {
     return (enum u_master_page)page_now;
 }
 
+// A map is up somewhere: on this panel, on the other one, or both. Never while the link is
+// down, when neither half draws one (docs/layout.md, "Never over the alarm").
+static bool map_showing(void) {
+    return u_map_side(panel.layers & 0x0F) != U_MAP_NONE && !u_sync_link_down();
+}
+
 void u_page_next(void) {
     if (!is_keyboard_master()) return;
+    // While a map is up, PAGE turns its style instead: a page change is never wanted then.
+    if (map_showing()) {
+        u_setting_set(U_SETTING_VIEW, (uint8_t)(u_setting_get(U_SETTING_VIEW) ^ U_VIEW_MAP_SHAPED));
+        return;
+    }
     page_load();
     do {
         page_now = (uint8_t)((page_now + 1) % U_PAGE_COUNT);
@@ -658,6 +670,16 @@ void oled_master_task(void) {
 }
 
 void oled_render_master(void) {
+    // A held layer's map, when its keys are under this panel. It replaces whatever page is
+    // up, and gives way to the bands while the link is down, so the alarm shows.
+    const uint8_t layer = panel.layers & 0x0F;
+    if (map_showing() && u_map_here(layer, is_keyboard_left())) {
+        u_map_render(layer, is_keyboard_left(), panel.flags & U_FLAG_IS_MAC,
+                     u_setting_get(U_SETTING_VIEW) & U_VIEW_MAP_SHAPED);
+        u_canvas_commit();
+        return;
+    }
+
     // Holding SYS still opens the stats page from any page, and it still closes itself;
     // as a page it stays. Either way it carries no alarm, as the SYS page never has: its
     // FAIL and OUT lines are how it reports the link.

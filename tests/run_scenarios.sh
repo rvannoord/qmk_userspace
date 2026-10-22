@@ -25,11 +25,14 @@ cp "$here/$mode"/* "$here/scenarios/scenario.hpp" "$here/scenarios/test_home_row
 if [ "$mode" = new ]; then
     keymap=$repo/keyboards/splitkb/kyria/keymaps/rvannoord
     miryoku=$repo/users/manna-harbour_miryoku
-    cp "$here/scenarios/test_host_os.cpp" "$here/scenarios/test_split_state.cpp" \
+    cp "$here/scenarios/test_host_os.cpp" "$here/scenarios/test_split_state.cpp" "$here/scenarios/test_map_legend.cpp" \
        "$keymap/tap_hold.c" "$keymap/host_os.c" "$keymap/host_os.h" \
        "$keymap/split_state.c" "$keymap/split_state.h" \
        "$keymap/split_sync.c" "$keymap/split_sync.h" \
-       "$keymap/split_health.c" "$keymap/split_health.h" "$keymap/oled.h" "$keymap/oled_settings.h" "$stage/"
+       "$keymap/split_health.c" "$keymap/split_health.h" "$keymap/oled.h" "$keymap/oled_settings.h" \
+       "$keymap/map_legend.c" "$keymap/map_legend.h" "$miryoku/custom_config.h" "$stage/"
+    mkdir -p "$stage/art"
+    cp "$keymap/art/drashna_icons.h" "$stage/art/"
     # The test framework has its own keymap.c and config.h, so these get other names
     cp "$keymap/keymap.c" "$stage/rvannoord_keymap.c"
     cp "$keymap/config.h" "$stage/rvannoord_keymap_config.h"
