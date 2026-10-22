@@ -15,6 +15,7 @@ while the reason for it is still obvious.
 
 | Build | Commit | Flashed | Notes |
 |-------|--------|---------|-------|
+| `2026-10-22-e839e27.uf2` | `e839e27` | 2026-10-22 | Both halves, loaded and verified with `picotool load -v`, built from a clean tree (label `e839e2`, no `-dirty`, 122,256 bytes of text). The Monitor ERP screens, and with them `e3bf16d`: the master's screen no longer moves over. Each half read as `d267d99` before loading |
 | `2026-10-22-d267d99.uf2` | `d267d99` | 2026-10-22 | Both halves, loaded and verified with `picotool load -v`, built from a clean tree (label `d267d9`, no `-dirty`, 120,964 bytes of text). The rest of stage 4: the master's screen moving over, and QMK's `@` with ZXPIX's `|` and `*`. Each half read as `12b236a` before loading |
 | `2026-10-22-12b236a.uf2` | `12b236a` | 2026-10-22 | Both halves, loaded and verified with `picotool load -v`, built from a clean tree (label `12b236`, no `-dirty`, 120,780 bytes of text). The first half of stage 4: the live layer maps on both halves, D15's Mac legends, PAGE turning the map's style. Each half read as `70f3bc0` before loading. For the early check of the other half's presses |
 | `2026-10-22-70f3bc0.uf2` | `70f3bc0` | 2026-10-22 | Both halves, loaded and verified with `picotool load -v`, built from a clean tree (label `70f3bc`, no `-dirty`, 117,580 bytes of text). The page and the animation follow the cable; the payload is eight bytes. Each half read as `657fb8e` before loading |
@@ -94,11 +95,6 @@ that was not flashed simply stops typing.
 | Linux shows Tux | Plug into a Linux machine, if one is at hand | QMK reports Linux, and the logo follows the new host byte. Behaviour stays Windows-like | `v3-1` |
 | SYS on Linux flips Linux and Mac | On that Linux machine, tap SYS twice | It should go to the Apple logo with a line under it, then back to Tux with the line, not to Windows | `v3-1` |
 | The other half still types | Any key on the non-USB half | The payload grew from six bytes to seven. The handshake is unchanged, but a half on the old build would drop every state as the wrong size | `v3-1` |
-| `@`, `|` and `*` read on the Sym map | Hold Enter (Sym): the `@` is whole, the `|` is one line, and the `*` is a small star, not the sun. Both styles | The `|` and `*` are ZXPIX's now, out of the same font file, placed in Ein's slot, and the `@` is QMK's (`docs/layout.md`) | `v3-4b` |
-| Bjorn comes back awake | After releasing a layer whose map covered his panel (Button, or a map on his half), Bjorn is awake, not mid-doze | His clocks pause while he is not drawn | `v3-4` |
-| The three Monitor screens | Tap ANIM until each comes round: the horizontal Monitor ERP logo, the stacked one, "MONITOR YOUR FUTURE". The ring is even, the two slants in the mark are clean, every letter reads | Drawn by hand at panel size from the brand files (`docs/layout.md`, *The Monitor ERP screens*), in place of the two old Monitor logos | `monitor` |
-| The Monitor stop on the master | PAGE through the bands: after the QMK logo comes the horizontal Monitor logo in the base band, 28 px tall, clear of the OS logo. Six dots now | The fifth version of the bands (D1) | `monitor` |
-| A stored choice may move once | If the slave showed Monitor 1 or 2 before, it now shows the horizontal or stacked logo; a master left on Stats comes back on the bands once | The animation list and the page numbers changed shape | `monitor` |
 
 ### Only one season can be seen at a time
 
@@ -114,6 +110,11 @@ than supplying weather: a forced state is also how these get tested.
 
 | Check | Verdict | Date | From |
 |-------|---------|------|------|
+| `@`, `|` and `*` read on the Sym map | Passed ("everything looks ok"): QMK's `@`, ZXPIX's `|` and `*` | 2026-10-22 | `d267d99` |
+| Bjorn comes back awake | Passed ("everything looks ok") | 2026-10-22 | `d267d99` |
+| The three Monitor screens | Passed: the horizontal logo, the stacked one and "Monitor your future" all read | 2026-10-22 | `e839e27` |
+| The Monitor stop on the master (and stage 4 with it) | Passed, with six dots. With `e3bf16d` on the board too, stage 4's checkpoint is closed: the maps sat over their keys in both cable positions at the early check | 2026-10-22 | `e839e27` |
+| A stored choice may move once | Passed: nothing looked out of place after the flash | 2026-10-22 | `e839e27` |
 | The master's screen moves over (stage 4's checkpoint) | **Superseded**: tried on the board, confusing, and the map's name tag already says the layer. Taken out (D3) | 2026-10-22 | `d267d99` |
 | The moved screen's mod row is mirrored | **Superseded**: the screen no longer moves (D3) | 2026-10-22 | `d267d99` |
 | The other half lights its own presses (stage 4's early check) | Passed: "everything works". Three of Ein's glyphs on Sym read badly at 2x, `@`, `|` and `*`; the next build takes `|` and `*` from ZXPIX and `@` from QMK's font | 2026-10-22 | `12b236a` |
