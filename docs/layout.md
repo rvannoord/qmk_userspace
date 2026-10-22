@@ -438,7 +438,7 @@ the goat later.
 | File | Holds |
 |------|-------|
 | `oled.h` / `oled.c` | the module's interface and its dispatcher. The header holds the slave-animation enum and boot default, `u_anim_get` / `u_anim_next`, the master's page enum in D1's order with `U_PAGES_BUILT`, `u_page_get` / `u_page_next`, the four entry points `oled_render_*` / `oled_*_task` and the pure sleep predicate; the `.c` draws the boot splash and then branches on master or slave, and paints the bootloader screen in `shutdown_user()` on the way into the bootloader. The sleep check itself is in `keymap.c`'s `housekeeping_task_user`, so a stray dirty block can light the panel for one main loop at most |
-| `oled_master_zones.c` | the master panel. Three bands, status bar, 128x40 layer picture and mod row, in raw page bytes composed in the canvas and committed once, never `oled_write`. Also the pages: which one is showing, the dots, the kitty and QMK versions of the base band, and the Stats stop. 1x and 2x glyph blitters; the 2x one doubles each source row, so a 16x16 is two page bytes a column |
+| `oled_master_zones.c` | the master panel. Three bands, status bar, 128x40 layer picture and mod row, in raw page bytes composed in the canvas and committed once, never `oled_write`. Also the pages: which one is showing, the dots, the kitty and QMK versions of the base band, and the Stats stop. The bands also draw on the other half while a map covers the master's panel (`u_bands_slave_task`, `u_bands_render`), from the state that crossed the link. 1x and 2x glyph blitters; the 2x one doubles each source row, so a 16x16 is two page bytes a column |
 | `oled_map.c` / `.h` | the live layer map: which halves a layer's map fills (`u_map_side`, the one answer both the drawing and PAGE use), and the two styles. A key's matrix position comes from `LAYOUT_miryoku` given slot numbers in place of keycodes, so the map and `keymaps[]` agree by construction; its legend from `keymap_key_to_keycode()` and `map_legend.c`; a press from this half's own matrix |
 | `map_legend.c` / `.h` | keycode to legend, on both hosts: up to three cells of Ein or drashna's 6x8 icons, or one of his 12x8 mod icons, dimmed or not. The Mac's legends are D15's. Unknown keycodes are flagged, and the scenario tests fail on any key a map draws that has none |
 | `art/panel_glyphs.c` | generated. The five mod-row glyphs — four-pane, option mark, caret, command, shift — as drashna's filled 12x8 icons, centred at (2, 4) in 16x16 cells so the cell model did not change (until 2026-10-21 they were hand-drawn at 16x16, in DUNGEON.mode's weight language; `tools/panel/glyphs.py` still holds those). The lock glyphs are drashna's Caps Lock and Scroll Lock cells (Caps Word lights the Caps Lock one), and the file also holds the 2x16 "i" that stands in front of the Apple logo on iOS. Eight slots are five drawings: shift is one drawing in both sets, and the caret is one drawing that changes cell when the OS does, so the Ctrl/GUI swap is visible as a hop from the middle finger to the pinky |
@@ -448,7 +448,7 @@ the goat later.
 | `speed_tier.h` | WPM as four tiers with hysteresis and an 800 ms dwell, shared by Bjorn and the master's kitty so both read speed the same way. Each keeps its own state |
 | `oled_settings.c` / `.h` | the one tagged word of user EEPROM: byte 0 the slave's animation, byte 1 the master's page (bits 0-3) and map style (bit 4). Read-modify-write, so neither key's press resets the other's byte. `u_settings_follow` is the other half's side: it saves what the master sent, in one write, only when something differs |
 | `oled_slave_world.c` | the weather behind Bjorn, across the whole panel, season from `__DATE__` until a host daemon supplies it |
-| `oled_slave_select.c` | which slave animation is live: `oled_settings.c` on the master, the `world` byte of the sync on the slave, which also saves what the master sent once a fresh state has arrived |
+| `oled_slave_select.c` | which slave animation is live: `oled_settings.c` on the master, the `world` byte of the sync on the slave, which also saves what the master sent once a fresh state has arrived. Ahead of the animation, from a fresh state only: this half's map, or the master's bands when a map covers the master's panel (`u_map_moves_master`); Bjorn's clocks pause while either is up |
 | `split_state.c` / `.h` | the 8-byte payload the master gathers: modifiers in finger order, the active and default layers, locks and Caps Word, the host and whether it is a Mac, a misfire count, the chosen animation, and the stored page and map style. Built fresh every main loop; a modifier it reports is one that is held at that instant |
 | `split_sync.c` / `.h` | the transport for that payload. Double-buffered on the slave because the callback runs on a HIGHPRIO thread; heartbeat 250 ms, minimum interval 20 ms, soft stale 600 ms, hard stale 1250 ms. `u_sync_link_down()` answers for both halves — the master from its own failed sends, the slave from the sequence number standing still |
 | `split_health.c` / `.h` | link health: the stats page behind a long SYS press, self-reset of a half whose link stays dead, the hardware watchdog. Every guard is explained in the header |
@@ -765,6 +765,18 @@ now. Rendered against the real panel, the cell model matched the firmware byte f
 TinyOLED-Fonts for the extra faces, but that set has no Ein, so its origin is untraced (see
 `VENDORED.md`). It draws whatever text the panels still carry: the stats page, the new pages and
 the layer maps. Its lowercase is small capitals.
+
+**Three of Ein's glyphs come from elsewhere** (decided 2026-10-22, after the first board look at
+the Sym map). The map draws a single character at 2×, which is where these three failed:
+- Ein's `@` is missing its left side, so it read as a 2 with a hook. It is **QMK's `@`** now, which
+  is Ein's with that column back, so it fits as it is.
+- Its `|` is a broken bar, two short strokes, and its `*` is a dense blob that reads as the
+  brightness sun. QMK's font has both the same way, so these two are **ZXPIX's**, another face in
+  drashna's file.
+
+ZXPIX's glyphs are six columns by six rows where Ein's are five by seven, so the two are placed in
+Ein's slot without being redrawn: the `|` moves to the middle column, so it centres like every
+other glyph, and the `*` drops its sixth column, one stray pixel that made it lopsided.
 
 **The live layer map.** It shows only while a thumb layer key is held, and fills a whole panel on
 the half under the fingers that use it:

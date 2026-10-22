@@ -62,11 +62,21 @@ static bool map_here(void) {
     return u_sync_fresh() && u_map_here(u_sync_state().layers & 0x0F, is_keyboard_left());
 }
 
+// The master's map covers its own panel and not this one, so its screen comes here and the
+// layer icon never leaves sight. Fresh only, for the same reason as the map.
+static bool master_here(void) {
+    return u_sync_fresh() && u_map_moves_master(u_sync_state().layers & 0x0F, is_keyboard_left());
+}
+
 void oled_render_slave(void) {
     if (map_here()) {
         const u_split_state_t s = u_sync_state();
         u_map_render(s.layers & 0x0F, is_keyboard_left(), s.flags & U_FLAG_IS_MAC, s.view & U_VIEW_MAP_SHAPED);
         u_canvas_commit();
+        return;
+    }
+    if (master_here()) {
+        u_bands_render();
         return;
     }
     switch (u_anim_get()) {
@@ -90,7 +100,9 @@ void oled_slave_task(void) {
     // animation is showing would let his idle clocks advance unseen, so he would
     // come back mid-doze; letting it run only while he is drawn means he always
     // returns awake, which is the honest reading - you just arrived.
-    if (u_anim_get() == U_ANIM_BJORN && !map_here()) u_slave_bjorn_task();
+    u_bands_slave_task();
+
+    if (u_anim_get() == U_ANIM_BJORN && !map_here() && !master_here()) u_slave_bjorn_task();
 }
 
 #endif     // OLED_ENABLE

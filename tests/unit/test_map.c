@@ -89,6 +89,16 @@ static u_legend_t single(uint8_t layer, keypos_t pos, bool mac) {
     return plan_index(only_left, pos) == only_at ? only : TXT(0, 0, 0);
 }
 
+// Sym and Num as Miryoku has them, keyed by the plan's index (left half, pinky first).
+static u_legend_t sym_num(uint8_t layer, keypos_t pos, bool mac) {
+    (void)mac;
+    static const char sym[] = "{&*(}:$%^+~!@#|()_";
+    static const char num[] = "[789];456=`123\\.0-";
+    const int8_t i = plan_index(true, pos);
+    if (i < 0) return TXT(0, 0, 0);
+    return TXT((uint8_t)(layer == U_SYM ? sym : num)[i], 0, 0);
+}
+
 static u_legend_t every(uint8_t layer, keypos_t pos, bool mac) {
     (void)layer; (void)pos; (void)mac;
     return TXT('M', 'M', 'B');      // as wide as text gets
@@ -154,6 +164,13 @@ int main(int argc, char **argv) {
                     draw(L ? U_NAV : U_FUN, L == 0, mac, shaped);
                     fwrite(frame, 1, OLED_MATRIX_SIZE, stdout);
                 }
+        // Then Sym and Num, grid then shaped.
+        legend_at = sym_num;
+        for (uint8_t L = 0; L < 2; L++)
+            for (uint8_t shaped = 0; shaped < 2; shaped++) {
+                draw(L ? U_NUM : U_SYM, true, false, shaped);
+                fwrite(frame, 1, OLED_MATRIX_SIZE, stdout);
+            }
         return 0;
     }
 
@@ -182,6 +199,22 @@ int main(int argc, char **argv) {
     check("and base, Extra and Tap on neither",
           u_map_side(U_BASE) == U_MAP_NONE && u_map_side(U_EXTRA) == U_MAP_NONE && u_map_side(U_TAP) == U_MAP_NONE);
 
+    // The master's screen moves to the other half exactly when a map covers the master's
+    // panel and not that half's: never for Button, which covers both, nor off the map layers.
+    {
+        bool right = true, left = true;
+        for (uint8_t L = U_BASE; L <= U_FUN; L++) {
+            // Cable on the left: the right half is the other one.
+            const bool want_r = L == U_SYM || L == U_NUM || L == U_FUN;
+            // Cable on the right: the left half is.
+            const bool want_l = L == U_NAV || L == U_MOUSE || L == U_MEDIA;
+            if (u_map_moves_master(L, false) != want_r) right = false;
+            if (u_map_moves_master(L, true) != want_l) left = false;
+        }
+        check("with the cable on the left, Sym, Num and Fun move the master's screen right", right);
+        check("with it on the right, Nav, Mouse and Media move it left", left);
+    }
+
     // The right half runs inner to pinky, left to right: its inner column is drawn leftmost.
     legend_at = single;
     only      = TXT('X', 0, 0);
@@ -207,6 +240,30 @@ int main(int argc, char **argv) {
         draw(U_NAV, false, false, true);
         const box_t ent = diff(frame, bare);
         check("and its innermost thumb sits at the inner end of the arc", ent.x1 < 20 && ent.y0 > 48);
+    }
+
+    // QMK's @ is drawn whole, its left column included; ZXPIX's | sits on the key's centre.
+    {
+        uint8_t bare[OLED_MATRIX_SIZE];
+        only_left = true;
+        only_at   = -1;
+        draw(U_SYM, true, false, false);
+        memcpy(bare, frame, sizeof bare);
+        only_at = 12;                    // the @ key: bottom row, middle finger
+        only    = TXT('@', 0, 0);
+        draw(U_SYM, true, false, false);
+        const box_t at = diff(frame, bare);
+        int cx, cy;
+        centre(true, false, 12, &cx, &cy);
+        check("the @ is drawn whole, five columns at 2x", at.x1 - at.x0 + 1 == 10);
+        check("and centred on its key", at.x0 == cx - 5);
+        only_at = 14;                    // the | key: bottom row, inner
+        only    = TXT('|', 0, 0);
+        draw(U_SYM, true, false, false);
+        const box_t bar = diff(frame, bare);
+        centre(true, false, 14, &cx, &cy);
+        check("the | is one unbroken bar on its key's centre",
+              bar.x1 - bar.x0 + 1 == 2 && bar.x0 >= cx - 2 && bar.x1 <= cx + 1 && bar.y1 - bar.y0 + 1 == 12);
     }
 
     // A press lights a box no bigger than its cell, with the widest legends there are: the

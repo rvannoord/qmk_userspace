@@ -75,6 +75,10 @@ bool u_map_here(uint8_t layer, bool left) {
     return s == U_MAP_BOTH || s == (left ? U_MAP_LEFT : U_MAP_RIGHT);
 }
 
+bool u_map_moves_master(uint8_t layer, bool this_left) {
+    return u_map_here(layer, !this_left) && !u_map_here(layer, this_left);
+}
+
 static const char *name_of(uint8_t layer) {
     switch (layer) {
         case U_NAV:    return "NAV";

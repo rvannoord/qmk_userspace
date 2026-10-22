@@ -669,6 +669,26 @@ void oled_master_task(void) {
     if (dots_live && timer_elapsed32(dots_at) >= U_DOTS_MS) dots_live = false;
 }
 
+// The other half draws the bands too, when the master's own panel is covered by a map
+// (oled_map.h, u_map_moves_master). The same zones from the state that crossed the link:
+// it carries everything the bands read, and the mod row already mirrors by
+// is_keyboard_left(). Every loop on that half, so a misfire is latched there as here.
+void u_bands_slave_task(void) {
+    panel = u_sync_state();
+    watch_edges(&panel);
+}
+
+static void render_bands(void) {
+    render_status();
+    render_os_logo(render_band());
+    render_mods();
+}
+
+void u_bands_render(void) {
+    render_bands();
+    u_canvas_commit();
+}
+
 void oled_render_master(void) {
     // A held layer's map, when its keys are under this panel. It replaces whatever page is
     // up, and gives way to the bands while the link is down, so the alarm shows.
@@ -686,9 +706,7 @@ void oled_render_master(void) {
     if (u_stats_page_open() || u_page_get() == U_PAGE_STATS) {
         render_stats();
     } else {
-        render_status();
-        render_os_logo(render_band());
-        render_mods();
+        render_bands();
     }
     render_dots();
     u_canvas_commit();     // the only point that touches the driver's buffer

@@ -28,7 +28,7 @@ QMK line numbers refer to `7a1bbf37c5`.
 | 1. Bands: Ein, modifier icons, OS logo | **done 2026-10-21**, flashed `f639c97`; the checkpoint passed on the board. Linux logo, the iOS "i" (D14) and drashna's locks added the same day |
 | 2. Bootloader screen | **done 2026-10-22**, flashed `fd28d30`; the checkpoint passed on both halves |
 | 3. PAGE key, page framework, the three bands | **done 2026-10-22**, flashed `657fb8e`, then `70f3bc0` so the page and the animation follow the cable; the checkpoint passed on the board |
-| 4. Live layer map, master screen moves over | **in progress**: the maps draw on both halves; waiting on the early board check of the other half's presses before the master screen moves over |
+| 4. Live layer map, master screen moves over | **built 2026-10-22**; the early board check passed on `12b236a`; the checkpoint is open |
 | 5. Status sheet, layer map page, Typing, Event log | open |
 | 6. Bongo cat and the Mario scene on the slave | open |
 | 7. Encoder feedback | open |
@@ -468,6 +468,48 @@ existing rule, so he comes back awake.
 - Hold each of the six thumb layer keys and Z / slash: every map sits over its keys.
 - Move the cable to the other half and repeat, since the master screen now moves the other way.
 - Hold Enter and look at the right half: the layer icon is there.
+
+**As built, 2026-10-22.**
+- **Files.** `oled_map.c` / `.h` hold the side table, both styles and the screen moving over.
+  `map_legend.c` / `.h` hold the keycode-to-legend table. Both are in `SRC`.
+- **Where the keys are.** The keymap's own `LAYOUT_miryoku`, given the slot numbers 1-40 in place
+  of keycodes, builds a matrix of slot numbers, which is inverted once. So the map and `keymaps[]`
+  agree by construction, whichever thumb mapping is built. The shaped map's thumb arc is keyed by
+  matrix column (`keyboard.json`), so it follows the thumb mapping too. The test checks every key
+  against the position table above.
+- **Legends.** Each is up to three cells of Ein or drashna's 6x8 icons, or one 12x8 mod icon, and
+  can be dimmed.
+  - The big grid draws single glyphs and icon-only legends at 2x. The Mac's sun and triangle count
+    as one glyph, as approved.
+  - A pressed key's box is capped at its cell: 25 x 16 in the grid, 19 x 12 in the shaped map.
+  - Unknown keycodes are flagged, and drawn as a dot.
+- **Coverage.** As planned, the test preprocesses Miryoku's layer macros. A scenario test does it,
+  because the scenario build's `keymaps[]` is the framework's own, so `keymap_key_to_keycode()`
+  there checks nothing. It includes `custom_config.h` and defines `RGB_MATRIX_ENABLE`, so the RGB
+  keys are the `RM_*` codes the firmware has. The table lists both RGB families and QMK's current
+  mouse names, so it needs no shim of its own. Removing any of three legends failed the test.
+- **D15.** The firmware's Fun and Nav maps, both styles on both hosts, match the render D15 was
+  decided from, byte for byte.
+- **Never over the alarm**, decided while building and written into `docs/layout.md`. The master
+  shows its map only while the link is up. The other half shows a map, or the master's screen,
+  only from a fresh state.
+- **Three glyphs**, after the early board check. Ein's `@` lacked a column and is QMK's now; its
+  `|` and `*` are ZXPIX's, placed in Ein's slot (`docs/layout.md`, under *The font becomes Ein*).
+- **The early check** passed on `12b236a`: the half without the cable lights its own presses.
+- **The master's screen moves over.**
+  - `u_map_moves_master()` decides it: the master's panel is covered and this one isn't.
+  - The other half runs `u_bands_slave_task()` every loop, so a misfire is latched there too.
+    While the screen is moved over, `u_bands_render()` draws the bands from `u_sync_state()`.
+  - Bjorn's clocks pause while a map or the moved screen is up.
+- **Tests.**
+  - `test_map.c`: positions, sides, when the screen moves, the right half's order, boxes inside
+    their cells, the glyphs, a free redraw, and staying under the alarm.
+  - `test_panel.c`: the master's map, the style toggle, the alarm rule, and the other half's bands
+    matching a right-hand master's for the same state, mirrored and with its misfire.
+  - `test_map_legend.cpp`: coverage, D15's legends and the mods following the host.
+  - Deliberate breakages each failed them.
+- **The brightest map** lights 2,004 px, with every legend three letters wide and four keys held,
+  against an alarm frame of 4,584.
 
 ## Stage 5: the other four pages
 

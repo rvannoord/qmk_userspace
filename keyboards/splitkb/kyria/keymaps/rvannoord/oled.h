@@ -84,6 +84,11 @@ void oled_render_slave(void);
 void oled_master_task(void);
 void oled_slave_task(void);
 
+// The master's bands, drawn on the other half while a map covers the master's panel: the
+// state comes from the link there, so the task runs every loop on that half.
+void u_bands_slave_task(void);
+void u_bands_render(void);
+
 // QMK's own display timeout follows oled_on(), which any dirty block calls, so a panel
 // that keeps drawing can hold itself awake for ever. This reads the input clock instead,
 // which no amount of drawing can re-arm. Pure, so the tests can pin the boundary.

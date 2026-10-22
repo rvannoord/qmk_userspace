@@ -15,6 +15,7 @@ while the reason for it is still obvious.
 
 | Build | Commit | Flashed | Notes |
 |-------|--------|---------|-------|
+| `2026-10-22-12b236a.uf2` | `12b236a` | 2026-10-22 | Both halves, loaded and verified with `picotool load -v`, built from a clean tree (label `12b236`, no `-dirty`, 120,780 bytes of text). The first half of stage 4: the live layer maps on both halves, D15's Mac legends, PAGE turning the map's style. Each half read as `70f3bc0` before loading. For the early check of the other half's presses |
 | `2026-10-22-70f3bc0.uf2` | `70f3bc0` | 2026-10-22 | Both halves, loaded and verified with `picotool load -v`, built from a clean tree (label `70f3bc`, no `-dirty`, 117,580 bytes of text). The page and the animation follow the cable; the payload is eight bytes. Each half read as `657fb8e` before loading |
 | `2026-10-22-657fb8e.uf2` | `657fb8e` | 2026-10-22 | Both halves, loaded and verified with `picotool load -v`, built from a clean tree (label `657fb8`, no `-dirty`). Stage 3: the PAGE key, five master pages, the dots, both kitties. Each half was identified before loading by reading the start of its flash: both were `fd28d30`. Left first, then right |
 | `2026-10-22-fd28d30.uf2` | `fd28d30` | 2026-10-22 | Both halves, loaded and verified with `picotool load -v`, built from a clean tree (label `fd28d3`). Stage 2: the bootloader screen. The left half went first; the right half's load caught it in the bootloader still on `0130b8b`. The checkpoint then put each half into the bootloader through Boot, and each was loaded again and verified |
@@ -92,11 +93,10 @@ that was not flashed simply stops typing.
 | Linux shows Tux | Plug into a Linux machine, if one is at hand | QMK reports Linux, and the logo follows the new host byte. Behaviour stays Windows-like | `v3-1` |
 | SYS on Linux flips Linux and Mac | On that Linux machine, tap SYS twice | It should go to the Apple logo with a line under it, then back to Tux with the line, not to Windows | `v3-1` |
 | The other half still types | Any key on the non-USB half | The payload grew from six bytes to seven. The handshake is unchanged, but a half on the old build would drop every state as the wrong size | `v3-1` |
-| The other half lights its own presses | With the cable in the left half, hold Space (Nav): the right panel shows the Nav map. Press a few of its keys: each one's legend turns into a small inverted box while it is down. Then with the cable in the right half, hold Enter (Sym) and do the same on the left | Each half reads its own matrix with `matrix_is_on()`. The plan asks for this early: if the half without the cable cannot see its presses, the design changes before the master screen moves over | `v3-4a` |
-| Every map sits over its keys | Hold each thumb layer key, and Z or slash for Button: Nav, Mouse and Media on the right panel, Sym, Num and Fun on the left, Button on both. Each legend sits over the key it names | Positions come from `LAYOUT_miryoku`, the same macro `keymaps[]` is built with | `v3-4a` |
-| PAGE turns the map's style | While a map is up, tap PAGE: big grid and Kyria-shaped swap, on both halves, and the page underneath does not change. It stays after a replug | The style is stored with the page and crosses in `view` bit 4 | `v3-4a` |
-| The Mac's legends | On the Mac, hold Del (Fun): `F13`, the sun with ▼ and ▲, a dimmed App. Hold Space (Nav): `Hlp` where Insert is | D15 | `v3-4a` |
-| No map over the alarm | Hold Z (Button), pull the TRRS: the master shows the alarm, not the map | The master shows its map only while the link is up | `v3-4a` |
+| `@`, `|` and `*` read on the Sym map | Hold Enter (Sym): the `@` is whole, the `|` is one line, and the `*` is a small star, not the sun. Both styles | The `|` and `*` are ZXPIX's now, out of the same font file, placed in Ein's slot, and the `@` is QMK's (`docs/layout.md`) | `v3-4b` |
+| The master's screen moves over (stage 4's checkpoint) | Cable in the left half: hold Enter (Sym), Bksp (Num) and Del (Fun) in turn. The left panel shows the map, and the right panel shows the master's screen: OS logo, the layer icon, the mod row. Cable in the right half: the same with Space, Tab and Esc (Nav, Mouse, Media). Button covers both panels, so nothing moves for it | While a map covers the master's panel, the other half draws the master's bands from the state that crossed the link, so the layer icon never leaves sight | `v3-4` |
+| The moved screen's mod row is mirrored | With the screen moved to the right half, hold a right-hand modifier: its cell lights on the right half's side, pinky outermost | The zones mirror by `is_keyboard_left()`, which is the half drawing, not the master | `v3-4` |
+| Bjorn comes back awake | After releasing a layer whose map covered his panel, Bjorn is awake, not mid-doze | His clocks pause while he is not drawn | `v3-4` |
 
 ### Only one season can be seen at a time
 
@@ -112,6 +112,11 @@ than supplying weather: a forced state is also how these get tested.
 
 | Check | Verdict | Date | From |
 |-------|---------|------|------|
+| The other half lights its own presses (stage 4's early check) | Passed: "everything works". Three of Ein's glyphs on Sym read badly at 2x, `@`, `|` and `*`; the next build takes `|` and `*` from ZXPIX and `@` from QMK's font | 2026-10-22 | `12b236a` |
+| Every map sits over its keys | Passed: "everything works". Three of Ein's glyphs on Sym read badly at 2x, `@`, `|` and `*`; the next build takes `|` and `*` from ZXPIX and `@` from QMK's font | 2026-10-22 | `12b236a` |
+| PAGE turns the map's style | Passed: "everything works". Three of Ein's glyphs on Sym read badly at 2x, `@`, `|` and `*`; the next build takes `|` and `*` from ZXPIX and `@` from QMK's font | 2026-10-22 | `12b236a` |
+| The Mac's legends | Passed: "everything works". Three of Ein's glyphs on Sym read badly at 2x, `@`, `|` and `*`; the next build takes `|` and `*` from ZXPIX and `@` from QMK's font | 2026-10-22 | `12b236a` |
+| No map over the alarm | Passed: "everything works". Three of Ein's glyphs on Sym read badly at 2x, `@`, `|` and `*`; the next build takes `|` and `*` from ZXPIX and `@` from QMK's font | 2026-10-22 | `12b236a` |
 | PAGE turns five pages, with the dots (stage 3's checkpoint) | Passed. The bands, the small kitty, the striped kitty, the QMK logo and Stats, then back to the bands, with five dots after each press | 2026-10-22 | `657fb8e` |
 | Both kitties read speed | Passed, both on Bjorn's tiers | 2026-10-22 | `657fb8e` |
 | A replug keeps the page | Passed into the same half. The other half brought back its own page at first, which is what `70f3bc0` changed | 2026-10-22 | `657fb8e` |

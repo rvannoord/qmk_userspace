@@ -2,7 +2,8 @@
 // Do not edit: regenerate instead.
 //
 // The Ein face of drashna's OLED font, transposed into this panel's
-// row-major form and placed flush left in an 8 px cell. The QMK logo is
+// row-major form and placed flush left in an 8 px cell, with | and * from
+// his ZXPIX face and @ from QMK's (docs/layout.md). The QMK logo is
 // still QMK's own, out of glcdfont.c (GPL-2.0-or-later WITH BSD-2-Clause).
 // See VENDORED.md, which also says what is known of the face's origin.
 //

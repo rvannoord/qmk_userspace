@@ -1095,6 +1095,52 @@ int main(int argc, char **argv) {
         frame(at_rest, false);
     }
 
+    // --- the master's screen on the other half --------------------------------
+    // While a map covers the master's panel, the other half draws the master's bands from
+    // the state that crossed the link. It must be the master's screen exactly, its mod row
+    // mirrored for the hand it is on, which the zones already do by is_keyboard_left().
+    {
+        show_page(U_PAGE_BANDS);
+        const u_split_state_t held = {.layers = U_SYM, .fingers = U_FIN_R_INDEX | U_FIN_R_PINKY,
+                                      .flags = U_FLAG_CAPS_WORD | U_FLAG_OS_MANUAL, .host = U_HOST_WINDOWS};
+        // The screen as a right-hand master would draw it, with a non-map layer so it shows
+        // the bands: Sym's own map is on the left.
+        fake_is_left = false;
+        frame(held, false);
+        keep();
+        // Now the same half as the slave, given the same state across the link.
+        fake_is_master = false;
+        drive = held;
+        u_bands_slave_task();
+        u_bands_render();
+        check("the other half draws the master's bands, for the same state", same_in(0, 127, 0, 63));
+        check("with the held layer's icon", any_lit(BAND_Y0, BAND_Y1));
+        // A pinky alone says which way the row runs.
+        drive = (u_split_state_t){.layers = U_SYM, .fingers = U_FIN_R_PINKY};
+        u_bands_slave_task();
+        u_bands_render();
+        check("and the mod row mirrored for the right hand: the pinky is the outermost cell on the right",
+              cell_filled(3) && !cell_filled(0));
+        fake_is_master = true;
+        fake_is_left   = true;
+        frame(held, false);
+        check("which is not what the left half draws for it", !same_in(0, 127, MOD_Y0, MOD_Y1));
+
+        // It latches a misfire on its own clock, as the master does.
+        fake_is_master = false;
+        fake_is_left   = false;
+        drive = (u_split_state_t){.layers = U_SYM, .fingers = U_FIN_R_PINKY, .anomaly = 7};
+        u_bands_slave_task();
+        drive = (u_split_state_t){.layers = U_SYM, .fingers = 0, .anomaly = 8};
+        u_bands_slave_task();
+        u_bands_render();
+        check("and shows a misfire there too", cell_chipped(3));
+        fake_is_master = true;
+        fake_is_left   = true;
+        fake_now += U_TRACE_MS;
+        frame(at_rest, false);
+    }
+
     // --- the sleep predicate ------------------------------------------------
     check("awake at 119,999 ms idle", !u_oled_should_sleep(true, 119999));
     check("asleep at 120,000 ms idle", u_oled_should_sleep(true, 120000));

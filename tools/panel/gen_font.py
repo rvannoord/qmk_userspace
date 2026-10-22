@@ -106,6 +106,31 @@ def read_drashna(path, face):
     return vals, csource.header(path)
 
 
+# Three of Ein's glyphs fail where the live layer map draws a single character at 2x
+# (docs/layout.md, under "The font becomes Ein"; decided 2026-10-22). Its @ lacks its left
+# column, so it is QMK's, which is Ein's with that column. Its | is a broken bar and its *
+# reads as the brightness sun, the same in QMK's font, so they are ZXPIX's, another face in
+# drashna's file. ZXPIX is six columns by six rows; these two are placed in Ein's slot.
+FROM_ZXPIX = {
+    '|': lambda cols: [0, 0, cols[0], 0, 0, 0],      # its bar, moved to the middle column
+    '*': lambda cols: list(cols[:5]) + [0],          # the sixth column is a stray bar pixel
+}
+FROM_QMK = '@'
+
+
+def with_replacements(src, path, qmk):
+    import csource
+    zx = csource.load(path, ['OLED_FONT_ZXPIX'])['font'].values
+    out = list(src)
+    for ch, fit in FROM_ZXPIX.items():
+        c = ord(ch)
+        out[c * SRC_W:(c + 1) * SRC_W] = fit(zx[c * SRC_W:(c + 1) * SRC_W])
+    for ch in FROM_QMK:
+        c = ord(ch)
+        out[c * SRC_W:(c + 1) * SRC_W] = qmk[c * SRC_W:(c + 1) * SRC_W]
+    return out
+
+
 def main(qmk, outdir, font, drashna=None, face=None):
     font = pathlib.Path(font or pathlib.Path(qmk) / 'drivers/oled/glcdfont.c')
     outdir = pathlib.Path(outdir)
@@ -114,6 +139,7 @@ def main(qmk, outdir, font, drashna=None, face=None):
     if drashna:
         drashna = pathlib.Path(drashna)
         src, notice = read_drashna(drashna, face)
+        src = with_replacements(src, drashna, vals)
     glyphs = [(ch, transpose(src[ch * SRC_W:(ch + 1) * SRC_W]))
               for ch in range(FIRST, LAST + 1)]
 
@@ -122,7 +148,8 @@ def main(qmk, outdir, font, drashna=None, face=None):
                   "// Do not edit: regenerate instead.\n"
                   "//\n"
                   f"// The {face.capitalize()} face of drashna's OLED font, transposed into this panel's\n"
-                  "// row-major form and placed flush left in an 8 px cell. The QMK logo is\n"
+                  "// row-major form and placed flush left in an 8 px cell, with | and * from\n"
+                  "// his ZXPIX face and @ from QMK's (docs/layout.md). The QMK logo is\n"
                   "// still QMK's own, out of glcdfont.c (GPL-2.0-or-later WITH BSD-2-Clause).\n"
                   "// See VENDORED.md, which also says what is known of the face's origin.\n"
                   "//\n" + ''.join(f'{line}\n' for line in notice))
