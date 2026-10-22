@@ -19,3 +19,10 @@ bool            u_map_here(uint8_t layer, bool left);
 // This half's map of `layer`, composed into the canvas; the caller commits. Legends follow
 // `mac`; pressed keys come from this half's own matrix.
 void u_map_render(uint8_t layer, bool left, bool mac, bool shaped);
+
+// Miryoku's own name for a layer, from its list: "BASE", "NAV" and so on.
+const char *u_layer_name(uint8_t layer);
+
+// The Layer map page of `layer`, from the keymap and the whole matrix, which the master
+// has: the live map's slots drawn by oled_layer_page.c. `deflt` is the default layer.
+void u_map_page_render(uint8_t layer, uint8_t deflt, bool mac);

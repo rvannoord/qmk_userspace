@@ -18,3 +18,4 @@ bool     host_is_mac(void);
 u_host_t host_kind(void);
 void     host_os_toggle(void);
 bool     host_os_is_manual(void);   // true once SYS has overridden detection
+bool     host_os_detected(void);    // true once detection has reported, whatever it said

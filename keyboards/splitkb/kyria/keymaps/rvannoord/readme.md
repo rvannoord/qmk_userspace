@@ -23,7 +23,11 @@ The design and every tuning decision are in `docs/layout.md`; this file is the m
 | `oled_canvas.c` / `.h` | the frame every renderer draws into, committed to the driver once per frame |
 | `oled_master_zones.c` | the master panel: status bar, a 128x40 layer picture, the mod row; and its pages, turned with PAGE. |
 | `oled_map.c` / `.h` | the live layer map: while a thumb layer is held, the panel over its keys shows what they do, in a big grid or shaped like the Kyria |
-| `map_legend.c` / `.h` | what each key's legend is on the map, on Windows and on the Mac |
+| `map_legend.c` / `.h` | what each key's legend is on the map, on Windows and on the Mac, and its one-cell form for the Layer map page |
+| `oled_draw.c` / `.h` | drawing at any row: boxes, art, legends and text, for the map and the pages |
+| `oled_layer_page.c` / `.h` | the Layer map page: the current layer, both halves, on the master's panel |
+| `oled_pages.c` / `.h` | the Status sheet and Typing pages |
+| `oled_event_log.c` / `.h` | the Event log page: the last eight link and host events, stamped with the uptime |
 | `oled_settings.c` / `.h` | the one EEPROM word the animation and the page share; the other half saves what the master sends |
 | `speed_tier.h` | WPM as four speed tiers, for Bjorn and the master's kitty |
 | `oled_slave_select.c` | what the half without the cable shows: its map, or the chosen animation, persisted on the master and sent across |

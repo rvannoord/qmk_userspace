@@ -5,6 +5,7 @@
 #
 #   tests/run_unit.sh            build and run all seven
 #   tests/run_unit.sh --dump     print the panel's frames instead of checking them
+#   tests/run_unit.sh --raw      the panel's frames as raw buffers; --raw-map the live maps
 set -euo pipefail
 
 here=$(cd "$(dirname "$0")" && pwd)
@@ -23,7 +24,9 @@ cc "${cc_flags[@]}" -Wno-unused-parameter -o "$out/split_sync" \
    "$here/unit/test_split_sync.c" "$keymap/split_sync.c" "$keymap/split_health.c"
 cc "${cc_flags[@]}" -o "$out/panel" \
    "$here/unit/test_panel.c" "$keymap/art/panel_font.c" "$keymap/art/panel_glyphs.c" "$keymap/art/panel_layer_icons.c" "$keymap/art/drashna_icons.c" \
-   "$keymap/art/kitty_art.c" "$keymap/art/monitor_art.c" "$keymap/oled_canvas.c" "$keymap/split_health.c" "$keymap/oled_map.c"
+   "$keymap/art/kitty_art.c" "$keymap/art/monitor_art.c" "$keymap/art/status_frame.c" \
+   "$keymap/oled_canvas.c" "$keymap/oled_draw.c" "$keymap/split_health.c" "$keymap/oled_map.c" "$keymap/oled_layer_page.c" \
+   "$keymap/oled_pages.c" "$keymap/oled_event_log.c"
 
 cc "${cc_flags[@]}" -DOLED_SLAVE_ANIMATION_BJORN -o "$out/bjorn" \
    "$here/unit/test_bjorn.c" "$keymap/art/bjorn_art.c" "$keymap/art/bjorn_poses.c" "$keymap/oled_canvas.c"
@@ -34,7 +37,7 @@ cc "${cc_flags[@]}" -Wno-unused-parameter -o "$out/sync_slave" \
 
 # The live layer map, from oled_map.c itself.
 cc "${cc_flags[@]}" -o "$out/map" \
-   "$here/unit/test_map.c" "$keymap/art/panel_font.c" "$keymap/art/drashna_icons.c" "$keymap/oled_canvas.c"
+   "$here/unit/test_map.c" "$keymap/art/panel_font.c" "$keymap/art/drashna_icons.c" "$keymap/oled_canvas.c" "$keymap/oled_draw.c" "$keymap/oled_layer_page.c"
 
 # The bootloader screen, from oled.c itself.
 cc "${cc_flags[@]}" -o "$out/boot" \
@@ -47,6 +50,8 @@ cc "${cc_flags[@]}" -Wno-unused-parameter -o "$out/space" \
 case "${1:-}" in
     --dump) exec "$out/panel" --dump ;;   # the frames as text
     --raw)  exec "$out/panel" --raw  ;;   # three 1024-byte frames, for a renderer
+    --raw-map) exec "$out/map" --raw ;;   # the live maps D15 was decided from
+    --raw-pages) exec "$out/panel" --raw-pages "$2" ;;   # stage 5's mock frames, fed a WPM series
 esac
 
 fails=0

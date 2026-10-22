@@ -15,10 +15,16 @@
 #define U_LEG_ICON12  0x01    // cell[0] is a u_icon12 index: the legend is that one icon
 #define U_LEG_DIM     0x02    // every other pixel: a key that does nothing on this host
 #define U_LEG_UNKNOWN 0x04    // not in the table; drawn as a dot, and the tests fail on it
+#define U_LEG_TIGHT   0x08    // characters set to their ink a pixel apart: two digits in one key
 
 typedef struct {
     uint8_t cell[3];
     uint8_t flags;
 } u_legend_t;
 
+// The full legend: the live map, and the Layer map page's thumb row.
 u_legend_t u_map_legend(uint16_t keycode, bool mac);
+
+// One cell, for the Layer map page, where a key has 12 pixels (docs/layout.md, "The Layer
+// map page's legends"). A key that also holds a modifier or a layer shows what it types.
+u_legend_t u_map_short(uint16_t keycode, bool mac);

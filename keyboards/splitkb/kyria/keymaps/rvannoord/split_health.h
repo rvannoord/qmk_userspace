@@ -51,6 +51,8 @@ typedef struct {
 // Referencing them also puts both strings in the binary, so a flash read back off a
 // board can finally be identified — the read-backs taken on 2026-10-14 could not be.
 uint16_t u_build_id(void);
+// The userspace commit the build was made from, as `git describe` gave it: "e839e2".
+const char *u_build_label(void);
 
 // Every main loop, on both halves.
 void u_health_task(void);

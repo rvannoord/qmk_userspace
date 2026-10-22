@@ -29,7 +29,7 @@ QMK line numbers refer to `7a1bbf37c5`.
 | 2. Bootloader screen | **done 2026-10-22**, flashed `fd28d30`; the checkpoint passed on both halves |
 | 3. PAGE key, page framework, the three bands | **done 2026-10-22**, flashed `657fb8e`, then `70f3bc0` so the page and the animation follow the cable; the checkpoint passed on the board |
 | 4. Live layer map, master screen moves over | **done 2026-10-22**, on the board as `e839e27`; the early check passed on `12b236a`, and the screen moving over was tried on `d267d99` and taken out (D3) |
-| 5. Status sheet, layer map page, Typing, Event log | open |
+| 5. Status sheet, layer map page, Typing, Event log | **built 2026-10-22**; all 18 of the mock's frames match byte for byte. Waiting for the checkpoint |
 | 6. Bongo cat and the Mario scene on the slave | open |
 | 7. Encoder feedback | open |
 | 8. Glitch bursts on link loss | open |
@@ -73,7 +73,7 @@ Open, with a default, to answer before the stage that needs it:
   layer, which is when it toggles the map style.
 - D8. **Status sheet footer (stage 5).** The mock carried a keylogger, which was declined as a
   status-bar strip. Default: the layout name, `Colemak-DH`, or the default layer's name when that
-  is not Base.
+  is not Base. **Decided 2026-10-22, the default.**
 - D9. **Kitty thresholds (stage 3).** drashna's are 10, 40 and 60 WPM. Decided 2026-10-22, the
   default: Bjorn's tiers instead (10 / 30 / 50 up, 6 / 24 / 42 down, 800 ms dwell), so both
   characters read speed the same way, paw frames and all. Found at stage 0: the small kitty's paw frames are byte for byte its sleep frames. So on
@@ -121,6 +121,11 @@ Open, with a default, to answer before the stage that needs it:
   - Home, End, PgUp and PgDn scroll the view on the Mac rather than moving the cursor. That is
     the *OS-aware navigation* experiment in `docs/layout.md`.
   - Media Stop probably does nothing on the Mac.
+- D16. **The Status sheet's layer line at rest on a default that is not Base (stage 5).** The
+  line names the active layer, which at rest is the default, so it says `EXTRA` or `TAP` there; the
+  mock's `BASE` cannot be produced. Either it is inverted like any layer that is not Base, as
+  built, or it is inverted only while a layer is held, which keeps the plain look of the mock at
+  rest. Default: as built. A one-line change either way; asked at stage 5's checkpoint.
 
 ---
 
@@ -372,8 +377,8 @@ replug.
   y=12 up.
 - **Both versions are drawn before the alarm**, which still fills the base band whichever version
   is showing.
-- **The dots** use the mock's geometry: one per page PAGE can reach, so five now and nine after
-  stage 5. They sit at x 41-85, the current one 5x4 and the others 3x2, for 700 ms. They are drawn
+- **The dots** use the mock's geometry: one per page PAGE can reach: six after the Monitor stop,
+  at x 37-89, and ten after stage 5, at x 21-105, the current one 5x4 and the others 3x2, for 700 ms. They are drawn
   last, over any page, including the Stats page's first line.
 - **The Stats stop** calls `render_stats()` directly, so no key or timer closes it. Holding SYS
   still opens the overlay from any page, and a key still closes the overlay.
@@ -531,13 +536,53 @@ All four draw in Ein and go through the dispatcher from stage 3.
   When a thumb layer is held, the live map still takes its half as usual.
 - **Typing.** WPM at 2×, the session peak, a 62x28 graph fed from a ring of 62 samples taken every
   300 ms (18.6 s), and bongo cat along the bottom. That needs stage 6's art, so build stage 6 first
-  or stub the cat.
+  or stub the cat. Decided 2026-10-22: stub it; the cat joins in stage 6.
 - **Event log.** A RAM ring of eight `{uptime, event}`, RAM only like the rest of the link evidence.
   The events: boot; link up and down (the edges of `u_sync_link_down()`); a self-heal reset (the
   `resets` count in the slave's reply going up); the OS set by detection or by SYS; a misfire.
-  Stamped `+1h04`, since there is no wall clock.
+  Stamped `+1:04`, since there is no wall clock.
 
 **Tests:** the redraw cost and the alarm ratio per page, and the event ring's wrap and order.
+
+**Checkpoint, on the board,** on both hosts:
+- PAGE through all ten pages: ten dots, and each page as mocked.
+- Status sheet: WPM and the kitty while typing; a held thumb layer inverts its name; Caps Word,
+  Caps Lock and Scroll Lock invert; each held home-row mod inverts its icon over its finger; SYS
+  shows the other host and `hand`.
+- Layer map: Base at rest, a pressed key inverted; hold Space and the page shows Nav with Space
+  inverted. A layer whose live map is on the master's half still shows the live map there.
+- Typing: the graph moves and the peak holds.
+- Event log: the boot line with the build's label, the link up, the OS; then SYS, a misfire, and
+  the TRRS out for a few seconds and back, which logs down and up with the seconds it was gone.
+- With the TRRS out, the Status sheet, Layer map and Typing show the bands and the alarm; the Event
+  log and Stats keep showing.
+
+**As built, 2026-10-22.**
+- **Files.** `oled_draw.c` / `.h` draw at any row: boxes, art, legends, text. The live map moved
+  onto them, and its frames did not change by a byte. `oled_layer_page.c` / `.h` draw the Layer map
+  page from keycodes alone, `oled_pages.c` / `.h` the Status sheet and Typing, and
+  `oled_event_log.c` / `.h` the Event log. `oled_master_zones.c` picks the page.
+- **Legends.** `u_map_short` in `map_legend.c` gives the page's one cell a key; the thumbs keep
+  `u_map_legend`. Both unwrap mod-taps and layer-taps. The F-keys 10 to 12 are `U_LEG_TIGHT`.
+- **The held layer key** is found on the page itself: a pressed slot whose default-layer keycode is
+  a layer-tap to the layer shown. The master's matrix covers both halves.
+- **Two signals the state did not carry.** The first link up is the first reply
+  (`u_health_have_reply()`), because before any send has failed `u_sync_link_down()` has no edge to
+  give. A Windows detection changes nothing in the state, so `host_os.c` now says whether detection
+  has reported (`host_os_detected()`). The build label comes from `u_build_label()` in
+  `split_health.c`.
+- **The mock match.** A scenario test draws the twelve Layer map frames from Miryoku's real layers,
+  and `tests/run_unit.sh --raw-pages` the four Status sheets, Typing and the Event log. All 18
+  match the mock byte for byte. The mock's third Status sheet was redrawn with Extra as the layer,
+  the state the firmware can reach (`docs/layout.md`), and its Typing series as whole WPM.
+- **Tests.**
+  - `test_panel.c`: per page, a free redraw, under the alarm, and the link-down rule; the striped
+    kitty; Typing sampling on every page; the ring's wrap, order, stamp and cut; each event.
+  - `test_map_legend.cpp`: every key of every layer on both hosts, the one-cell legends, the Mac's,
+    the held key's base legend, and no page over the alarm.
+  - Breaking a legend entry failed them.
+- **The busiest mock frame** lights 2,594 px, a Status sheet, against an alarm frame of 4,584.
+- **Firmware.** It builds with no warnings at 127,028 bytes of text, 4,772 more than `e839e27`.
 
 ## Stage 6: bongo cat and the Mario scene on the slave
 

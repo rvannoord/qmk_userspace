@@ -9,8 +9,8 @@
 #include "oled_map.h"
 #include "map_legend.h"
 #include "oled_canvas.h"
-#include "art/panel_font.h"
-#include "art/drashna_icons.h"
+#include "oled_draw.h"
+#include "oled_layer_page.h"
 
 #ifdef OLED_ENABLE
 
@@ -75,41 +75,24 @@ bool u_map_here(uint8_t layer, bool left) {
     return s == U_MAP_BOTH || s == (left ? U_MAP_LEFT : U_MAP_RIGHT);
 }
 
-static const char *name_of(uint8_t layer) {
-    switch (layer) {
-        case U_NAV:    return "NAV";
-        case U_MOUSE:  return "MOUSE";
-        case U_MEDIA:  return "MEDIA";
-        case U_SYM:    return "SYM";
-        case U_NUM:    return "NUM";
-        case U_FUN:    return "FUN";
-        default:       return "BUTTON";
-    }
+// Miryoku's own list, so a layer added there is named here too.
+static const char *const layer_names[] = {
+#    define MIRYOKU_X(LAYER, STRING) [U_##LAYER] = #LAYER,
+    MIRYOKU_LAYER_LIST
+#    undef MIRYOKU_X
+};
+
+const char *u_layer_name(uint8_t layer) {
+    return layer < sizeof layer_names / sizeof layer_names[0] ? layer_names[layer] : "?";
 }
 
 // --- drawing -----------------------------------------------------------------------
-
-static void put(int16_t x, int16_t y, bool on) {
-    if (x < 0 || x >= OLED_DISPLAY_WIDTH || y < 0 || y >= OLED_DISPLAY_HEIGHT) return;
-    uint8_t *b = &u_canvas[(uint16_t)(y >> 3) * OLED_DISPLAY_WIDTH + (uint16_t)x];
-    if (on) {
-        *b |= (uint8_t)(1u << (y & 7));
-    } else {
-        *b &= (uint8_t)~(1u << (y & 7));
-    }
-}
-
-static uint8_t cells_in(u_legend_t g) {
-    uint8_t n = 0;
-    while (n < 3 && g.cell[n]) n++;
-    return n;
-}
 
 // Single glyphs and icons go 2x in the big grid; anything with letters stays 1x. A pair
 // of icons counts as one glyph, which is how the Mac's sun and triangle were approved.
 static bool scales(u_legend_t g) {
     if (g.flags & U_LEG_ICON12) return true;
-    const uint8_t n = cells_in(g);
+    const uint8_t n = u_legend_cells(g);
     if (n == 1) return true;
     for (uint8_t i = 0; i < n; i++) {
         if (g.cell[i] < 0x80) return false;
@@ -117,63 +100,24 @@ static bool scales(u_legend_t g) {
     return n > 0;
 }
 
-// Unscaled width: text cells are 6 apart with the last one's gap dropped; an icon brings
-// its own blank column.
-static uint8_t width_of(u_legend_t g) {
-    if (g.flags & U_LEG_ICON12) return U_ICON12_W;
-    const uint8_t n = cells_in(g);
-    if (n == 0) return 0;
-    return (uint8_t)(6 * n - (g.cell[n - 1] < 0x80 ? 1 : 0));
-}
-
-// One unscaled pixel of a legend, (x, y) inside its width and eight rows.
-static bool legend_px(u_legend_t g, uint8_t x, uint8_t y) {
-    bool on;
-    if (g.flags & U_LEG_ICON12) {
-        on = (pgm_read_byte(&u_icon12[g.cell[0]][x]) >> y) & 1u;
-    } else {
-        const uint8_t c = g.cell[x / 6], sx = x % 6;
-        if (c >= 0x80) {
-            on = (pgm_read_byte(&u_icon6[c - 0x80][sx]) >> y) & 1u;
-        } else {
-            const uint8_t u = (c < U_FONT_FIRST || c > U_FONT_LAST) ? U_FONT_FIRST : c;
-            on = pgm_read_byte(&u_font8[u - U_FONT_FIRST][y]) & (0x80u >> sx);
-        }
-    }
-    // Dimmed: every other pixel, the only grey a 1-bit panel has.
-    if (on && (g.flags & U_LEG_DIM)) on = ((x + y) & 1u) == 0;
-    return on;
-}
-
 // A legend centred on (cx, cy). Pressed, it is cut out of a box no wider or taller than
 // its cell, so a press never spills onto the next key.
 static void draw_legend(u_legend_t g, int16_t cx, int16_t cy, uint8_t k, bool pressed,
                         uint8_t cell_w, uint8_t cell_h) {
-    const int16_t w = (int16_t)(width_of(g) * k), h = (int16_t)(8 * k);
+    const int16_t w = (int16_t)(u_legend_w(g) * k), h = (int16_t)(8 * k);
     if (pressed) {
         int16_t bw = w + 6 > 14 ? w + 6 : 14, bh = h + 4;
         if (bw > cell_w) bw = cell_w;
         if (bh > cell_h) bh = cell_h;
-        for (int16_t y = cy - bh / 2; y < cy - bh / 2 + bh; y++)
-            for (int16_t x = cx - bw / 2; x < cx - bw / 2 + bw; x++) put(x, y, true);
+        u_rect((int16_t)(cx - bw / 2), (int16_t)(cy - bh / 2), bw, bh, true);
     }
-    const int16_t x0 = cx - w / 2, y0 = cy - h / 2;
-    for (int16_t y = 0; y < h; y++)
-        for (int16_t x = 0; x < w; x++)
-            if (legend_px(g, (uint8_t)(x / k), (uint8_t)(y / k))) put(x0 + x, y0 + y, !pressed);
+    u_legend_at(g, (int16_t)(cx - w / 2), (int16_t)(cy - h / 2), k, !pressed);
 }
 
 // The layer's name, cut out of a filled tag.
 static void draw_tag(const char *name, int16_t x0, int16_t y0) {
-    const uint8_t n = (uint8_t)strlen(name);
-    for (int16_t y = 0; y < 10; y++)
-        for (int16_t x = 0; x < 6 * n + 5; x++) put(x0 + x, y0 + y, true);
-    for (uint8_t i = 0; i < n; i++) {
-        const u_legend_t ch = {{(uint8_t)name[i]}, 0};
-        for (uint8_t y = 0; y < 8; y++)
-            for (uint8_t x = 0; x < 5; x++)
-                if (legend_px(ch, x, y)) put((int16_t)(x0 + 3 + i * 6 + x), (int16_t)(y0 + 1 + y), false);
-    }
+    u_rect(x0, y0, (int16_t)(6 * strlen(name) + 5), 10, true);
+    u_text((int16_t)(x0 + 3), (int16_t)(y0 + 1), name, 1, false);
 }
 
 // --- the two styles ----------------------------------------------------------------
@@ -196,7 +140,7 @@ void u_map_render(uint8_t layer, bool left, bool mac, bool shaped) {
     for (uint8_t i = 0; i < U_MAP_KEYS; i++) {
         const keypos_t   pos = pos_of[slot_of(left, i)];
         const u_legend_t g   = u_map_legend(keymap_key_to_keycode(layer, pos), mac);
-        if (!cells_in(g) && !(g.flags & U_LEG_ICON12)) continue;
+        if (!u_legend_w(g)) continue;
         const bool pressed = matrix_is_on(pos.row, pos.col);
 
         int16_t cx, cy;
@@ -220,13 +164,28 @@ void u_map_render(uint8_t layer, bool left, bool mac, bool shaped) {
     }
 
     // The name in the free thumb slots: outside the thumbs, on the half's outer edge.
-    const char   *name = name_of(layer);
+    const char   *name = u_layer_name(layer);
     const int16_t w    = (int16_t)(6 * strlen(name) + 6);
     if (!shaped) {
         draw_tag(name, left ? 6 : (int16_t)(OLED_DISPLAY_WIDTH - 6 - w), 51);
     } else {
         draw_tag(name, left ? 4 : (int16_t)(OLED_DISPLAY_WIDTH - 4 - w), 50);
     }
+}
+
+// --- the Layer map page --------------------------------------------------------------
+
+void u_map_page_render(uint8_t layer, uint8_t deflt, bool mac) {
+    find_slots();
+    uint16_t keys[U_PAGE_SLOTS], base[U_PAGE_SLOTS];
+    uint64_t down = 0;
+    for (uint8_t s = 0; s < U_PAGE_SLOTS; s++) {
+        const keypos_t pos = pos_of[s];
+        keys[s]            = keymap_key_to_keycode(layer, pos);
+        base[s]            = keymap_key_to_keycode(deflt, pos);
+        if (matrix_is_on(pos.row, pos.col)) down |= 1ull << s;
+    }
+    u_layer_page_draw(layer, u_layer_name(layer), keys, base, down, mac);
 }
 
 #endif     // OLED_ENABLE

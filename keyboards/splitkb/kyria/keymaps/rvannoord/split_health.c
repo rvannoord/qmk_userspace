@@ -43,6 +43,10 @@ uint16_t u_build_id(void) {
     return cached;
 }
 
+const char *u_build_label(void) {
+    return QMK_USERSPACE_VERSION;
+}
+
 static u_health_master_t master;
 static u_health_slave_t  slave;        // on the slave: its own; on the master: unused
 static u_health_slave_t  seen;         // on the master: the last reply

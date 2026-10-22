@@ -52,6 +52,10 @@ static bool     is_keyboard_master(void) { return fake_is_master; }
 uint16_t   keymap_key_to_keycode(uint8_t layer, keypos_t key) { (void)layer; (void)key; return 1; }
 bool       matrix_is_on(uint8_t row, uint8_t col) { (void)row; (void)col; return false; }
 u_legend_t u_map_legend(uint16_t keycode, bool mac) { (void)keycode; (void)mac; return (u_legend_t){{'F', '1'}, 0}; }
+// Whether OS detection has reported, which the event log asks host_os.c.
+static bool fake_detected;
+bool        host_os_detected(void) { return fake_detected; }
+u_legend_t u_map_short(uint16_t keycode, bool mac) { (void)keycode; (void)mac; return (u_legend_t){{'F'}, 0}; }
 
 #ifndef QMK_KEYBOARD_H
 #    define QMK_KEYBOARD_H "qmk_keyboard.h"
@@ -403,6 +407,49 @@ static void emit(const char *label) {
     fwrite(fake_oled, 1, sizeof(fake_oled), stdout);
 }
 
+// --raw-pages <series>: the stage 5 mock's Status sheets, its Typing page fed `series` (a
+// comma-separated WPM a sample), and its Event log, in the mock's order, for a byte compare.
+static void canvas_out(void) { fwrite(u_canvas, 1, OLED_MATRIX_SIZE, stdout); }
+
+static void raw_pages(const char *series) {
+    const struct { u_split_state_t s; uint8_t wpm, kitty; } sheets[] = {
+        {{.layers = U_BASE, .host = U_HOST_WINDOWS}, 0, 0},
+        {{.layers = U_NAV, .flags = U_FLAG_IS_MAC | U_FLAG_OS_MANUAL | U_FLAG_CAPS_WORD, .host = U_HOST_MAC,
+          .fingers = U_FIN_L_PINKY | U_FIN_R_INDEX}, 64, 8},
+        {{.layers = U_EXTRA | (U_EXTRA << 4), .flags = U_FLAG_IS_MAC | U_FLAG_CAPS_LOCK, .host = U_HOST_IOS}, 35, 5},
+        {{.layers = U_SYM, .flags = U_FLAG_SCROLL_LOCK, .host = U_HOST_LINUX, .fingers = U_FIN_L_INDEX}, 12, 4},
+    };
+    for (uint8_t i = 0; i < 4; i++) {
+        u_status_draw(&sheets[i].s, sheets[i].wpm, sheets[i].kitty);
+        canvas_out();
+    }
+    uint8_t last = 0;
+    for (const char *c = series; *c;) {
+        last = (uint8_t)strtoul(c, (char **)&c, 10);
+        u_typing_task(last);
+        fake_now += U_TYPING_MS;
+        if (*c == ',') c++;
+    }
+    u_typing_draw(last);
+    canvas_out();
+    static const struct { uint32_t min; const char *what; } events[] = {
+        {0, "boot e839e2"}, {0, "link up"}, {0, "os win auto"}, {41, "SYS win>mac"},
+        {70, "link down"}, {70, "heal reset"}, {70, "link up 1.1s"}, {82, "misfire L pnk"},
+    };
+    for (uint8_t i = 0; i < 8; i++) {
+        fake_now = events[i].min * 60000u;
+        u_log_add(events[i].what);
+    }
+    u_log_draw();
+    canvas_out();
+}
+
+static bool newest_is(const char *what) {
+    const char  *l = u_log_line((uint8_t)(u_log_count() - 1));
+    const size_t n = strlen(l), w = strlen(what);
+    return n >= w && strcmp(l + n - w, what) == 0;
+}
+
 int main(int argc, char **argv) {
     if (argc > 1 && strcmp(argv[1], "--raw") == 0) {
         each_state(emit);
@@ -412,11 +459,17 @@ int main(int argc, char **argv) {
         each_state(dump);
         return 0;
     }
+    if (argc > 2 && strcmp(argv[1], "--raw-pages") == 0) {
+        raw_pages(argv[2]);
+        return 0;
+    }
 
     // At rest the band is not dark any more: it carries the Kyria logo, and the mod
     // row shows all four glyphs whether or not anything is held. That is the Halcyon
     // panel's grammar — the row is a legend you read, and a hold fills a cell in it.
     frame(at_rest, false);
+    check("the event log's first line is the boot, with the build's first six characters",
+          u_log_count() == 1 && strcmp(u_log_line(0), "+0:00 boot testin") == 0);
     check("at rest the band shows the base layer's logo", any_lit(BAND_Y0, BAND_Y1));
     check("and the mod row shows every finger's glyph",
           cell_drawn(0) && cell_drawn(1) && cell_drawn(2) && cell_drawn(3));
@@ -749,7 +802,7 @@ int main(int argc, char **argv) {
     // --- the pages ------------------------------------------------------------
     {
         frame(at_rest, false);
-        check("no dots before PAGE is ever pressed", !any_lit_in(37, 89, 0, 7));
+        check("no dots before PAGE is ever pressed", !any_lit_in(21, 105, 0, 7));
 
         fake_ee = 0;
         replug();
@@ -765,7 +818,15 @@ int main(int argc, char **argv) {
         u_page_next();
         check("then the Monitor logo's", u_page_get() == U_PAGE_BANDS_MONITOR);
         u_page_next();
-        check("then Stats, past the pages not built yet", u_page_get() == U_PAGE_STATS);
+        check("then the Status sheet", u_page_get() == U_PAGE_STATUS);
+        u_page_next();
+        check("then the Layer map", u_page_get() == U_PAGE_LAYER_MAP);
+        u_page_next();
+        check("then Typing", u_page_get() == U_PAGE_TYPING);
+        u_page_next();
+        check("then Stats", u_page_get() == U_PAGE_STATS);
+        u_page_next();
+        check("then the Event log", u_page_get() == U_PAGE_EVENT_LOG);
         u_page_next();
         check("and the cycle wraps to the bands", u_page_get() == U_PAGE_BANDS);
 
@@ -787,11 +848,11 @@ int main(int argc, char **argv) {
         check("and keeps its animation", u_setting_get(U_SETTING_ANIM) == U_ANIM_KYRIA);
 
         // The map style's bit (stage 4) beside the page's four, which must not be read as
-        // part of it; then a page a later build has, the one that needs the fourth bit.
+        // part of it; then a page a later build might have, which the fourth bit allows.
         fake_ee = U_SETTINGS_TAG | ((uint32_t)(0x10 | U_PAGE_STATS) << 8);
         replug();
         check("the map style's bit is not read as part of the page", u_page_get() == U_PAGE_STATS);
-        fake_ee = U_SETTINGS_TAG | ((uint32_t)(0x10 | U_PAGE_EVENT_LOG) << 8);
+        fake_ee = U_SETTINGS_TAG | ((uint32_t)(0x10 | 0x0F) << 8);
         replug();
         check("a page this build has not got reads as the bands", u_page_get() == U_PAGE_BANDS);
         u_page_next();
@@ -836,20 +897,21 @@ int main(int argc, char **argv) {
             replug();
         }
 
-        // The dots: six pages, so x 37-89, the small kitty's the second and larger.
+        // The dots: all ten pages, so x 21-105, the small kitty's the second and larger.
         frame(at_rest, false);
+        bool small = true;
+        for (uint8_t i = 0; i < 10; i++)
+            if (i != 1) small = small && solid_block((uint8_t)(25 + i * 8), (uint8_t)(27 + i * 8), 3, 4);
         check("after a press the dots show, the current one larger",
-              solid_block(48, 52, 2, 5) && solid_block(41, 43, 3, 4) && solid_block(57, 59, 3, 4)
-              && solid_block(65, 67, 3, 4) && solid_block(73, 75, 3, 4) && solid_block(81, 83, 3, 4)
-              && count_in_except(37, 89, 0, 7, 1, 0, 1, 0) == 20 + 5 * 6);
-        check("between the OS logo and the locks", !any_lit_in(U_OS_LOGO_W, 36, 0, 7) && !any_lit_in(90, 108, 0, 7));
+              solid_block(32, 36, 2, 5) && small && count_in_except(21, 105, 0, 7, 1, 0, 1, 0) == 20 + 9 * 6);
+        check("between the OS logo and the locks", !any_lit_in(U_OS_LOGO_W, 23, 0, 7) && !any_lit_in(106, 108, 0, 7));
         fake_dirty = 0;
         fake_now += 50;
         step();
         check("the dots cost nothing to redraw", fake_dirty == 0);
         fake_now += U_DOTS_MS;
         step();
-        check("and are gone after 700 ms", !any_lit_in(37, 89, 0, 7));
+        check("and are gone after 700 ms", !any_lit_in(21, 105, 0, 7));
 
         // --- the bands, four ways
         fake_wpm = 0;
@@ -1122,6 +1184,148 @@ int main(int argc, char **argv) {
 
         // A map redraws for free, like every page.
         check("holding Fun, a redraw is free", redraw_cost(fun, false) == 0);
+        frame(at_rest, false);
+    }
+
+    // --- stage 5's pages ----------------------------------------------------
+    {
+        // Everything a page can show at once: every lock, every finger, the Mac by hand.
+        const u_split_state_t busy = {.layers = U_BASE, .fingers = 0xff, .host = U_HOST_MAC,
+                                      .flags = U_FLAG_CAPS_LOCK | U_FLAG_SCROLL_LOCK | U_FLAG_CAPS_WORD |
+                                               U_FLAG_IS_MAC | U_FLAG_OS_MANUAL};
+        static const struct { enum u_master_page p; const char *name; bool alarm; } pages[] = {
+            {U_PAGE_STATUS, "the Status sheet", false}, {U_PAGE_LAYER_MAP, "the Layer map", false},
+            {U_PAGE_TYPING, "Typing", false},           {U_PAGE_EVENT_LOG, "the Event log", true},
+        };
+        char name[96];
+        fake_wpm = 0;
+        for (uint8_t i = 0; i < 4; i++) {
+            show_page(pages[i].p);
+            at_multiple_of(1500);      // the kitty's frame and the typing sample both stand still
+            snprintf(name, sizeof name, "%s costs nothing to redraw", pages[i].name);
+            check(name, redraw_cost(busy, false) == 0);
+            snprintf(name, sizeof name, "%s lights less than the alarm frame", pages[i].name);
+            check(name, count(0, 63) < 4584);
+            frame(busy, false);
+            keep();
+            fake_now += 1000;          // past the alarm's three blinks
+            frame(busy, true);
+            const bool shown = same_in(0, 127, 0, 63);
+            show_page(U_PAGE_BANDS);
+            fake_now += 1000;
+            frame(busy, true);
+            const bool bands = same_in(0, 127, 0, 63);
+            show_page(pages[i].p);
+            fake_now += 1000;
+            frame(busy, true);
+            if (pages[i].alarm) {
+                snprintf(name, sizeof name, "with the link down, %s keeps showing", pages[i].name);
+                check(name, shown && !bands);
+            } else {
+                snprintf(name, sizeof name, "with the link down, %s gives way to the bands", pages[i].name);
+                keep();
+                show_page(U_PAGE_BANDS);
+                fake_now += 1000;
+                frame(busy, true);
+                check(name, !shown && same_in(0, 127, 0, 63));
+                show_page(pages[i].p);
+            }
+            frame(at_rest, false);
+        }
+        show_page(U_PAGE_BANDS);
+
+        // The Status sheet's kitty is the striped one, on the bands' clock.
+        show_page(U_PAGE_STATUS);
+        at_multiple_of(1000);
+        frame(at_rest, false);
+        {
+            bool same = true;
+            for (uint8_t y = 0; y < 32; y++)
+                for (uint8_t x = 0; x < U_KITTY_W; x++)
+                    same = same && lit((uint8_t)(4 + x), (uint8_t)(9 + y)) ==
+                                       (bool)((u_kitty_striped[0][(y / 8) * U_KITTY_W + x] >> (y % 8)) & 1);
+            check("the Status sheet's kitty is the striped one asleep, at (4,9)", same);
+        }
+        show_page(U_PAGE_BANDS);
+
+        // Typing keeps sampling on every page, and the peak is the session's.
+        fake_wpm = 90;
+        for (int k = 0; k < 10; k++) { fake_now += 50; step(); }
+        fake_wpm = 20;
+        for (int k = 0; k < 10; k++) { fake_now += 50; step(); }
+        show_page(U_PAGE_TYPING);
+        frame(at_rest, false);
+        check("Typing's graph has a column at the top for the 90 WPM burst", any_lit_in(66, 127, 1, 6));
+        show_page(U_PAGE_BANDS);
+
+        // The event ring: eight lines, the ninth pushes out the first, oldest first.
+        char want[32];
+        for (uint8_t i = 0; i < 10; i++) {
+            snprintf(want, sizeof want, "e%u", i);
+            u_log_add(want);
+        }
+        check("the ring holds eight", u_log_count() == 8);
+        check("oldest first, so the first two are gone", newest_is("e9") && strcmp(u_log_line(0) + strlen(u_log_line(0)) - 2, "e2") == 0);
+        fake_now += 70u * 60000u - fake_now % 60000u;
+        const uint32_t m = fake_now / 60000u;
+        u_log_add("a line too long for the panel to hold");
+        snprintf(want, sizeof want, "+%u:%02u a line too long for the panel to hold", (unsigned)(m / 60), (unsigned)(m % 60));
+        want[U_LOG_CHARS] = 0;
+        check("stamped in hours and minutes since boot, and cut to a line", strcmp(u_log_line(7), want) == 0);
+
+        // The events, as the watcher finds them on the master.
+        char before[U_LOG_CHARS + 1];
+        strcpy(before, u_log_line(7));
+        drive_link_down = true;
+        step();
+        drive_link_down = false;
+        step();
+        check("before the first reply the link has no edges to log", strcmp(u_log_line(7), before) == 0);
+        const u_health_slave_t reply = {.resets = 0};
+        u_health_note_reply(&reply, sizeof reply);
+        step();
+        check("the first reply logs the link up", newest_is("link up"));
+        drive_link_down = true;
+        step();
+        check("then a lost link logs down", newest_is("link down"));
+        fake_now += 1100;
+        drive_link_down = false;
+        step();
+        check("and back up, with how long it was gone", newest_is("link up 1.1s"));
+        const u_health_slave_t healed = {.resets = 1};
+        u_health_note_reply(&healed, sizeof healed);
+        step();
+        check("a self-heal reset of the other half is logged", newest_is("heal reset"));
+        drive_link_down = true;
+        step();
+        fake_now += 2500;
+        const u_health_slave_t again = {.resets = 2};
+        u_health_note_reply(&again, sizeof again);
+        drive_link_down = false;
+        step();
+        check("and when it ends an outage, the log reads down, reset, up",
+              newest_is("link up 2.5s") && strstr(u_log_line(6), "heal reset") && strstr(u_log_line(5), "link down"));
+        fake_detected = true;
+        frame(at_rest, false);
+        check("detection saying Windows is logged, though nothing changed", newest_is("os win auto"));
+        frame((u_split_state_t){.layers = U_BASE, .host = U_HOST_MAC, .flags = U_FLAG_IS_MAC | U_FLAG_OS_MANUAL}, false);
+        check("SYS is logged as from and to", newest_is("SYS win>mac"));
+        frame((u_split_state_t){.layers = U_BASE, .host = U_HOST_MAC, .flags = U_FLAG_IS_MAC | U_FLAG_OS_MANUAL,
+                                .fingers = U_FIN_L_PINKY, .anomaly = 100}, false);
+        frame((u_split_state_t){.layers = U_BASE, .host = U_HOST_MAC, .flags = U_FLAG_IS_MAC | U_FLAG_OS_MANUAL,
+                                .anomaly = 101}, false);
+        check("a misfire is logged with its hand and finger", newest_is("misfire L pnk"));
+        frame(at_rest, false);
+        strcpy(before, u_log_line(7));
+        const char *slot = u_log_line(0);
+        frame(at_rest, false);
+        frame(at_rest, false);
+        check("and nothing repeats while nothing happens", strcmp(u_log_line(7), before) == 0 && u_log_line(0) == slot);
+
+        show_page(U_PAGE_EVENT_LOG);
+        frame(at_rest, false);
+        check("the Event log draws its eight lines", any_lit_in(0, 30, 0, 6) && any_lit_in(0, 30, 56, 62));
+        show_page(U_PAGE_BANDS);
         frame(at_rest, false);
     }
 

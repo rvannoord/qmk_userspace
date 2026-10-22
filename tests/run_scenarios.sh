@@ -30,9 +30,11 @@ if [ "$mode" = new ]; then
        "$keymap/split_state.c" "$keymap/split_state.h" \
        "$keymap/split_sync.c" "$keymap/split_sync.h" \
        "$keymap/split_health.c" "$keymap/split_health.h" "$keymap/oled.h" "$keymap/oled_settings.h" \
-       "$keymap/map_legend.c" "$keymap/map_legend.h" "$miryoku/custom_config.h" "$stage/"
+       "$keymap/map_legend.c" "$keymap/map_legend.h" "$miryoku/custom_config.h" \
+       "$keymap/oled_layer_page.c" "$keymap/oled_layer_page.h" "$keymap/oled_draw.c" "$keymap/oled_draw.h" \
+       "$keymap/oled_canvas.h" "$stage/"
     mkdir -p "$stage/art"
-    cp "$keymap/art/drashna_icons.h" "$stage/art/"
+    cp "$keymap/art/drashna_icons.h" "$keymap/art/drashna_icons.c" "$keymap/art/panel_font.h" "$keymap/art/panel_font.c" "$stage/art/"
     # The test framework has its own keymap.c and config.h, so these get other names
     cp "$keymap/keymap.c" "$stage/rvannoord_keymap.c"
     cp "$keymap/config.h" "$stage/rvannoord_keymap_config.h"

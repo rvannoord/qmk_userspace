@@ -6,6 +6,7 @@
 static bool     is_mac    = false;
 static bool     is_manual = false;            // SYS has overridden detection
 static u_host_t detected  = U_HOST_WINDOWS;
+static bool     reported  = false;            // a Windows answer changes nothing else
 
 static void apply_host_os(void) {
     keymap_config.swap_lctl_lgui = is_mac;
@@ -18,6 +19,10 @@ bool host_is_mac(void) {
 
 bool host_os_is_manual(void) {
     return is_manual;
+}
+
+bool host_os_detected(void) {
+    return reported;
 }
 
 // SYS only flips between Mac and not-Mac. Each side keeps the detected flavour when
@@ -41,6 +46,7 @@ bool process_detected_host_os_user(os_variant_t os) {
                                : U_HOST_WINDOWS;
     is_mac    = os == OS_MACOS || os == OS_IOS;
     is_manual = false;
+    reported  = true;
     apply_host_os();
     return true;
 }

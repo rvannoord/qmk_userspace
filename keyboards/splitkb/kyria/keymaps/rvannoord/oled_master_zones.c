@@ -46,10 +46,13 @@
 #include "art/kitty_art.h"
 #include "art/monitor_art.h"
 #include "oled_canvas.h"
+#include "oled_draw.h"
 #include "split_health.h"
 #include "oled_settings.h"
 #include "speed_tier.h"
 #include "oled_map.h"
+#include "oled_pages.h"
+#include "oled_event_log.h"
 
 // Rebuilt every main loop by oled_master_task. That is a resampling, not a capture:
 // u_sync_build() reports only what is held at the instant it is called, and each build
@@ -143,20 +146,6 @@ static void draw_glyph_16_knockout(uint8_t x, uint8_t page, uint8_t which) {
     }
 }
 
-// A page-format image ORed in at any row. The art is page-aligned and its place on the
-// panel is not, so each source byte lands across two canvas pages.
-static void blit_at(const uint8_t *src, uint8_t w, uint8_t pages, uint8_t x0, uint8_t y0) {
-    const uint8_t sh = y0 & 7;
-    for (uint8_t q = 0; q < pages; q++) {
-        const uint16_t at = (uint16_t)((y0 >> 3) + q) * OLED_DISPLAY_WIDTH + x0;
-        for (uint8_t i = 0; i < w; i++) {
-            const uint16_t b = (uint16_t)(pgm_read_byte(&src[(uint16_t)q * w + i]) << sh);
-            u_canvas[at + i] |= (uint8_t)b;
-            if (sh) u_canvas[at + OLED_DISPLAY_WIDTH + i] |= (uint8_t)(b >> 8);
-        }
-    }
-}
-
 // --- the page ---------------------------------------------------------------
 // The stored value is the page's number in D1's order, not its place in the cycle, so
 // building a page later does not move the others.
@@ -244,6 +233,7 @@ static void watch_edges(const u_split_state_t *now) {
             trace_left  = (uint8_t)(U_FIN_LEFT(prev.fingers) & keep);
             trace_at    = timer_read32();
             trace_live  = true;
+            u_log_misfire(keep, trace_left);
         }
     }
     if (trace_live && timer_elapsed32(trace_at) >= U_TRACE_MS) trace_live = false;
@@ -335,19 +325,22 @@ static void knock_chain(uint8_t x) {
 
 // Either kitty, on Bjorn's four tiers in drashna's order. The small one's paw frames are
 // her sleep frames, so in the first tier she looks asleep (D9); the striped one has her own.
-static void base_kitty(const uint8_t (*art)[U_KITTY_BYTES], const u_kitty_run_t *moods) {
+// Her frame now, on the shared clock, so the Status sheet's kitty and the band's agree.
+static uint8_t kitty_frame(const u_kitty_run_t *moods) {
     static const uint8_t mood_of_tier[4] = {U_KITTY_SLEEP, U_KITTY_PAW, U_KITTY_WATCH, U_KITTY_BOUNCE};
+    const u_kitty_run_t  run             = moods[mood_of_tier[kitty_speed.tier]];
+    const uint32_t       ms              = kitty_speed.tier == 3 ? U_KITTY_FAST_MS : U_KITTY_MS;
+    return (uint8_t)(run.first + (timer_read32() / ms) % run.count);
+}
 
+static void base_kitty(const uint8_t (*art)[U_KITTY_BYTES], const u_kitty_run_t *moods) {
     for (uint8_t q = 0; q < U_BAND_PAGES; q++) fill((uint8_t)(U_BAND_PAGE + q), 0, U_KITTY_CLEAR_W, 0x00);
-    const u_kitty_run_t run = moods[mood_of_tier[kitty_speed.tier]];
-    const uint32_t      ms  = kitty_speed.tier == 3 ? U_KITTY_FAST_MS : U_KITTY_MS;
-    const uint8_t       f   = (uint8_t)(run.first + (timer_read32() / ms) % run.count);
-    blit_at(art[f], U_KITTY_W, U_KITTY_BYTES / U_KITTY_W, U_KITTY_X, U_KITTY_Y);
+    u_blit(art[kitty_frame(moods)], U_KITTY_W, U_KITTY_BYTES / U_KITTY_W, U_KITTY_X, U_KITTY_Y);
 }
 
 static void base_qmk(void) {
     for (uint8_t q = 0; q < U_BAND_PAGES; q++) fill((uint8_t)(U_BAND_PAGE + q), 0, OLED_DISPLAY_WIDTH, 0x00);
-    blit_at(u_qmk_logo, U_LOGO_W, U_LOGO_PAGES, U_QMK_X, U_QMK_Y);
+    u_blit(u_qmk_logo, U_LOGO_W, U_LOGO_PAGES, U_QMK_X, U_QMK_Y);
 }
 
 // Centred in y 18-47 and across the panel.
@@ -356,7 +349,7 @@ static void base_qmk(void) {
 
 static void base_monitor(void) {
     for (uint8_t q = 0; q < U_BAND_PAGES; q++) fill((uint8_t)(U_BAND_PAGE + q), 0, OLED_DISPLAY_WIDTH, 0x00);
-    blit_at(u_monitor_band, U_MONITOR_BAND_W, U_MONITOR_BAND_PAGES, U_MONITOR_X, U_MONITOR_Y);
+    u_blit(u_monitor_band, U_MONITOR_BAND_W, U_MONITOR_BAND_PAGES, U_MONITOR_X, U_MONITOR_Y);
 }
 
 // Returns whether the alarm lit the band this frame, which the OS logo needs to know.
@@ -548,7 +541,7 @@ static void render_mods(void) {
 
 // --- the page dots ----------------------------------------------------------
 // One per page that PAGE can reach, the current one larger, in the status bar's dark
-// middle (x 37-89 with six pages), the mock's geometry. Drawn last, over any page, the
+// middle (x 21-105 with all ten), the mock's geometry. Drawn last, over any page, the
 // Stats page's first line included: they are only there for 700 ms.
 
 static void render_dots(void) {
@@ -677,6 +670,8 @@ void oled_master_task(void) {
     panel = u_sync_build();
     watch_edges(&panel);
     u_speed_tier_update(&kitty_speed, get_current_wpm());
+    u_typing_task(get_current_wpm());
+    u_log_watch(&panel);
     if (dots_live && timer_elapsed32(dots_at) >= U_DOTS_MS) dots_live = false;
 }
 
@@ -700,10 +695,23 @@ void oled_render_master(void) {
     // Holding SYS still opens the stats page from any page, and it still closes itself;
     // as a page it stays. Either way it carries no alarm, as the SYS page never has: its
     // FAIL and OUT lines are how it reports the link.
-    if (u_stats_page_open() || u_page_get() == U_PAGE_STATS) {
+    //
+    // The Event log reports the link too. The other pages give way to the bands while the
+    // link is down, so the alarm is never hidden (docs/layout.md, "Pages give way to the
+    // alarm").
+    const enum u_master_page p = u_page_get();
+    if (u_stats_page_open() || p == U_PAGE_STATS) {
         render_stats();
-    } else {
+    } else if (p == U_PAGE_EVENT_LOG) {
+        u_log_draw();
+    } else if (u_sync_link_down() || p < U_PAGE_STATUS) {
         render_bands();
+    } else if (p == U_PAGE_STATUS) {
+        u_status_draw(&panel, get_current_wpm(), kitty_frame(u_kitty_striped_moods));
+    } else if (p == U_PAGE_LAYER_MAP) {
+        u_map_page_render(layer, panel.layers >> 4, panel.flags & U_FLAG_IS_MAC);
+    } else {
+        u_typing_draw(get_current_wpm());
     }
     render_dots();
     u_canvas_commit();     // the only point that touches the driver's buffer

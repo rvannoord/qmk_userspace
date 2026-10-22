@@ -65,16 +65,15 @@ enum u_master_page {
     U_PAGE_BANDS_STRIPED,   // the same, the striped kitty
     U_PAGE_BANDS_QMK,       // the same, the QMK logo in the base band
     U_PAGE_BANDS_MONITOR,   // the same, the Monitor ERP logo
-    U_PAGE_STATUS,          // stage 5
-    U_PAGE_LAYER_MAP,       // stage 4
-    U_PAGE_TYPING,          // stage 5
+    U_PAGE_STATUS,          // drashna's left screen, this keyboard's state
+    U_PAGE_LAYER_MAP,       // the current layer, both halves
+    U_PAGE_TYPING,          // WPM and its last 18.6 s
     U_PAGE_STATS,           // the SYS page
-    U_PAGE_EVENT_LOG,       // stage 5
+    U_PAGE_EVENT_LOG,       // the last eight events
     U_PAGE_COUNT,
 };
 
-#define U_PAGES_BUILT ((1u << U_PAGE_BANDS) | (1u << U_PAGE_BANDS_KITTY) | (1u << U_PAGE_BANDS_STRIPED) | \
-                       (1u << U_PAGE_BANDS_QMK) | (1u << U_PAGE_BANDS_MONITOR) | (1u << U_PAGE_STATS))
+#define U_PAGES_BUILT ((1u << U_PAGE_COUNT) - 1u)
 
 enum u_master_page u_page_get(void);
 void               u_page_next(void);

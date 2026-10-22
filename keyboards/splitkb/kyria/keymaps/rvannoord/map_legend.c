@@ -102,9 +102,71 @@ static bool find(const u_legend_entry_t *table, uint8_t n, uint16_t keycode, u_l
     return false;
 }
 
+// What a key types: a key that also holds a modifier or a layer is drawn as its tap.
+static uint16_t tap_of(uint16_t keycode) {
+    if (IS_QK_MOD_TAP(keycode)) return QK_MOD_TAP_GET_TAP_KEYCODE(keycode);
+    if (IS_QK_LAYER_TAP(keycode)) return QK_LAYER_TAP_GET_TAP_KEYCODE(keycode);
+    return keycode;
+}
+
+static const u_legend_t unknown = {{U_LEG_ICON6(U_ICON6_BULLET)}, U_LEG_UNKNOWN};
+
 u_legend_t u_map_legend(uint16_t keycode, bool mac) {
     u_legend_t l;
+    keycode = tap_of(keycode);
     if (mac && find(mac_legends, ARRAY_SIZE(mac_legends), keycode, &l)) return l;
     if (find(legends, ARRAY_SIZE(legends), keycode, &l)) return l;
-    return (u_legend_t){{U_LEG_ICON6(U_ICON6_BULLET)}, U_LEG_UNKNOWN};
+    return unknown;
+}
+
+// --- one cell ----------------------------------------------------------------------------
+
+// Miryoku's tap dances are Boot, then one lock per layer in MIRYOKU_LAYER_LIST order
+// (manna-harbour_miryoku.c), so a tap dance's index past Boot is the layer it locks.
+static const char letters[] = {[U_BASE] = 'B', [U_EXTRA] = 'E', [U_TAP] = 'T', [U_BUTTON] = 'U', [U_NAV] = 'V',
+                                 [U_MOUSE] = 'M', [U_MEDIA] = 'D', [U_NUM] = 'N', [U_SYM] = 'Y', [U_FUN] = 'F'};
+
+static const u_legend_entry_t shorts[] = {
+    {KC_QUOT, T('\'')}, {KC_COMM, T(',')}, {KC_SLSH, T('/')},
+    {U_RDO, T('R')}, {U_PST, T('P')}, {U_CPY, T('C')}, {U_CUT, T('X')}, {U_UND, T('U')},
+    {CW_TOGG, T('W')}, {KC_INS, T('I')},
+    {KC_HOME, T(I6(TRI_LEFT))}, {KC_PGDN, T(I6(TRI_DOWN))}, {KC_PGUP, T(I6(TRI_UP))}, {KC_END, T(I6(TRI_RIGHT))},
+    {MS_WHLL, T(I6(ARROW_LEFT))}, {MS_WHLD, T(I6(ARROW_DOWN))}, {MS_WHLU, T(I6(ARROW_UP))}, {MS_WHLR, T(I6(ARROW_RIGHT))},
+    {RM_TOGG, T('R')}, {RM_NEXT, T('M')}, {RM_HUEU, T('H')}, {RM_SATU, T('S')}, {RM_VALU, T('V')},
+    {UG_TOGG, T('R')}, {UG_NEXT, T('M')}, {UG_HUEU, T('H')}, {UG_SATU, T('S')}, {UG_VALU, T('V')},
+    {KC_MPRV, T(I6(TRI_LEFT))}, {KC_VOLD, T('-')}, {KC_VOLU, T('+')}, {KC_MNXT, T(I6(TRI_RIGHT))}, {OU_AUTO, T('O')},
+    {KC_PSCR, T('P')}, {KC_SCRL, T('S')}, {KC_PAUS, T('B')},
+    {KC_ALGR, I12(ALT)},
+};
+
+static const u_legend_entry_t mac_shorts[] = {
+    {KC_INS, T('H')},                   // Help
+    {KC_PSCR, T('F')},                  // F13
+    {KC_SCRL, T(I6(TRI_DOWN))},         // F14, brightness down
+    {KC_PAUS, T(I6(TRI_UP))},           // F15, brightness up
+};
+
+u_legend_t u_map_short(uint16_t keycode, bool mac) {
+    keycode = tap_of(keycode);
+    if (keycode == KC_NO) return (u_legend_t){{0}, 0};
+    if (IS_QK_TAP_DANCE(keycode)) {
+        const uint8_t i = QK_TAP_DANCE_GET_INDEX(keycode);
+        if (i == 0) return (u_legend_t)T('!');
+        return i - 1 < (int)sizeof letters ? (u_legend_t)T((uint8_t)letters[i - 1]) : unknown;
+    }
+    if (keycode >= KC_A && keycode <= KC_Z) return (u_legend_t)T((uint8_t)('A' + keycode - KC_A));
+    if (keycode >= KC_1 && keycode <= KC_9) return (u_legend_t)T((uint8_t)('1' + keycode - KC_1));
+    if (keycode == KC_0) return (u_legend_t)T('0');
+    if (keycode >= KC_F1 && keycode <= KC_F12) {
+        const uint8_t n = (uint8_t)(1 + keycode - KC_F1);
+        if (n < 10) return (u_legend_t)T((uint8_t)('0' + n));
+        return (u_legend_t){{'1', (uint8_t)('0' + n - 10)}, U_LEG_TIGHT};
+    }
+    u_legend_t l;
+    if (mac && find(mac_shorts, ARRAY_SIZE(mac_shorts), keycode, &l)) return l;
+    if (find(shorts, ARRAY_SIZE(shorts), keycode, &l)) return l;
+    // Single characters, arrows, the pointer and the modifiers are the full legend already.
+    l = u_map_legend(keycode, mac);
+    if (l.flags & (U_LEG_ICON12 | U_LEG_UNKNOWN)) return l;
+    return l.cell[1] ? unknown : l;
 }

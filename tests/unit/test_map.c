@@ -8,6 +8,7 @@
 #include "qmk_keyboard.h"
 #include "driver.h"
 #include "map_legend.h"
+#include "art/drashna_icons.h"
 
 uint8_t  fake_oled[OLED_MATRIX_SIZE + 1];
 uint16_t fake_dirty;
@@ -30,6 +31,8 @@ u_legend_t u_map_legend(uint16_t keycode, bool mac) {
     const uint16_t k = (uint16_t)(keycode - 1);
     return legend_at((uint8_t)(k >> 8), (keypos_t){.col = (uint8_t)(k & 0xF), .row = (uint8_t)((k >> 4) & 0xF)}, mac);
 }
+// The Layer map page is test_panel.c's and the scenario tests'; the map only links it.
+u_legend_t u_map_short(uint16_t keycode, bool mac) { return u_map_legend(keycode, mac); }
 
 #include "oled_map.c"
 

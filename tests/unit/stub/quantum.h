@@ -23,3 +23,18 @@ static inline bool     is_keyboard_left(void)   { return fake_is_left; }
 // its dirty blocks; power is not part of that model, so this is a no-op here. The real
 // one comes from oled_driver.h via quantum.h in the firmware build.
 static inline void     oled_off(void)            { }
+
+// The panel's size, for the drawing files that include this header rather than
+// qmk_keyboard.h; the same values as there.
+#ifndef OLED_DISPLAY_WIDTH
+#    define OLED_DISPLAY_WIDTH  128
+#    define OLED_DISPLAY_HEIGHT 64
+#    define OLED_MATRIX_SIZE    1024
+#endif
+
+// QMK's layer-tap encoding (quantum/keycodes.h, quantum_keycodes.h), for the Layer map page.
+#define QK_LAYER_TAP               0x4000
+#define QK_LAYER_TAP_MAX           0x4FFF
+#define IS_QK_LAYER_TAP(code)      ((code) >= QK_LAYER_TAP && (code) <= QK_LAYER_TAP_MAX)
+#define QK_LAYER_TAP_GET_LAYER(kc) (((kc) >> 8) & 0xF)
+#define LT(layer, kc)              (QK_LAYER_TAP | (((layer) & 0xF) << 8) | ((kc) & 0xFF))
