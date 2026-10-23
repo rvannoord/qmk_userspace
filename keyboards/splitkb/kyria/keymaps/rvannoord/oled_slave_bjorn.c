@@ -14,6 +14,8 @@
 #include "art/bjorn_art.h"
 #include "art/bjorn_poses.h"
 #include "oled_slave_world.h"
+#include "oled_slave_director.h"
+#include "oled_slave_goat.h"
 #include "split_sync.h"
 #include "oled_canvas.h"
 #include "speed_tier.h"
@@ -433,11 +435,16 @@ static void bjorn_compose(void) {
     // and this closes the one instant where they could overlap.
     if (in.idle_ms < BJORN_VIG_START_MS || bjorn_state != 0) {
         bjorn_vig = U_POSE_COUNT;
-    } else if (bjorn_vig == U_POSE_COUNT ||
-               (uint16_t)(bjorn_ticks - bjorn_vig_at) >= BJORN_VIG_HOLD) {
+    } else if ((bjorn_vig == U_POSE_COUNT ||
+                (uint16_t)(bjorn_ticks - bjorn_vig_at) >= BJORN_VIG_HOLD) &&
+               u_director_claim()) {
         // A cursor, not a shuffle. Random selection repeats a drawing back to back and
         // takes a dozen idle periods to work through the set; a cursor guarantees the
-        // whole cast is seen and lets the order mean something later.
+        // whole cast is seen and lets the order mean something later. While the goat is
+        // out his two drawings with a goat in them are passed over: one goat on screen.
+        while (u_goat_present() && pgm_read_byte(&u_pose_still_x0[bjorn_vig_next]) != 255) {
+            bjorn_vig_next = (uint8_t)((bjorn_vig_next + 1u) % U_POSE_COUNT);
+        }
         bjorn_vig      = bjorn_vig_next;
         bjorn_vig_next = (uint8_t)((bjorn_vig_next + 1u) % U_POSE_COUNT);
         bjorn_vig_at   = bjorn_ticks;
@@ -610,7 +617,13 @@ void u_slave_bjorn_render(void) {
     // Compose first, commit once. Every early return in bjorn_compose is a frame that
     // still has to reach the panel, which is why the commit lives out here.
     memset(u_canvas, 0, OLED_MATRIX_SIZE);
+    const uint32_t idle = last_input_activity_elapsed();
+    u_director_step(idle);
     bjorn_compose();
+    // The goat after him and his floor, which it stands on and which assigns its bytes.
+    u_goat_step(idle, u_sync_hard_stale(),
+                bjorn_vig != U_POSE_COUNT && pgm_read_byte(&u_pose_still_x0[bjorn_vig]) != 255);
+    u_goat_draw();
 #ifdef OLED_SLAVE_WORLD
     // After him, not before: bjorn_blit_base() assigns his column rather than
     // OR-ing it, so weather drawn first would simply be erased where he stands.

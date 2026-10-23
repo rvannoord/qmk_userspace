@@ -27,6 +27,7 @@
 #include "oled.h"
 #include "oled_canvas.h"
 #include "oled_slave_world.h"
+#include "oled_slave_goat.h"
 #include "art/world_art.h"
 
 #ifdef OLED_SLAVE_WORLD
@@ -214,7 +215,12 @@ static int16_t sway_of(const leaf_t *l) {
     return (int16_t)((t * 2 * l->sway_amp16) / (half ? half : 1) - l->sway_amp16);
 }
 
-static void leaves_draw(const uint64_t *hull) {
+// Behind Bjorn, in his column, or behind the goat, in its.
+static bool blocked(const uint64_t *hull, const uint64_t *goat, int16_t x, int16_t y) {
+    return x < BJORN_W ? (hull[y] >> x) & 1u : (goat[y] >> (x - BJORN_W)) & 1u;
+}
+
+static void leaves_draw(const uint64_t *hull, const uint64_t *goat) {
     for (uint8_t i = 0; i < U_LEAVES; i++) {
         const leaf_t *l  = &leaves[i];
         const int16_t ox = (int16_t)((l->x16 + sway_of(l)) >> 8);
@@ -225,7 +231,7 @@ static void leaves_draw(const uint64_t *hull) {
             for (uint8_t lx = 0; lx < U_LEAF_W; lx++) {
                 const int16_t x = (int16_t)(ox + lx);
                 if (x < 0 || x >= (int16_t)W) continue;
-                if (x < BJORN_W && ((hull[y] >> x) & 1u)) continue;     // behind him
+                if (blocked(hull, goat, x, y)) continue;
                 if (art_bit(u_leaf[l->frame], U_LEAF_STRIDE, ly, lx)) put((uint8_t)x, (uint8_t)y);
             }
         }
@@ -237,8 +243,9 @@ static void leaves_draw(const uint64_t *hull) {
 void u_world_draw(void) {
     if (world_state == U_WORLD_NONE) return;
 
-    uint64_t hull[H];
+    uint64_t hull[H], goat[H];
     bjorn_hull(hull);
+    u_goat_silhouette(goat);
 
     const uint8_t *art;
     uint16_t       tile_h;
@@ -247,15 +254,14 @@ void u_world_draw(void) {
         case U_WORLD_RAIN:  art = u_rain;  tile_h = U_RAIN_H;  scrolls = true;  break;
         case U_WORLD_SNOW:  art = u_snow;  tile_h = U_SNOW_H;  scrolls = true;  break;
         case U_WORLD_STARS: art = u_stars; tile_h = U_STARS_H; scrolls = false; break;
-        case U_WORLD_LEAVES: leaves_draw(hull); return;
+        case U_WORLD_LEAVES: leaves_draw(hull, goat); return;
         default: return;
     }
 
     for (uint8_t y = 0; y < H; y++) {
         const uint16_t row = scrolls ? (uint16_t)((y + scroll) % tile_h) : y;
-        const uint64_t blocked = hull[y];
         for (uint8_t x = 0; x < W; x++) {
-            if (x < BJORN_W && ((blocked >> x) & 1u)) continue;   // behind him
+            if (blocked(hull, goat, x, y)) continue;
             if (art_bit(art, U_WORLD_ROW_BYTES, row, x)) put(x, y);
         }
     }

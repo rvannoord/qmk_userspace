@@ -3,7 +3,7 @@
 # transport's master half, which only exists under SPLIT_KEYBOARD, and the panel's
 # drawing, which needs a buffer to draw into. No QMK tree and no toolchain beyond cc.
 #
-#   tests/run_unit.sh            build and run all eight
+#   tests/run_unit.sh            build and run all nine
 #   tests/run_unit.sh --dump     print the panel's frames instead of checking them
 #   tests/run_unit.sh --raw      the panel's frames as raw buffers; --raw-map the live maps
 set -euo pipefail
@@ -29,7 +29,8 @@ cc "${cc_flags[@]}" -o "$out/panel" \
    "$keymap/oled_pages.c" "$keymap/oled_event_log.c"
 
 cc "${cc_flags[@]}" -DOLED_SLAVE_ANIMATION_BJORN -o "$out/bjorn" \
-   "$here/unit/test_bjorn.c" "$keymap/art/bjorn_art.c" "$keymap/art/bjorn_poses.c" "$keymap/oled_canvas.c"
+   "$here/unit/test_bjorn.c" "$keymap/art/bjorn_art.c" "$keymap/art/bjorn_poses.c" "$keymap/oled_canvas.c" \
+   "$keymap/oled_slave_director.c" "$keymap/oled_slave_goat.c" "$keymap/art/goat_art.c"
 
 # The other half's side of the transport, from boot.
 cc "${cc_flags[@]}" -Wno-unused-parameter -o "$out/sync_slave" \
@@ -38,6 +39,11 @@ cc "${cc_flags[@]}" -Wno-unused-parameter -o "$out/sync_slave" \
 # The live layer map, from oled_map.c itself.
 cc "${cc_flags[@]}" -o "$out/map" \
    "$here/unit/test_map.c" "$keymap/art/panel_font.c" "$keymap/art/drashna_icons.c" "$keymap/oled_canvas.c" "$keymap/oled_draw.c" "$keymap/oled_layer_page.c"
+
+# The goat, from its own file, on the director's real stream.
+cc "${cc_flags[@]}" -DOLED_SLAVE_WORLD -o "$out/goat" \
+   "$here/unit/test_goat.c" "$keymap/oled_slave_director.c" "$keymap/art/goat_art.c" "$keymap/oled_canvas.c" \
+   "$keymap/oled_slave_world.c" "$keymap/art/world_art.c"
 
 # Bongo cat and the Mario scene, from their own files.
 cc "${cc_flags[@]}" -o "$out/scenes" \
@@ -83,6 +89,8 @@ echo
 "$out/bjorn" || fails=1
 echo
 "$out/scenes" || fails=1
+echo
+"$out/goat" || fails=1
 echo
 "$out/boot" || fails=1
 exit $fails

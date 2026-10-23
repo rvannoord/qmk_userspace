@@ -46,6 +46,14 @@ git checkout 61a4758e5ee3d37d43c10eb690340626139912c0
 
 The art is **regenerable**: `tools/` holds the generator and the text grids it reads (`STAGE1.txt`), verified on 2026-10-14 to reproduce `bjorn_art.c` and `bjorn_art.h` byte for byte. Edit the grids, never the generated file.
 
+## `keyboards/splitkb/kyria/keymaps/rvannoord/art/goat_art.c`
+
+Bjorn's goat, from the same **[infinition/Bjorn](https://github.com/infinition/Bjorn)**, MIT licensed, "Copyright (c) 2024 infinition", at the same commit `61a4758e5ee3d37d43c10eb690340626139912c0`.
+
+The goat at Bjorn's feet in `resources/images/status/IDLE/IDLE9.bmp` and `IDLE10.bmp` (78x78), **redrawn by hand** at panel size on 2026-10-23, because reduced like Bjorn it dissolves into the dither: 15 frames of 30x23, one-bit, ink lit, as text grids in `tools/sprites/goat.txt`. Nothing of infinition's pixels is copied; the drawing is his design. A first draft was revised in a second pass, which raised the head onto a neck as in his frames and swept the horn back.
+
+The art is **regenerable**: `python3 -I tools/sprites/sprite_art.py goat tools/sprites/goat.txt <art dir>` writes `goat_art.c` and `goat_art.h`, each frame's ink and its filled silhouette. Edit the grids, never the generated file.
+
 ## `keyboards/splitkb/kyria/keymaps/rvannoord/art/oled_spaceship.h`
 
 The spaceship animation — the ship, its mask, and the four-row space strip it flies through — is from **JBaguley's `retrograde` keymap for the Corne**, [`JBaguley/qmk_firmware`](https://github.com/JBaguley/qmk_firmware/tree/crkbd-retrograde-keymap/keyboards/crkbd/keymaps/retrograde), branch `crkbd-retrograde-keymap`, commit **`c653e0f22f`** (2022-10-20, "added retrograde keymap for corne"). GPL-2.0-or-later, under the keymap's foostan/drashna header.

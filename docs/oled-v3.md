@@ -88,6 +88,8 @@ Open, with a default, to answer before the stage that needs it:
 - D12. **Order against `docs/oled-v2.md`.** Stages 0-7 here touch neither Bjorn's idle show nor the
   director, so they can go before v2's open stages. Stages 8 and 9 touch the slave's idle time and
   should follow v2 stage 4 (the director). Default: v3 0-7, then v2 resumes, then v3 8-9.
+  **Decided 2026-10-23, the default:** v2's director (stage 4) and the goat (stage 5) next, then
+  v3's stages 8 and 9.
 - D13. **When Yoshi curls up (stage 6).** The mock used 4 s after the last key. Default: at
   Bjorn's doze, 75 s, so the two slave scenes rest on the same clock. **Decided 2026-10-22: 4 s
   after the last key**, as the mock had it.

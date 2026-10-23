@@ -32,6 +32,8 @@ The design and every tuning decision are in `docs/layout.md`; this file is the m
 | `speed_tier.h` | WPM as four speed tiers, for Bjorn and the master's kitty |
 | `oled_slave_select.c` | what the half without the cable shows: its map, or the chosen animation, persisted on the master and sent across |
 | `oled_slave_bjorn.c` | Bjorn: the idle ladder, blink, poses, props |
+| `oled_slave_director.c` / `.h` | the idle show's timing: when things may happen, and one at a time |
+| `oled_slave_goat.c` / `.h` | the goat that wanders beside Bjorn while you are idle |
 | `oled_slave_world.c` / `.h` | the weather behind Bjorn, across the whole panel, season from `__DATE__` |
 | `oled_slave_spaceship.c` | the ship over three parallax planes, speed from WPM |
 | `oled_slave_logo.c` | the static screens: the Kyria logo and the three Monitor ERP ones |

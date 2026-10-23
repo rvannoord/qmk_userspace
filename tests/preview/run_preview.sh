@@ -40,7 +40,8 @@ cc -std=c11 -Wall -Wextra -Werror \
    -I "$repo/tests/unit" -I "$repo/tests/unit/stub" -I "$keymap" \
    -DQMK_KEYBOARD_H='"qmk_keyboard.h"' -DOLED_ENABLE -DOLED_SLAVE_ANIMATION_BJORN -DOLED_SLAVE_WORLD \
    -o "$bin" "$here/preview.c" "$keymap/art/bjorn_art.c" "$keymap/art/bjorn_poses.c" "$keymap/oled_canvas.c" \
-   "$keymap/oled_slave_world.c" "$keymap/art/world_art.c"
+   "$keymap/oled_slave_world.c" "$keymap/art/world_art.c" \
+   "$keymap/oled_slave_director.c" "$keymap/oled_slave_goat.c" "$keymap/art/goat_art.c"
 
 "$bin" "$scenario" "$out"
 python3 -I "$repo/tools/preview.py" "$out" $invert

@@ -85,6 +85,7 @@ static uint8_t  prev_canvas[OLED_MATRIX_SIZE];
 static bool     prev_valid;
 static int      free_redraws, paid_redraws;   // identical frame, nothing written / something written
 static int      blinks;
+static int      two_goats, goat_ticks;   // his goat drawing and the wandering goat at once
 static bool     blinking;
 static uint32_t last_blink_at;
 static uint32_t first_blink_at;   // since the last arm_first(), so "how soon" is measurable
@@ -109,6 +110,9 @@ static void tick(void) {
     memcpy(prev_canvas, u_canvas, OLED_MATRIX_SIZE);
     prev_valid = true;
 
+    if (u_goat_present()) goat_ticks++;
+    if (u_goat_present() && bjorn_vig != U_POSE_COUNT && u_pose_still_x0[bjorn_vig] != 255) two_goats++;
+
     const bool shut = eyes_shut();
     if (shut && !blinking) {
         blinks++;
@@ -132,10 +136,13 @@ static void run(uint32_t ms, uint8_t wpm, bool typing) {
     }
 }
 
-// Type briefly, then idle past 20 s, which starts the next drawing in the cursor.
+// Let the panel sleep, type briefly, then idle past 20 s, which starts the next drawing in
+// the cursor. The sleep sends the goat away, so his own goat drawings are not passed over.
 // Searching by idling alone does not work: at 75 s he dozes and vignettes stop, so a
 // long search finds nothing however finely it steps.
 static int next_pose(void) {
+    run(126000, 0, false);            // to the end of the show, and the panel off a while:
+    fake_now += 60000;                // the goat has wandered off
     run(1000, 40, true);
     run(21000, 0, false);
     return pose_showing();
@@ -361,6 +368,15 @@ int main(void) {
     drive.flags = 0;
     drive.fingers = 0;
     run(90000, 0, false);                     // doze again
+
+    // One goat on screen: his two drawings with a goat are passed over while it is out,
+    // and it does not come in while one of them shows.
+    for (int k = 0; k < 12; k++) {
+        run(2000, 40, true);
+        run(70000, 0, false);
+    }
+    check("the goat came out in the long idles", goat_ticks > 2000);
+    check("and never with Bjorn's own goat on screen", two_goats == 0);
 
     check("an unchanged frame was seen many times", free_redraws > 500);
     check("and never cost a single block", paid_redraws == 0);

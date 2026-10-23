@@ -21,9 +21,9 @@ Keep the Progress table below current, in the same commit that finishes a stage.
 | 1. Bug A: the panels sleep, Bjorn keeps blinking, sequence per send | **done 2026-10-14**, flashed `c95356d`, checked on the board |
 | 2. Bug B: link health, stats page, self-heal | **done 2026-10-14**, cause still unknown; §2.5 skipped for want of evidence |
 | 3. Survey of all 17 sprite sets | fetched and sheets rendered 2026-10-14; tools committed. Mapping with the animator |
-| 4. Director, layered compositor, preview harness | preview harness and one idle clock done 2026-10-14; compositor and director open |
+| 4. Director, layered compositor, preview harness | preview harness and one idle clock done 2026-10-14; **director built 2026-10-23** in part: the timeline, one starter a step, its own random stream, with Bjorn's frames byte-identical when nothing new is on stage. Not built: the repertoire table with weights and cooldowns, the rare-once-an-idle-period rule beyond the goat's own hop, and the block arbiter; stage 8 needs the repertoire first. The 8-block budget is not enforced: the weather, added since, already changes up to 15 blocks in a step (`docs/layout.md`). Not flashed |
+| 5. The goat | **built 2026-10-23**, not flashed: redrawn by hand in two passes, approved by Roel from the renders the same day. The pet at 45 s is deferred to stage 7 for want of a drawing of Bjorn reaching down |
 | 4a. Master panel reworked into three bands (unplanned) | **done 2026-10-15**, not flashed. Layer icons from splitkb's Halcyon module, QMK's own font replaces DUNGEON.mode. See the note below |
-| 5. The goat | open |
 | 6. Weather by season | open |
 | 7. Doze extras and the heart | open |
 | 8. Every sprite set gets its moment | open |
