@@ -33,7 +33,7 @@ QMK line numbers refer to `7a1bbf37c5`.
 | 6. Bongo cat and the Mario scene on the slave | **built 2026-10-22** in `42f140a`, not flashed yet; D13 decided (4 s) |
 | 7. Encoder feedback | **built 2026-10-23** in `915f3b2`, not flashed yet; D11 decided (the same box, centred, 2 px rim) |
 | 8. Glitch bursts on link loss | **built 2026-10-23** in `1a87127`, not flashed: it replaces the alarm band, over every page and animation |
-| 9. Screensaver | **built 2026-10-23**, not flashed: the rain from 100 s on both halves, panels off at 180 s (D10) |
+| 9. Screensaver | **built 2026-10-23** in `053db26`, not flashed: the rain from 100 s on both halves, panels off at 180 s (D10) |
 
 ## Decisions
 

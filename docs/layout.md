@@ -1149,6 +1149,7 @@ few extra glyphs each one carries. All —.
 
 | Date | Change | Why | Verdict after a week |
 |------|--------|-----|----------------------|
+| 2026-10-23 | Flashed `053db26` to both halves: the matrix rain on both halves from 100 s of idle, and `OLED_TIMEOUT` 180 s instead of 120 | The last step of `docs/oled-v3.md`, timing decided on the day (D10) | Open. Watch FAIL, OUT and DROP for a few days: the rain repaints both panels in full |
 | 2026-10-23 | Flashed `1a87127` to both halves: the Status sheet, Layer map, Typing and Event log pages; bongo cat and the Mario scene; the encoder box and Mute; the goat and the idle-show director; and a lost link shown as glitch bursts in place of the alarm band | Six commits had stacked up unflashed, the goat the first to change the other half | Open |
 | 2026-10-22 | Flashed `e839e27` to both halves: three Monitor ERP screens on the slave in place of the two Monitor logos, a Monitor stop on the master's bands, and `e3bf16d`, which took the master's screen moving over back out | The old Monitor logos were a stacked logo and a picture that did not read; the moving screen confused more than it helped | Passed on the board the same day |
 | 2026-10-22 | Flashed `d267d99` to both halves: the rest of stage 4, the master's screen moving to the other half under a map, and QMK's `@` with ZXPIX's `|` and `*` | The early check had passed; the three glyphs failed at the map's 2x | The glyphs passed; the moving screen was confusing and came out again in `e3bf16d` |
