@@ -145,6 +145,68 @@ void u_num3(char *b, uint8_t v) {
     b[3] = 0;
 }
 
+// --- glitch ---------------------------------------------------------------------------
+
+static uint16_t glitch_rand(u_glitch_t *g, uint16_t span) {
+    g->seed = g->seed * 1664525u + 1013904223u;
+    return span ? (uint16_t)((g->seed >> 16) % span) : 0;
+}
+
+bool u_glitch_due(u_glitch_t *g, bool alarm) {
+    if (!alarm) {
+        g->armed = false;
+        g->left  = 0;
+        return false;
+    }
+    if (!g->armed) {
+        g->armed   = true;
+        g->next_at = timer_read32();
+    }
+    if (!g->left && (int32_t)(timer_read32() - g->next_at) >= 0) g->left = (uint8_t)(3 + glitch_rand(g, 5));
+    if (!g->left) return false;
+    if (--g->left == 0) g->next_at = timer_read32() + 700u + glitch_rand(g, 801);
+    return true;
+}
+
+u_glitch_t u_glitch_clock = {.seed = 0x6a09e667u};
+
+void u_glitch_frame(bool lost) {
+    if (u_glitch_due(&u_glitch_clock, lost)) u_glitch(&u_glitch_clock);
+}
+
+static bool canvas_px(int16_t x, int16_t y) {
+    return (u_canvas[(uint16_t)(y >> 3) * OLED_DISPLAY_WIDTH + (uint16_t)x] >> (y & 7)) & 1u;
+}
+
+void u_glitch(u_glitch_t *g) {
+    // Bands of rows slid sideways, wrapping round.
+    for (uint8_t n = (uint8_t)(3 + glitch_rand(g, 4)); n; n--) {
+        const int16_t y0 = (int16_t)glitch_rand(g, OLED_DISPLAY_HEIGHT);
+        const int16_t h  = (int16_t)(1 + glitch_rand(g, 7));
+        const int16_t dx = (int16_t)((2 + glitch_rand(g, 17)) * (glitch_rand(g, 2) ? 1 : -1));
+        for (int16_t y = y0; y < y0 + h && y < OLED_DISPLAY_HEIGHT; y++) {
+            bool row[OLED_DISPLAY_WIDTH];
+            for (int16_t x = 0; x < OLED_DISPLAY_WIDTH; x++) row[x] = canvas_px(x, y);
+            for (int16_t x = 0; x < OLED_DISPLAY_WIDTH; x++)
+                u_put((int16_t)((x + dx + OLED_DISPLAY_WIDTH) % OLED_DISPLAY_WIDTH), y, row[x]);
+        }
+    }
+    // Sometimes a thin strip inverted.
+    if (glitch_rand(g, 10) < 6) {
+        const int16_t y0 = (int16_t)glitch_rand(g, OLED_DISPLAY_HEIGHT - 4), h = (int16_t)(1 + glitch_rand(g, 4));
+        for (int16_t y = y0; y < y0 + h; y++)
+            for (int16_t x = 0; x < OLED_DISPLAY_WIDTH; x++) u_put(x, y, !canvas_px(x, y));
+    }
+    // Noise.
+    for (uint8_t n = 0; n < 40; n++) {
+        const int16_t x = (int16_t)glitch_rand(g, OLED_DISPLAY_WIDTH), y = (int16_t)glitch_rand(g, OLED_DISPLAY_HEIGHT);
+        u_put(x, y, glitch_rand(g, 2));
+    }
+    // Now and then a few rows dropped.
+    if (glitch_rand(g, 10) < 4) u_rect(0, (int16_t)glitch_rand(g, OLED_DISPLAY_HEIGHT - 6), OLED_DISPLAY_WIDTH,
+                                       (int16_t)(1 + glitch_rand(g, 3)), false);
+}
+
 void u_text_bar(int16_t x, int16_t y, const char *s) {
     u_rect((int16_t)(x - 1), (int16_t)(y - 1), (int16_t)(u_text_w(s) + 2), 9, true);
     u_text(x, y, s, 1, false);

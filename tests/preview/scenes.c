@@ -20,6 +20,7 @@ static uint8_t  fake_wpm;
 static uint32_t fake_idle_ms;
 uint8_t         get_current_wpm(void) { return fake_wpm; }
 uint32_t        last_input_activity_elapsed(void) { return fake_idle_ms; }
+bool            u_sync_hard_stale(void) { return false; }
 
 #include "oled_slave_bongo.c"
 #include "oled_slave_mario.c"

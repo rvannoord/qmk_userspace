@@ -12,6 +12,7 @@
 #include "oled_canvas.h"
 #include "oled_draw.h"
 #include "speed_tier.h"
+#include "split_sync.h"
 #include "art/mario_art.h"
 
 #ifdef OLED_ENABLE
@@ -250,6 +251,7 @@ void u_slave_mario_render(void) {
     draw_yoshi();
     draw_bill();
     u_slave_wpm_corner(get_current_wpm());
+    u_glitch_frame(u_sync_hard_stale());
     u_canvas_commit();
 }
 

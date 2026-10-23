@@ -30,7 +30,8 @@ cc "${cc_flags[@]}" -o "$out/panel" \
 
 cc "${cc_flags[@]}" -DOLED_SLAVE_ANIMATION_BJORN -o "$out/bjorn" \
    "$here/unit/test_bjorn.c" "$keymap/art/bjorn_art.c" "$keymap/art/bjorn_poses.c" "$keymap/oled_canvas.c" \
-   "$keymap/oled_slave_director.c" "$keymap/oled_slave_goat.c" "$keymap/art/goat_art.c"
+   "$keymap/oled_slave_director.c" "$keymap/oled_slave_goat.c" "$keymap/art/goat_art.c" \
+   "$keymap/oled_draw.c" "$keymap/art/panel_font.c" "$keymap/art/drashna_icons.c"
 
 # The other half's side of the transport, from boot.
 cc "${cc_flags[@]}" -Wno-unused-parameter -o "$out/sync_slave" \
@@ -48,21 +49,23 @@ cc "${cc_flags[@]}" -DOLED_SLAVE_WORLD -o "$out/goat" \
 # Bongo cat and the Mario scene, from their own files.
 cc "${cc_flags[@]}" -o "$out/scenes" \
    "$here/unit/test_scenes.c" "$keymap/art/bongo_art.c" "$keymap/art/mario_art.c" "$keymap/art/panel_font.c" \
+   "$keymap/art/monitor_art.c" \
    "$keymap/art/drashna_icons.c" "$keymap/oled_canvas.c" "$keymap/oled_draw.c"
 
 # The bootloader screen, from oled.c itself.
 cc "${cc_flags[@]}" -o "$out/boot" \
    "$here/unit/test_boot.c" "$keymap/art/panel_font.c" "$keymap/oled_canvas.c"
 
-# -Wno-unused-parameter: the spaceship's oled_set_cursor stub takes QMK's (col, line).
-cc "${cc_flags[@]}" -Wno-unused-parameter -o "$out/space" \
-   "$here/unit/test_space.c" "$keymap/art/space_art.c"
+cc "${cc_flags[@]}" -o "$out/space" \
+   "$here/unit/test_space.c" "$keymap/art/space_art.c" "$keymap/oled_canvas.c" "$keymap/oled_draw.c" \
+   "$keymap/art/panel_font.c" "$keymap/art/drashna_icons.c"
 
 case "${1:-}" in
     --dump) exec "$out/panel" --dump ;;   # the frames as text
     --raw)  exec "$out/panel" --raw  ;;   # three 1024-byte frames, for a renderer
     --raw-map) exec "$out/map" --raw ;;   # the live maps D15 was decided from
     --raw-pages) exec "$out/panel" --raw-pages "$2" ;;   # stage 5's mock frames, fed a WPM series
+    --raw-glitch) exec "$out/panel" --raw-glitch ;;      # ten seconds of the alarm, glitching
 esac
 
 fails=0

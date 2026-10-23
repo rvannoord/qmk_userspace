@@ -9,18 +9,14 @@
 //                          Underlined at y=16 when SYS set the OS by hand
 //   pages 1-5 layer band   one 128x40 picture per layer, from panel_layer_icons.c.
 //                          A rule under it while a held layer hides a non-base
-//                          default. This band is also the alarm
+//                          default
 //   pages 6-7 mod row      four 32 px cells, one per finger, each showing its glyph
 //                          always. A held finger fills its cell; a finger that just
 //                          misfired fills only its glyph box
 //
-// Two things moved when the bands did, and both had to, because the band that used to
-// hold them is now 40 px of picture:
-//
-// The alarm is no longer a banner. A 128x8 inverted row is about 850 dark pixels and a
-// held mod cell is 405, so against the new mod row a banner reads as two modifiers —
-// the exact collision docs/layout.md records from when the mod row last inverted. So
-// the alarm now takes the whole band, which nothing routine can reach.
+// A lost link is not drawn as a picture any more: since 2026-10-23 the whole frame breaks
+// up in glitch bursts, whatever page is up (docs/layout.md, "Glitch bursts"). The band
+// was the alarm before that, inverted with a broken chain cut out of it.
 //
 // The misfire trace is no longer a strip across the bottom. watch_edges() fires on the
 // bit that just dropped, so the next 1.5 s is precisely when the shortcut is retried;
@@ -175,7 +171,7 @@ enum u_master_page u_page_get(void) {
 }
 
 // A map is up somewhere: on this panel, on the other one, or both. Never while the link is
-// down, when neither half draws one (docs/layout.md, "Never over the alarm").
+// down, when the other half cannot draw its part (docs/layout.md, "Never over the alarm").
 static bool map_showing(void) {
     return u_map_side(panel.layers & 0x0F) != U_MAP_NONE && !u_sync_link_down();
 }
@@ -200,7 +196,7 @@ void u_page_next(void) {
 // --- the encoder toast ------------------------------------------------------
 // What an encoder or Mute just did, for 800 ms after: drashna's speaker, bulb or struck-through
 // speaker at 2x and VOL+, VOL-, BRI+, BRI- or MUTE, cut out of a box with chamfered corners. In the band on the
-// bands, centred over any other page with a dark rim (D11). Never over the alarm.
+// bands, centred over any other page with a dark rim (D11). Not over a live map.
 
 #    define U_TOAST_MS 800
 #    define U_TOAST_W  90
@@ -249,16 +245,11 @@ static void draw_toast(int16_t y0, bool rim) {
 // be missed is latched here instead.
 
 #    define U_TRACE_MS  1500    // how long a misfire stays on screen
-#    define U_BLINK_MS   600    // alarm entry: three blinks over this
-#    define U_BLINK_HALF 100    // so 200 ms a cycle, three cycles
 
 static uint8_t  trace_cells;        // finger bits that dropped on the misfire
 static uint8_t  trace_left;         // which of them were the left hand
 static uint32_t trace_at;
 static bool     trace_live;
-
-static uint32_t alarm_at;
-static bool     alarm_was;
 
 // Run whatever the page, so the kitty shows the speed you are typing at the moment you
 // turn to her, rather than catching up from wherever she was last seen.
@@ -284,10 +275,6 @@ static void watch_edges(const u_split_state_t *now) {
         }
     }
     if (trace_live && timer_elapsed32(trace_at) >= U_TRACE_MS) trace_live = false;
-
-    const bool alarm = u_sync_link_down();
-    if (alarm && !alarm_was) alarm_at = timer_read32();
-    alarm_was = alarm;
 
     prev   = *now;
     primed = true;
@@ -339,25 +326,6 @@ static void blit_band(uint8_t which) {
     }
 }
 
-static void invert_band(void) {
-    for (uint8_t q = 0; q < U_BAND_PAGES; q++) {
-        for (uint8_t i = 0; i < U_BAND_W; i++) {
-            u_canvas[(uint16_t)(U_BAND_PAGE + q) * OLED_DISPLAY_WIDTH + i] ^= 0xffu;
-        }
-    }
-}
-
-// The chain is cut out of the inverted band rather than drawn on it, so it reads lit
-// against the dark — the same knockout the mod row uses for a held glyph.
-static void knock_chain(uint8_t x) {
-    for (uint8_t q = 0; q < U_CHAIN_PAGES; q++) {
-        for (uint8_t i = 0; i < U_CHAIN_W; i++) {
-            u_canvas[(uint16_t)(U_BAND_PAGE + 1 + q) * OLED_DISPLAY_WIDTH + x + i] &=
-                (uint8_t)~pgm_read_byte(&u_chain[(uint16_t)q * U_CHAIN_W + i]);
-        }
-    }
-}
-
 // The base band's other four versions. All start right of x=15 or below y=17, or under
 // the OS logo and its underline in the corner. A kitty takes only the emblem's half, so
 // the Kyria wordmark stays; the QMK and Monitor logos take the whole band.
@@ -399,8 +367,7 @@ static void base_monitor(void) {
     u_blit(u_monitor_band, U_MONITOR_BAND_W, U_MONITOR_BAND_PAGES, U_MONITOR_X, U_MONITOR_Y);
 }
 
-// Returns whether the alarm lit the band this frame, which the OS logo needs to know.
-static bool render_band(void) {
+static void render_band(void) {
     const uint8_t active = panel.layers & 0x0F;
     const uint8_t deflt  = panel.layers >> 4;
 
@@ -408,7 +375,6 @@ static bool render_band(void) {
     // is, which on a stock setup is base and its Kyria logo.
     const uint8_t shown = (active == U_BASE && deflt != U_BASE) ? deflt : active;
     blit_band(shown);
-    // Before the alarm, which still fills the base band whichever version it is.
     if (shown == U_BASE) {
         switch (u_page_get()) {
             case U_PAGE_BANDS_KITTY:   base_kitty(u_kitty_small, u_kitty_small_moods); break;
@@ -441,36 +407,10 @@ static bool render_band(void) {
         fill_or(5, x0, (uint8_t)(x1 - x0 + 1), 0xe0);     // rows 45-47
     }
 
-    if (!u_sync_link_down()) {
-        if (toast_live) {
-            for (uint8_t q = 0; q < U_BAND_PAGES; q++) fill((uint8_t)(U_BAND_PAGE + q), 0, OLED_DISPLAY_WIDTH, 0x00);
-            draw_toast(13, false);
-        }
-        return false;
+    if (toast_live) {
+        for (uint8_t q = 0; q < U_BAND_PAGES; q++) fill((uint8_t)(U_BAND_PAGE + q), 0, OLED_DISPLAY_WIDTH, 0x00);
+        draw_toast(13, false);
     }
-
-    // Three blinks over 600 ms on entry, which no routine change ever does. After that
-    // it is steady: a fault that stayed is not news any more, but it is still true.
-    const uint32_t since = timer_elapsed32(alarm_at);
-    if (since < U_BLINK_MS && ((since / U_BLINK_HALF) & 1u) != 0) return false;
-
-    if (shown == U_BASE) {
-        // The resting band is the one place the icon is not kept. It carries no
-        // information to lose — base is where you already are — and the Kyria wordmark
-        // is 81 px wide, so there is no gutter to put the chain in beside it.
-        fill(1, 0, OLED_DISPLAY_WIDTH, 0xff);
-        fill(2, 0, OLED_DISPLAY_WIDTH, 0xff);
-        fill(3, 0, OLED_DISPLAY_WIDTH, 0xff);
-        fill(4, 0, OLED_DISPLAY_WIDTH, 0xff);
-        fill(5, 0, OLED_DISPLAY_WIDTH, 0xff);
-        knock_chain(44);
-    } else {
-        // Escalation by scope, not replacement: the layer icon survives, lit on dark,
-        // so nothing needed while typing is hidden by the alarm.
-        invert_band();
-        knock_chain(2);
-    }
-    return true;
 }
 
 // --- OS logo ----------------------------------------------------------------
@@ -479,30 +419,21 @@ static bool render_band(void) {
 // (docs/oled-v3.md, D14), and the logo moves right to make room. It is 16 rows tall and
 // the status bar is 8, so its bottom half borrows the band's top-left corner: x 0-15,
 // y 8-17 is dark on all ten bands, which test_panel.c asserts on the art itself. The band
-// is redrawn whole every frame, so this has to come after it.
-//
-// Under the alarm that corner is lit along with the rest of the band, so the logo, the
-// "i" and the underline are cut out of it, the way the chain is, instead of being ORed
-// onto a field that is already lit. The three logos drawn here and the "i" all light
-// column 0, which is what the "no 1 px edge frame" argument in docs/layout.md rests on
-// now that the badge is gone.
+// is redrawn whole every frame, so this has to come after it. The three logos drawn here
+// and the "i" all light column 0, which is what the "no 1 px edge frame" argument in
+// docs/layout.md rests on now that the badge is gone.
 
 #    define U_OS_UNDERLINE_PAGE 2       // y=16, the row under the logo
 #    define U_OS_UNDERLINE_BIT  0x01u
 #    define U_IOS_I_GAP         2       // between the "i" and the logo
 
 // One column of something two pages tall at the top left: the top byte onto the dark
-// status bar, the bottom byte onto the band, cut out of it when the alarm has lit it.
-static void put_corner(uint8_t x, uint8_t page, uint8_t byte, bool band_lit) {
-    uint8_t *at = &u_canvas[(uint16_t)page * OLED_DISPLAY_WIDTH + x];
-    if (page > 0 && band_lit) {
-        *at &= (uint8_t)~byte;
-    } else {
-        *at |= byte;
-    }
+// status bar, the bottom byte onto the band's dark corner.
+static void put_corner(uint8_t x, uint8_t page, uint8_t byte) {
+    u_canvas[(uint16_t)page * OLED_DISPLAY_WIDTH + x] |= byte;
 }
 
-static void render_os_logo(bool band_lit) {
+static void render_os_logo(void) {
     static const uint8_t logo_of[] = {[U_HOST_WINDOWS] = U_OS_LOGO_WINDOWS, [U_HOST_MAC] = U_OS_LOGO_APPLE,
                                       [U_HOST_IOS] = U_OS_LOGO_APPLE, [U_HOST_LINUX] = U_OS_LOGO_LINUX};
     const uint8_t *src = u_os_logo[panel.host < sizeof(logo_of) ? logo_of[panel.host] : U_OS_LOGO_WINDOWS];
@@ -511,20 +442,20 @@ static void render_os_logo(bool band_lit) {
 
     if (ios) {
         for (uint8_t i = 0; i < U_IOS_I_W; i++) {
-            put_corner(i, 0, pgm_read_byte(&u_ios_i[i]), band_lit);
-            put_corner(i, 1, pgm_read_byte(&u_ios_i[U_IOS_I_W + i]), band_lit);
+            put_corner(i, 0, pgm_read_byte(&u_ios_i[i]));
+            put_corner(i, 1, pgm_read_byte(&u_ios_i[U_IOS_I_W + i]));
         }
     }
     for (uint8_t i = 0; i < U_OS_LOGO_W; i++) {
-        put_corner((uint8_t)(x0 + i), 0, pgm_read_byte(&src[i]), band_lit);
-        put_corner((uint8_t)(x0 + i), 1, pgm_read_byte(&src[U_OS_LOGO_W + i]), band_lit);
+        put_corner((uint8_t)(x0 + i), 0, pgm_read_byte(&src[i]));
+        put_corner((uint8_t)(x0 + i), 1, pgm_read_byte(&src[U_OS_LOGO_W + i]));
     }
     // Set by hand: detection was overridden, so the logo is a decision rather than a
     // reading. The logos and the "i" end at y=14, so the line stands a row clear, and on
     // iOS it runs under the "i" too.
     if (panel.flags & U_FLAG_OS_MANUAL) {
         for (uint8_t x = 0; x < x0 + U_OS_LOGO_W; x++) {
-            put_corner(x, U_OS_UNDERLINE_PAGE, U_OS_UNDERLINE_BIT, band_lit);
+            put_corner(x, U_OS_UNDERLINE_PAGE, U_OS_UNDERLINE_BIT);
         }
     }
 }
@@ -731,13 +662,14 @@ void oled_master_task(void) {
 
 static void render_bands(void) {
     render_status();
-    render_os_logo(render_band());
+    render_band();
+    render_os_logo();
     render_mods();
 }
 
 void oled_render_master(void) {
     // A held layer's map, when its keys are under this panel. It replaces whatever page is
-    // up, and gives way to the bands while the link is down, so the alarm shows.
+    // up. It needs the other half for the rest of the map, so not while the link is down.
     const uint8_t layer = panel.layers & 0x0F;
     if (map_showing() && u_map_here(layer, is_keyboard_left())) {
         u_map_render(layer, is_keyboard_left(), panel.flags & U_FLAG_IS_MAC,
@@ -747,19 +679,14 @@ void oled_render_master(void) {
     }
 
     // Holding SYS still opens the stats page from any page, and it still closes itself;
-    // as a page it stays. Either way it carries no alarm, as the SYS page never has: its
-    // FAIL and OUT lines are how it reports the link.
-    //
-    // The Event log reports the link too. The other pages give way to the bands while the
-    // link is down, so the alarm is never hidden (docs/layout.md, "Pages give way to the
-    // alarm").
+    // as a page it stays.
     const enum u_master_page p     = u_page_get();
     bool                     bands = false;
     if (u_stats_page_open() || p == U_PAGE_STATS) {
         render_stats();
     } else if (p == U_PAGE_EVENT_LOG) {
         u_log_draw();
-    } else if (u_sync_link_down() || p < U_PAGE_STATUS) {
+    } else if (p < U_PAGE_STATUS) {
         render_bands();
         bands = true;
     } else if (p == U_PAGE_STATUS) {
@@ -769,9 +696,11 @@ void oled_render_master(void) {
     } else {
         u_typing_draw(get_current_wpm());
     }
-    // The bands carry the toast in the band, or the alarm and no toast; any other page has it
-    // centred over it.
+    // The bands carry the toast in the band; any other page has it centred over it.
     if (toast_live && !bands) draw_toast((OLED_DISPLAY_HEIGHT - U_TOAST_H) / 2, true);
     render_dots();
+    // A lost link: whatever is up breaks up in bursts now and then (docs/layout.md,
+    // "Glitch bursts"). Between them it is the clean frame.
+    u_glitch_frame(u_sync_link_down());
     u_canvas_commit();     // the only point that touches the driver's buffer
 }

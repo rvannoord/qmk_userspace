@@ -185,21 +185,6 @@ static bool solid_block(uint8_t x0, uint8_t x1, uint8_t y0, uint8_t y1) {
     return true;
 }
 
-static bool any_dark_in(uint8_t x0, uint8_t x1, uint8_t y0, uint8_t y1) {
-    for (uint8_t y = y0; y <= y1; y++)
-        for (uint8_t x = x0; x <= x1; x++)
-            if (!lit(x, y)) return true;
-    return false;
-}
-
-// From x0 to the right edge. The band's rows are probed from just past the OS logo's
-// corner, because under the alarm the logo is cut out of the lit band there.
-static bool row_solid_from(uint8_t x0, uint8_t y) {
-    for (uint8_t x = x0; x < OLED_DISPLAY_WIDTH; x++)
-        if (!lit(x, y)) return false;
-    return true;
-}
-
 // The logo exactly as drawn: its top half on the status bar, its bottom half lit on the
 // dark corner, or cut out of the lit band under the alarm. Exact bytes, so this also
 // proves the corner around the logo is uniformly dark, or uniformly lit.
@@ -312,6 +297,14 @@ static void frame(u_split_state_t s, bool link) {
     drive           = s;
     drive_link_down = link;
     step();
+}
+
+// Hold the alarm's glitch off for a long while: for a test that compares clean alarm frames
+// across seconds of the link being down. The glitch has tests of its own.
+static void hold_glitch(void) {
+    u_glitch_clock.armed   = true;
+    u_glitch_clock.left    = 0;
+    u_glitch_clock.next_at = fake_now + 600000u;
 }
 
 // Move the clock forward to the next multiple of `ms`, which pins which frame a kitty is on.
@@ -479,6 +472,16 @@ int main(int argc, char **argv) {
         each_state(dump);
         return 0;
     }
+    // --raw-glitch: ten seconds of the alarm on the bands, a frame a render, for a GIF.
+    if (argc > 1 && strcmp(argv[1], "--raw-glitch") == 0) {
+        frame(at_rest, false);
+        for (int k = 0; k < 200; k++) {
+            fake_now += 50;
+            frame(at_rest, true);
+            fwrite(fake_oled, 1, OLED_MATRIX_SIZE, stdout);
+        }
+        return 0;
+    }
     if (argc > 2 && strcmp(argv[1], "--raw-pages") == 0) {
         raw_pages(argv[2]);
         return 0;
@@ -561,71 +564,34 @@ int main(int argc, char **argv) {
         frame(on_nav, false);
     }
 
-    // The ladder: nothing routine may light more of the panel than the alarm. The
-    // worst routine frame is four fingers of both hands held at once; the alarm is the
-    // whole 128x40 band. This is the measurement that retired the old banner, which at
-    // 128x8 had fallen to roughly two held cells.
+    // The ladder: nothing routine may light more of the panel than the alarm did. The
+    // alarm band is gone since 2026-10-23, but its 4,584 lit px stays as the ceiling; the
+    // worst routine frame is four fingers of both hands held at once.
     {
         u_split_state_t all = on_nav;
         all.fingers = 0xff;
         frame(all, false);
-        const int mods = count(MOD_Y0, MOD_Y1);
-        frame(latched, true);
-        const int alarm = count(BAND_Y0, BAND_Y1);
-        check("the alarm outshines the worst routine frame", alarm > mods * 2);
-        // Put the link back up before leaving: the entry blink is measured from the
-        // edge, so an alarm left latched here would make the next block's first frame
-        // land in the steady state instead.
-        frame(at_rest, false);
+        check("the worst routine frame stays well under the old alarm's ceiling", count(0, 63) * 2 < 4584);
     }
 
-    // The alarm. Three blinks over 600 ms on entry, then steady — and it inverts,
-    // which nothing else on this panel is allowed to do.
+    // A lost link is the glitch alone (docs/layout.md, "Glitch bursts"): no band lights, no
+    // chain, and between bursts the frame is exactly the one with the link up. The bursts
+    // have tests of their own below.
     fake_now = 10000;
-    frame(latched, true);
-    check("the whole band inverts on entry",
-          row_solid_from(CORNER_X1 + 1, BAND_Y0) && count(BAND_Y0, BAND_Y1) > 3500);
-    fake_now += 100;
-    step();
-    check("and returns to normal a blink later", !row_solid_from(CORNER_X1 + 1, BAND_Y0));
-    check("with the OS logo lit on the dark corner again", logo_is(U_OS_LOGO_WINDOWS, false));
-    fake_now += 100;
-    step();
-    check("and inverts again", row_solid_from(CORNER_X1 + 1, BAND_Y0));
+    const u_split_state_t locked = {.layers = U_BASE, .flags = U_FLAG_CAPS_LOCK | U_FLAG_SCROLL_LOCK};
+    frame(locked, false);
+    keep();
+    hold_glitch();
+    frame(locked, true);
+    check("with the link down the band is not lit and nothing is drawn over it", same_in(0, 127, 0, 63));
     fake_now += 1000;
     step();
-    check("steady once the blinking is over",
-          row_solid_from(CORNER_X1 + 1, BAND_Y0) && count(BAND_Y0, BAND_Y1) > 3500);
-    check("the OS logo is cut out of the lit band", logo_is(U_OS_LOGO_WINDOWS, true));
-    // Escalation by scope, not replacement. The chain is cut out of the inverted band
-    // rather than drawn on it, so its own 40x24 box holds dark pixels while a patch of
-    // band well clear of it stays solid — which is also what proves the band really is
-    // inverted underneath and not merely blanked.
-    check("the chain is knocked out of the inverted band", any_dark_in(2, 41, 16, 39));
-    check("and the band around it is still solid", !any_dark_in(90, 125, 16, 39));
-    check("the layer icon survives under the alarm", any_dark_in(48, 79, 16, 39));
+    check("not after a second either", same_in(0, 127, 0, 63));
+    check("the OS logo stays as it is", logo_is(U_OS_LOGO_WINDOWS, false));
 
     // Locks: two of three on, and Num Lock can never be, so its slot is never drawn.
     check("both latched locks show", any_lit_in(109, 117, 0, 7) && any_lit_in(118, 126, 0, 7));
     check("left of them the status bar stays dark", !any_lit_in(U_OS_LOGO_W, 108, 0, 7));
-
-    // Set by hand under the alarm: the underline is cut out of the lit band too, and the
-    // corner beside it stays lit. On base the band is filled rather than inverted, and
-    // the logo is cut out of that the same way.
-    {
-        u_split_state_t by_hand = latched;
-        by_hand.flags |= U_FLAG_IS_MAC | U_FLAG_OS_MANUAL;
-        by_hand.host = U_HOST_MAC;
-        frame(by_hand, true);
-        check("under the alarm the underline is cut out as well",
-              !any_lit_in(0, U_OS_LOGO_W - 1, LOGO_LINE, LOGO_LINE) && lit(U_OS_LOGO_W, LOGO_LINE)
-              && logo_is(U_OS_LOGO_APPLE, true));
-        frame(at_rest, true);
-        check("and on base, the logo is cut out of the filled band", logo_is(U_OS_LOGO_WINDOWS, true));
-        frame((u_split_state_t){.layers = U_BASE, .flags = U_FLAG_IS_MAC, .host = U_HOST_IOS}, true);
-        check("on iOS, the \"i\" is cut out with it", ios_is(true));
-        frame(latched, true);
-    }
 
     // The trace. A misfire is a count that changed and a finger bit that dropped on
     // the same loop; it is latched because the render would otherwise miss it.
@@ -802,11 +768,12 @@ int main(int argc, char **argv) {
         check("all eight at once, a redraw is free",
               redraw_cost((u_split_state_t){.layers = U_BASE, .fingers = 0xff}, false) == 0);
 
-        // Past the 600 ms entry blink, where the alarm row is steady.
+        // With the link down, between glitch bursts.
         drive = at_rest; drive_link_down = true;
         step();
+        hold_glitch();
         fake_now += 1000;
-        check("LINK DOWN steady, a redraw is free", redraw_cost(at_rest, true) == 0);
+        check("with the link down between bursts, a redraw is free", redraw_cost(at_rest, true) == 0);
         check("and on a held layer with the OS set by hand, still free",
               redraw_cost((u_split_state_t){.layers = U_NAV, .flags = U_FLAG_OS_MANUAL}, true) == 0);
 
@@ -1067,25 +1034,19 @@ int main(int argc, char **argv) {
         }
         check("every other layer looks the same on all five", alike);
 
-        bool alarm_alike = true;
-        show_page(U_PAGE_BANDS);
-        frame(at_rest, true);
-        fake_now += 1000;     // past the entry blink
-        step();
-        keep();
-        show_page(U_PAGE_BANDS_KITTY);
-        frame(at_rest, true);
-        alarm_alike = alarm_alike && same_in(0, 127, 0, 63);
-        show_page(U_PAGE_BANDS_STRIPED);
-        frame(at_rest, true);
-        alarm_alike = alarm_alike && same_in(0, 127, 0, 63);
-        show_page(U_PAGE_BANDS_QMK);
-        frame(at_rest, true);
-        alarm_alike = alarm_alike && same_in(0, 127, 0, 63);
-        show_page(U_PAGE_BANDS_MONITOR);
-        frame(at_rest, true);
-        alarm_alike = alarm_alike && same_in(0, 127, 0, 63);
-        check("the alarm still fills the base band, whichever version", alarm_alike);
+        // A lost link no longer fills the band: each version keeps its own picture.
+        bool kept = true;
+        static const enum u_master_page versions[] = {U_PAGE_BANDS, U_PAGE_BANDS_KITTY, U_PAGE_BANDS_STRIPED,
+                                                      U_PAGE_BANDS_QMK, U_PAGE_BANDS_MONITOR};
+        for (uint8_t v = 0; v < 5; v++) {
+            show_page(versions[v]);
+            frame(at_rest, false);
+            keep();
+            hold_glitch();
+            frame(at_rest, true);
+            kept = kept && same_in(0, 127, 0, 63);
+        }
+        check("with the link down every version of the bands keeps its own picture", kept);
         frame(at_rest, false);
 
         // --- Stats as a page
@@ -1120,12 +1081,7 @@ int main(int argc, char **argv) {
             {.layers = U_BASE, .fingers = 0xff, .flags = U_FLAG_CAPS_LOCK | U_FLAG_SCROLL_LOCK | U_FLAG_OS_MANUAL},
             {.layers = U_NAV, .fingers = 0xff, .flags = U_FLAG_IS_MAC | U_FLAG_OS_MANUAL | U_FLAG_CAPS_WORD, .host = U_HOST_IOS},
         };
-        show_page(U_PAGE_BANDS);
-        frame(latched, true);
-        fake_now += 1000;
-        step();
-        const int alarm = count(0, 63);
-        frame(at_rest, false);
+        const int alarm = 4584;     // the old alarm band's frame, kept as the ceiling
 
         static const enum u_master_page built[] = {U_PAGE_BANDS, U_PAGE_BANDS_KITTY, U_PAGE_BANDS_STRIPED,
                                                    U_PAGE_BANDS_QMK, U_PAGE_BANDS_MONITOR, U_PAGE_STATS};
@@ -1148,7 +1104,6 @@ int main(int argc, char **argv) {
             printf("        page %u lights %d px at most\n", (unsigned)built[p], worst);
             if (worst >= alarm) under = false;
         }
-        printf("        the alarm frame lights %d px\n", alarm);
         check("on every page, a redraw is free", free);
         check("and every page stays under the alarm", under);
 
@@ -1192,11 +1147,15 @@ int main(int argc, char **argv) {
         replug();
         check("the style is kept across a replug", u_setting_get(U_SETTING_VIEW) == view);
 
-        // Never over the alarm: with the link down there is no map, so PAGE pages again.
+        // With the link down there is no map, since the other half cannot draw its part, so
+        // PAGE pages again.
+        frame((u_split_state_t){.layers = U_BUTTON}, false);
+        hold_glitch();
         frame((u_split_state_t){.layers = U_BUTTON}, true);
         fake_now += 1000;
         step();
-        check("with the link down, holding Button shows the alarm, not the map", row_solid_from(CORNER_X1 + 1, BAND_Y0));
+        check("with the link down, holding Button shows the bands, not the map",
+              any_lit(BAND_Y0, BAND_Y1) && cell_drawn(0) && logo_is(U_OS_LOGO_WINDOWS, false));
         u_page_next();
         check("and PAGE turns the page", u_page_get() == U_PAGE_BANDS_KITTY && u_setting_get(U_SETTING_VIEW) == (uint8_t)((view & ~U_VIEW_PAGE_MASK) | U_PAGE_BANDS_KITTY));
         frame(at_rest, false);
@@ -1213,9 +1172,9 @@ int main(int argc, char **argv) {
         const u_split_state_t busy = {.layers = U_BASE, .fingers = 0xff, .host = U_HOST_MAC,
                                       .flags = U_FLAG_CAPS_LOCK | U_FLAG_SCROLL_LOCK | U_FLAG_CAPS_WORD |
                                                U_FLAG_IS_MAC | U_FLAG_OS_MANUAL};
-        static const struct { enum u_master_page p; const char *name; bool alarm; } pages[] = {
-            {U_PAGE_STATUS, "the Status sheet", false}, {U_PAGE_LAYER_MAP, "the Layer map", false},
-            {U_PAGE_TYPING, "Typing", false},           {U_PAGE_EVENT_LOG, "the Event log", true},
+        static const struct { enum u_master_page p; const char *name; } pages[] = {
+            {U_PAGE_STATUS, "the Status sheet"}, {U_PAGE_LAYER_MAP, "the Layer map"},
+            {U_PAGE_TYPING, "Typing"},           {U_PAGE_EVENT_LOG, "the Event log"},
         };
         char name[96];
         fake_wpm = 0;
@@ -1226,30 +1185,13 @@ int main(int argc, char **argv) {
             check(name, redraw_cost(busy, false) == 0);
             snprintf(name, sizeof name, "%s lights less than the alarm frame", pages[i].name);
             check(name, count(0, 63) < 4584);
+            // With the link down it stays up, unchanged between the glitch's bursts.
             frame(busy, false);
             keep();
-            fake_now += 1000;          // past the alarm's three blinks
+            hold_glitch();
             frame(busy, true);
-            const bool shown = same_in(0, 127, 0, 63);
-            show_page(U_PAGE_BANDS);
-            fake_now += 1000;
-            frame(busy, true);
-            const bool bands = same_in(0, 127, 0, 63);
-            show_page(pages[i].p);
-            fake_now += 1000;
-            frame(busy, true);
-            if (pages[i].alarm) {
-                snprintf(name, sizeof name, "with the link down, %s keeps showing", pages[i].name);
-                check(name, shown && !bands);
-            } else {
-                snprintf(name, sizeof name, "with the link down, %s gives way to the bands", pages[i].name);
-                keep();
-                show_page(U_PAGE_BANDS);
-                fake_now += 1000;
-                frame(busy, true);
-                check(name, !shown && same_in(0, 127, 0, 63));
-                show_page(pages[i].p);
-            }
+            snprintf(name, sizeof name, "with the link down, %s stays up", pages[i].name);
+            check(name, same_in(0, 127, 0, 63));
             frame(at_rest, false);
         }
         show_page(U_PAGE_BANDS);
@@ -1349,6 +1291,73 @@ int main(int argc, char **argv) {
         frame(at_rest, false);
     }
 
+    // --- the lost link's glitch ----------------------------------------------
+    // It replaced the alarm band on 2026-10-23: bursts over whatever page is up, from the
+    // moment the link is down, and between them the very frame the link-up panel shows.
+    {
+        show_page(U_PAGE_BANDS);
+        frame(at_rest, false);
+        keep();                                 // the clean frame
+        int      bursts = 0, run = 0, bad_len = 0, bad_gap = 0, unclean = 0, dirty_between = 0;
+        uint32_t first = 0, last_end = 0;
+        const uint32_t start = fake_now + 50;
+        for (int k = 0; k < 600; k++) {          // 30 s of a lost link
+            fake_now += 50;
+            fake_dirty = 0;
+            frame(at_rest, true);
+            const bool glitched = !same_in(0, 127, 0, 63);
+            if (glitched) {
+                if (!run) {
+                    bursts++;
+                    if (!first) first = fake_now;
+                    if (last_end && (fake_now - last_end < 700 || fake_now - last_end > 1550)) bad_gap++;
+                }
+                run++;
+            } else {
+                if (run && (run < 3 || run > 7)) bad_len++;
+                if (run) last_end = fake_now;
+                else if (fake_dirty && k > 0) dirty_between++;
+                run = 0;
+            }
+            if (!glitched && !same_in(0, 127, 0, 63)) unclean++;
+        }
+        printf("  (%d bursts in 30 s)\n", bursts);
+        check("with the link down the page breaks up in bursts", bursts >= 20 && bursts <= 40);
+        check("the first at once", first - start <= 100);
+        check("each burst 3 to 7 frames", bad_len == 0);
+        check("0.7 to 1.5 s apart", bad_gap == 0);
+        check("and between bursts the frame is the link-up one, costing nothing", dirty_between == 0 && unclean == 0);
+
+        // Every page, Stats included: the glitch is the signal now, so it shows wherever you are.
+        bool everywhere = true;
+        static const enum u_master_page all[] = {U_PAGE_BANDS_QMK, U_PAGE_STATUS, U_PAGE_LAYER_MAP,
+                                                 U_PAGE_TYPING, U_PAGE_STATS, U_PAGE_EVENT_LOG};
+        for (uint8_t i = 0; i < sizeof all / sizeof all[0]; i++) {
+            show_page(all[i]);
+            frame(at_rest, false);
+            int glitched = 0;
+            for (int k = 0; k < 40; k++) {
+                const uint8_t was = u_glitch_clock.left;
+                fake_now += 50;
+                frame(at_rest, true);
+                if (u_glitch_clock.left != was && u_glitch_clock.armed) glitched++;
+            }
+            everywhere = everywhere && glitched > 0;
+        }
+        check("it shows over every page, Stats and the Event log included", everywhere);
+
+        show_page(U_PAGE_BANDS);
+        frame(at_rest, false);
+        keep();
+        bool still = true;
+        for (int k = 0; k < 200; k++) {
+            fake_now += 50;
+            frame(at_rest, false);
+            still = still && same_in(0, 127, 0, 63) && !u_glitch_clock.armed;
+        }
+        check("and with the link up nothing glitches", still);
+    }
+
     // --- stage 7: the encoder toast ------------------------------------------
     {
         show_page(U_PAGE_BANDS);
@@ -1386,12 +1395,12 @@ int main(int argc, char **argv) {
         frame(at_rest, false);
         check("800 ms after the last turn it is gone", same_in(0, 127, 0, 63));
 
-        u_encoder_note(0, false);
-        fake_now += 1000;
+        frame(at_rest, false);
+        hold_glitch();
         frame(at_rest, true);
         u_encoder_note(0, false);
         frame(at_rest, true);
-        check("with the link down the band carries the alarm, not the toast", row_solid_from(CORNER_X1 + 1, BAND_Y0) && solid_block(16, 127, 13, 15));
+        check("with the link down the toast shows in the band as ever", solid_block(21, 106, 14, 15) && logo_is(U_OS_LOGO_WINDOWS, false));
         fake_now += U_TOAST_MS;
         frame(at_rest, false);
 
@@ -1432,12 +1441,12 @@ int main(int argc, char **argv) {
         check("and costing nothing to redraw", free);
 
         show_page(U_PAGE_EVENT_LOG);
-        u_encoder_note(0, true);
-        fake_now += 1000;
+        frame(at_rest, false);
+        hold_glitch();
         frame(at_rest, true);
         u_encoder_note(0, true);
         frame(at_rest, true);
-        check("with the link down the Event log still shows it, having no alarm to hide", solid_block(21, 106, 18, 19));
+        check("and over the Event log too", solid_block(21, 106, 18, 19));
         fake_now += U_TOAST_MS;
         frame(at_rest, false);
 

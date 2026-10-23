@@ -13,6 +13,9 @@
 
 #include QMK_KEYBOARD_H
 #include "oled.h"
+#include "oled_canvas.h"
+#include "oled_draw.h"
+#include "split_sync.h"
 
 
 #include "art/oled_spaceship.h"
@@ -29,23 +32,28 @@
 #define WPM_SPLIT_DIVISOR 4
 #define WPM_SPEED_DIVISOR 15
 
+// The frame is composed in the canvas on every render and committed once, like every other
+// frame, so a lost link's glitch reaches it; the scroll still advances every 50 ms, and a
+// render between steps recomposes the same frame, which commits nothing.
 static void render_space(void) {
-	static uint16_t state = 0;
+	static uint16_t state = 0, shown = 0;
+	static uint8_t  split = 0;
 	static uint32_t last_anim = 0;
 	static const char *const ship_rows[4] = {ship_row_1, ship_row_2, ship_row_3, ship_row_4};
 
 	uint8_t wpm = get_current_wpm();
-	if (timer_elapsed32(last_anim) < ANIMATION_INTERVAL_MS) return;
-	last_anim = timer_read32();
-
-	uint8_t split = wpm / WPM_SPLIT_DIVISOR;
-	uint8_t render_row[OLED_WIDTH];
+	if (timer_elapsed32(last_anim) >= ANIMATION_INTERVAL_MS) {
+		last_anim = timer_read32();
+		shown     = state;
+		split     = wpm / WPM_SPLIT_DIVISOR;
+		state     = (state + 1 + (wpm / WPM_SPEED_DIVISOR)) % OLED_SCROLL_MODULO;
+	}
 
 	// One counter, three offsets. The planes' periods divide the loop, so at the
 	// wrap all three are back at zero together and the seam cannot show.
-	const uint16_t of = state >> 2;
-	const uint16_t om = state >> 1;
-	const uint16_t on = state;
+	const uint16_t of = shown >> 2;
+	const uint16_t om = shown >> 1;
+	const uint16_t on = shown;
 
 	for (uint8_t p = 0; p < 8; p++) {
 		for (uint8_t i = 0; i < OLED_WIDTH; i++) {
@@ -60,13 +68,11 @@ static void render_space(void) {
 			if (p >= 2 && p <= 5 && i >= split) {
 				b = (b & pgm_read_byte(&u_space_ship_mask[p - 2][i - split])) | pgm_read_byte(ship_rows[p - 2] + i - split);
 			}
-			render_row[i] = b;
+			u_canvas[(uint16_t)p * OLED_WIDTH + i] = b;
 		}
-		oled_set_cursor(0, p);
-		oled_write_raw((char *)render_row, OLED_WIDTH);
 	}
-
-	state = (state + 1 + (wpm / WPM_SPEED_DIVISOR)) % OLED_SCROLL_MODULO;
+	u_glitch_frame(u_sync_hard_stale());
+	u_canvas_commit();
 }
 
 void u_slave_spaceship_render(void) {

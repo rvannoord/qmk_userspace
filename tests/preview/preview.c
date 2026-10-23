@@ -98,6 +98,13 @@ int main(int argc, char **argv) {
         run(6000,  20, true, "tier1");
         run(6000,  40, true, "tier2");
         run(6000,  70, true, "tier3");
+    } else if (!strcmp(scenario, "dead")) {
+        // The link dies for ten seconds: he stops blinking and his frame breaks up.
+        run(3000, 40, true, "typing");
+        stale_soft = stale_hard = true;
+        run(10000, 0, false, "dead");
+        stale_soft = stale_hard = false;
+        run(3000, 0, false, "back");
     } else if (!strcmp(scenario, "props")) {
         drive.flags = U_FLAG_CAPS_WORD;
         run(8000, 50, true, "capsword");

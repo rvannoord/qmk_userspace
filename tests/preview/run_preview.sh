@@ -3,7 +3,7 @@
 #
 #   tests/preview/run_preview.sh [scenario] [--invert]
 #
-# Scenarios: idle (type, settle, doze, switch off) · wake · tiers · props, for Bjorn;
+# Scenarios: idle (type, settle, doze, switch off) · wake · tiers · props · dead (the link), for Bjorn;
 # bongo · mario, for the stage 6 scenes (scenes.c).
 # Output lands in tests/preview/out/<scenario>/ — strip.png, anim.gif, frames.bin,
 # events.csv — which is git-ignored.
@@ -41,7 +41,8 @@ cc -std=c11 -Wall -Wextra -Werror \
    -DQMK_KEYBOARD_H='"qmk_keyboard.h"' -DOLED_ENABLE -DOLED_SLAVE_ANIMATION_BJORN -DOLED_SLAVE_WORLD \
    -o "$bin" "$here/preview.c" "$keymap/art/bjorn_art.c" "$keymap/art/bjorn_poses.c" "$keymap/oled_canvas.c" \
    "$keymap/oled_slave_world.c" "$keymap/art/world_art.c" \
-   "$keymap/oled_slave_director.c" "$keymap/oled_slave_goat.c" "$keymap/art/goat_art.c"
+   "$keymap/oled_slave_director.c" "$keymap/oled_slave_goat.c" "$keymap/art/goat_art.c" \
+   "$keymap/oled_draw.c" "$keymap/art/panel_font.c" "$keymap/art/drashna_icons.c"
 
 "$bin" "$scenario" "$out"
 python3 -I "$repo/tools/preview.py" "$out" $invert

@@ -32,7 +32,7 @@ QMK line numbers refer to `7a1bbf37c5`.
 | 5. Status sheet, layer map page, Typing, Event log | **built 2026-10-22** in `636ba56`; all 18 of the mock's frames match byte for byte. Not flashed yet: the checkpoint waits for the next flash, with D16 |
 | 6. Bongo cat and the Mario scene on the slave | **built 2026-10-22** in `42f140a`, not flashed yet; D13 decided (4 s) |
 | 7. Encoder feedback | **built 2026-10-23** in `915f3b2`, not flashed yet; D11 decided (the same box, centred, 2 px rim) |
-| 8. Glitch bursts on link loss | open |
+| 8. Glitch bursts on link loss | **built 2026-10-23**, not flashed |
 | 9. Screensaver | open |
 
 ## Decisions
@@ -708,6 +708,37 @@ It must not stop the alarm from being read.
 **Both.** Glitch frames are the only frames allowed to change with no new state, and only during the
 alarm. A slave whose code has stopped shows nothing new either way, which is v2's D-6, and the
 hardware watchdog still covers it.
+
+**Changed 2026-10-23, after looking at the first build:** the glitch replaces the alarm band
+instead of breaking it up, runs over whatever each half shows, and comes more often. The text above
+is the plan as it was; `docs/layout.md`, *Glitch bursts*, is what holds now.
+
+**Checkpoint, on the board:** pull the TRRS for ten seconds, on a few pages. The master keeps its
+screen, with no lit band, and breaks up in bursts from the start, about every second. The other half
+does the same whichever animation it shows: Bjorn (who also stops blinking), the spaceship, the
+Kyria and Monitor screens, bongo cat, the Mario scene. Plug it back: both clean at once.
+
+**As built, 2026-10-23.**
+- **Where.** `u_glitch_frame()` in `oled_draw.c`, one glitch clock a half, called by each renderer
+  just before it commits: `oled_master_zones.c` over every page while the link is down, and on the
+  other half Bjorn, the spaceship, the logo screens, bongo cat and the Mario scene while the link is
+  hard stale. The spaceship and the logo screens now compose in the canvas like everything else; the
+  spaceship's frames are byte-identical at 0, 30 and 90 WPM.
+- **The alarm band is gone:** no inverted band, no broken chain, no entry blinks, no OS logo cut out
+  of a lit band. Pages no longer give way to the bands with the link down, and the encoder box shows
+  as ever. Maps stay off while the link is down, since the other half cannot draw its part.
+- **Timing.** Bursts of 3 to 7 renders (50 ms each) every 0.7 to 1.5 s, the first at once.
+- **Nothing else changed.** With the link up, the master's frames and all four of Bjorn's preview
+  runs are byte-identical to before.
+- **Tests.** `test_panel.c`: the page as it was between bursts, bursts over 30 s with their lengths
+  and gaps, the first at once, over every page; the five band versions keep their pictures; maps off.
+  `test_bjorn.c`, `test_space.c`, `test_scenes.c`: every animation on the other half breaks up with
+  the link dead and never with it alive. Removing the glitch from the logo screens failed the test.
+- **Previews.** `tests/run_unit.sh --raw-glitch` for the master, `tests/preview/run_preview.sh dead`
+  for Bjorn.
+- **Firmware.** 140,668 bytes of text, 464 fewer: the alarm band's code is gone.
+
+---
 
 ## Stage 9: screensaver
 

@@ -20,13 +20,11 @@ uint16_t fake_dirty;
 uint32_t fake_now;
 bool     fake_is_master = false, fake_is_left = false;
 
-static uint8_t  fake_wpm;
-static uint16_t cursor;
-uint8_t get_current_wpm(void) { return fake_wpm; }
-void    oled_set_cursor(uint8_t col, uint8_t line) { cursor = (uint16_t)(line * 128 + col * 6); }
-void    oled_write_raw(const char *d, uint16_t n) {
-    for (uint16_t i = 0; i < n; i++) u_fake_write(d[i], (uint16_t)(cursor + i));
-}
+static uint8_t fake_wpm;
+uint8_t        get_current_wpm(void) { return fake_wpm; }
+void           oled_write_raw_byte(const char data, uint16_t index) { u_fake_write(data, index); }
+static bool    fake_stale;
+bool           u_sync_hard_stale(void) { return fake_stale; }
 
 #include "oled_slave_spaceship.c"
 
@@ -135,5 +133,19 @@ int main(int argc, char **argv) {
 
     check("the driver's one-past-the-end byte was never touched", fake_oled[OLED_MATRIX_SIZE] == 0);
     puts(failures ? "space: FAILED" : "space: all good");
+    // A dead link breaks the ship's sky up in bursts, like every other-half animation.
+    {
+        int g = 0;
+        fake_stale = true;
+        for (int k = 0; k < 60; k++) {
+            const uint8_t was = u_glitch_clock.left;
+            tick();
+            if (u_glitch_clock.left != was && u_glitch_clock.armed) g++;
+        }
+        fake_stale = false;
+        tick();
+        check("with the link dead the spaceship breaks up too", g >= 6);
+    }
+
     return failures != 0;
 }

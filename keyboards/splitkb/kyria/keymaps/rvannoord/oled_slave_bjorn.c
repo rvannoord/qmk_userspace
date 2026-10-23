@@ -18,6 +18,7 @@
 #include "oled_slave_goat.h"
 #include "split_sync.h"
 #include "oled_canvas.h"
+#include "oled_draw.h"
 #include "speed_tier.h"
 
 // --- tuning -----------------------------------------------------------------
@@ -630,6 +631,8 @@ void u_slave_bjorn_render(void) {
     // u_world_draw() reads his pixels back out of the canvas to find his outline.
     u_world_draw();
 #endif
+    // A dead link: on top of the blink that stops, his frame breaks up in bursts.
+    u_glitch_frame(u_sync_hard_stale());
     u_canvas_commit();
 }
 

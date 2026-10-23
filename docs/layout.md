@@ -211,7 +211,7 @@ Three bands of pictures and no text, modelled on splitkb's own Halcyon TFT panel
 | Zone | Origin | Size | Content |
 |------|--------|------|---------|
 | Status bar | (0,0) | 128x8 | drashna's 12x16 host logo at the left (since 2026-10-21; it was `Win`/`Mac` text): Windows, Apple for the Mac, Tux for Linux. iOS is the Apple logo with a small lowercase "i" in front of it, in Apple's own lettering style, so it reads as an i-device (decided 2026-10-21). The "i" is 2 px wide and 10 rows tall, a row shorter than first drawn, with a 2 px gap before the logo, which moves 4 px right for it. The logo is twice the bar's height, so its lower half sits in the band's top-left corner, x 0-15 by y 8-17, which every band keeps dark (in those rows the nearest band pixel is the Kyria emblem at x=18). Underlined at y=16 when SYS set the host by hand, under the "i" too on iOS. The right end is permanently dark, so the latched locks live there at x=109 and 118 — one row, so they cannot drift off a shared baseline. Both are drashna's cells: Caps Lock, which Caps Word lights too, as on drashna's own screen, and Scroll Lock |
-| Layer band | (0,8) | 128x40 | one picture per layer, from `panel_layer_icons.c`. Three rows under the icon when a held layer is hiding a non-base default. **This band is also the alarm**: the link being down inverts the whole of it and cuts a broken chain out of it. The OS logo's lower half and its underline are cut out of it then too, rather than lost in the lit field |
+| Layer band | (0,8) | 128x40 | one picture per layer, from `panel_layer_icons.c`. Three rows under the icon when a held layer is hiding a non-base default. Until 2026-10-23 this band was also the alarm: the link being down inverted the whole of it and cut a broken chain out of it. Since then a lost link is shown by glitch bursts over whatever is on screen, and the band keeps its picture (*Glitch bursts* below) |
 | Mod row | (0,48) | 128x16 | four 32 px cells, one per finger, each showing its glyph **always**: drashna's filled 12x8 icon (⊞ ⌥ ⌃ ⌘ ⇧, since 2026-10-21), centred in a 16x16 slot. A held finger fills its whole cell and the glyph is knocked out of it; a finger that just misfired fills only the glyph's own 16 px box. Both fills are chamfered, 3 px off each corner, so a lit cell reads as a key rather than a black rectangle. **The order reverses with the half the panel is on** |
 
 **Why the layer is a picture now.** The name was text because text was what a 16 px band
@@ -346,6 +346,11 @@ band is given over to the chain entirely, because base is where you already are 
 wordmark leaves no gutter to put a chain beside. The master has no 1 px edge frame — the frame needs
 x=0, x=127, y=0 and y=63 kept clear and a status panel cannot promise that, since the OS logo itself
 lights x=0. Entry blinks three times over 600 ms, which routine changes never do.
+
+**On the master the inverted band is gone (decided 2026-10-23).** A lost link is now shown by the
+glitch alone, over whatever page is up, and the band keeps its layer picture; there is no chain and
+no entry blink. The old alarm frame's 4,584 lit px stays in the tests as the ceiling for routine
+pages, so "nothing routine outshines the alarm" still has a number.
 
 Miryoku uses the left-hand mod-tap variants on both hands (`LSFT_T(KC_T)` and `LSFT_T(KC_N)`), so
 `get_mods()` cannot tell which hand fired. Handedness comes from the matrix row, the same test
@@ -482,7 +487,7 @@ the goat later.
 |------|-------|
 | `oled.h` / `oled.c` | the module's interface and its dispatcher. The header holds the slave-animation enum and boot default, `u_anim_get` / `u_anim_next`, the master's page enum in D1's order with `U_PAGES_BUILT`, `u_page_get` / `u_page_next`, the four entry points `oled_render_*` / `oled_*_task` and the pure sleep predicate; the `.c` draws the boot splash and then branches on master or slave, and paints the bootloader screen in `shutdown_user()` on the way into the bootloader. The sleep check itself is in `keymap.c`'s `housekeeping_task_user`, so a stray dirty block can light the panel for one main loop at most |
 | `oled_master_zones.c` | the master panel. Three bands, status bar, 128x40 layer picture and mod row, in raw page bytes composed in the canvas and committed once, never `oled_write`. Also the pages: which one is showing, the dots, the kitty, QMK and Monitor versions of the base band, the Stats stop, which of the stage 5 pages to draw, with the bands in their place while the link is down, and the encoder toast. 1x and 2x glyph blitters; the 2x one doubles each source row, so a 16x16 is two page bytes a column |
-| `oled_draw.c` / `.h` | pixel drawing into the canvas at any row, for the live map and the stage 5 pages: boxes, page-format art, legends (tight ones included), and Ein text at 1x or 2x, lit or cut out |
+| `oled_draw.c` / `.h` | pixel drawing into the canvas at any row, for the live map and the stage 5 pages: boxes, page-format art, legends (tight ones included), and Ein text at 1x or 2x, lit or cut out. Also the glitch bursts that show a lost link on both halves, with the one clock a half that times them |
 | `oled_layer_page.c` / `.h` | the Layer map page, drawn from a layer's keycodes in slot order alone, so the scenario tests draw every Miryoku layer through it. A cell a key, the thumbs' full legends, the held layer key's base legend |
 | `oled_pages.c` / `.h` | the Status sheet and Typing pages, and Typing's 62 samples, one every 300 ms whatever the page |
 | `oled_event_log.c` / `.h` | the Event log: a RAM ring of eight stamped lines, and the watcher that finds the events on the master |
@@ -504,7 +509,7 @@ the goat later.
 | `split_sync.c` / `.h` | the transport for that payload. Double-buffered on the slave because the callback runs on a HIGHPRIO thread; heartbeat 250 ms, minimum interval 20 ms, soft stale 600 ms, hard stale 1250 ms. `u_sync_link_down()` answers for both halves — the master from its own failed sends, the slave from the sequence number standing still |
 | `split_health.c` / `.h` | link health: the stats page behind a long SYS press, self-reset of a half whose link stays dead, the hardware watchdog. Every guard is explained in the header |
 | `oled_slave_spaceship.c` | the ship, JBaguley's and byte-identical, over three parallax planes of my own; speed from WPM |
-| `oled_slave_logo.c` | the static screens: the Kyria logo and the three Monitor ERP ones |
+| `oled_slave_logo.c` | the static screens: the Kyria logo and the three Monitor ERP ones, composed in the canvas so a lost link's glitch reaches them |
 | `oled_slave_bongo.c` | bongo cat along the bottom, idle, paws up or slapping by WPM, and the WPM corner (2x digits from x=90, `wpm` under them) that the Mario scene shares |
 | `oled_slave_mario.c` | Mario, Yoshi and Bullet Bill: a scene on its own 50 ms tick, run by `oled_slave_select.c` only while it is shown. Bill's jumps are planned from his speed each tick; Yoshi curls up 4 s after the last key (D13) |
 | `art/bjorn_art.c` / `.h` | generated: base, patch table, frame index |
@@ -851,7 +856,9 @@ The Status sheet's layer line is the active layer. At rest on an Extra or Tap de
 default, not Base: the mock showed `BASE` there, which the state cannot say. Whether it is then
 inverted, as built, or inverted only while a layer is held, is open (`docs/oled-v3.md`, D16).
 
-**Pages give way to the alarm** (decided 2026-10-22, with the rule for maps). While the link is
+**Pages give way to the alarm** (decided 2026-10-22, with the rule for maps; **superseded
+2026-10-23**, when the glitch replaced the alarm band: every page now stays up with the link down,
+and the glitch runs over it). Until then: while the link is
 down, the Status sheet, Layer map and Typing pages show the bands, so the alarm is never hidden.
 Stats and the Event log keep showing, because reporting the link is what they are for.
 
@@ -918,7 +925,8 @@ the half under the fingers that use it:
   its layer in its tag, so it was taken out. While the master's panel shows a map, the other half
   keeps its animation.
 - **Never over the alarm** (decided 2026-10-22, while building stage 4). The master shows its map
-  only while the link is up. With the link down it shows the bands, so holding Button can't hide
+  only while the link is up. Since 2026-10-23 there is no alarm band to hide, but the rule stays:
+  with the link down the other half cannot show its part of the map. With the link down it shows the bands, so holding Button can't hide
   the alarm on both panels at once. The other half shows a map only from a fresh state, and its
   animation otherwise. So a layer that was held when the cable
   came out doesn't stay frozen on screen.
@@ -978,22 +986,29 @@ struck-through speaker, in the same box, and so would the left encoder's click i
 Mute (decided 2026-10-23). Only the press is known; the host's volume and whether it is muted are
 not. The box is 90x30 with chamfered corners, the icon and the label cut out of it at 2×,
 in the band at y=13; the OS logo stays whole in its corner. On any other page the same box shows
-centred, at y=17, with a two-pixel dark rim (D11, decided 2026-10-23). It never hides the alarm:
-while the link is down the bands carry the alarm and no box, and it is not drawn over a live map.
+centred, at y=17, with a two-pixel dark rim (D11, decided 2026-10-23). It is not drawn over a live
+map. With the link down it shows like any other time, and the glitch runs over it.
 The rim stays two pixels, decided 2026-10-23 over a full-width strip: so the Status sheet with all
 eight mods held and all three locks on lights about 2% more than the alarm frame while the box is
 up, the one known exception to *everything stays under the alarm*.
 
-**Glitch bursts, for the alarms only.** While the link is down, the master breaks up in short
-random bursts (row shifts, noise, a sliced inversion) over its alarm frame. Bjorn does the same
-while his link is dead, on top of the blink that already stops. They are procedural, with no
-stored art. Motion stays reserved for things that are wrong.
+**Glitch bursts, the lost link's signal.** While the link is down, the master breaks up in short
+random bursts (row shifts, noise, a sliced inversion), and the other half does the same while its
+link is dead, on top of Bjorn's blink, which stops. They are procedural, with no stored art.
+Motion stays reserved for things that are wrong. **Decided 2026-10-23, on looking at the first
+build: the glitch replaces the alarm band** rather than breaking it up, and runs over whatever
+each half shows: every master page, Stats and the Event log included, and every animation on the
+other half (Bjorn, the spaceship, the Kyria and Monitor screens, bongo cat, the Mario scene).
+Bursts of 3 to 7 frames, one a render, every 0.7 to 1.5 s: more often than first built (1.5 to
+3 s), not faster. The first comes as soon as the link is down. Between bursts the clean frame,
+which costs nothing to redraw.
 
 **A screensaver step.** drashna's matrix rain (72 frames, 72 KB) runs between idle and the panels
 switching off. At the split's 50 ms update interval it loops every 3.6 s rather than drashna's
 2.2 s. When it starts, and on which half, is open.
 
-**Everything stays under the alarm.** Measured on the host renders: the status sheet is the
+**Everything stays under the alarm.** (The alarm band is gone since 2026-10-23; its 4,584 lit px
+stays as the ceiling.) Measured on the host renders: the status sheet is the
 brightest routine page at 2,519 lit px, the encoder flash 2,663, the rain 1,095 at most, bongo cat
 1,288 and the big-grid map 1,671. That is against roughly 4,200 for the master's inverted band.
 When each page is built, `test_panel.c`'s ratio test should cover it.

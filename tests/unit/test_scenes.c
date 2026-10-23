@@ -20,9 +20,33 @@ static uint8_t  fake_wpm;
 static uint32_t fake_idle_ms;
 uint8_t         get_current_wpm(void) { return fake_wpm; }
 uint32_t        last_input_activity_elapsed(void) { return fake_idle_ms; }
+static bool     fake_stale;
+bool            u_sync_hard_stale(void) { return fake_stale; }
 
 #include "oled_slave_bongo.c"
 #include "oled_slave_mario.c"
+#include "oled_slave_logo.c"
+
+// How many of `n` renders were glitch burst frames, with the link dead.
+static int glitches(void (*render)(void), int n) {
+    int g = 0;
+    fake_stale = true;
+    for (int k = 0; k < n; k++) {
+        const uint8_t was = u_glitch_clock.left;
+        fake_now += 50;
+        render();
+        if (u_glitch_clock.left != was && u_glitch_clock.armed) g++;
+    }
+    fake_stale = false;
+    render();
+    return g;
+}
+
+static void mario_both(void) { u_slave_mario_task(); u_slave_mario_render(); }
+static void kyria(void) { u_slave_logo_render(U_ANIM_KYRIA); }
+static void monitor(void) { u_slave_logo_render(U_ANIM_MONITOR); }
+static void stacked(void) { u_slave_logo_render(U_ANIM_MONITOR_STACKED); }
+static void future(void) { u_slave_logo_render(U_ANIM_MONITOR_FUTURE); }
 
 // --- looking --------------------------------------------------------------------------
 
@@ -230,6 +254,28 @@ int main(void) {
         u_slave_bongo_render();
         check("and never faster than every 100 ms", slap != fast);
         check("the WPM corner shows 200", any_in(fake_oled, 90, 124, 1, 15) && any_in(fake_oled, 108, 124, 18, 25));
+    }
+
+    // --- a dead link breaks every animation on this half up -----------------------------
+    {
+        static const struct { void (*render)(void); const char *name; } anims[] = {
+            {u_slave_bongo_render, "bongo cat"}, {mario_both, "the Mario scene"}, {kyria, "the Kyria logo"},
+            {monitor, "the Monitor logo"}, {stacked, "the stacked Monitor logo"}, {future, "Monitor your future"},
+        };
+        bool all = true;
+        for (unsigned i = 0; i < sizeof anims / sizeof anims[0]; i++) {
+            const int g = glitches(anims[i].render, 60);
+            if (g < 6) printf("    %s: %d burst frames in 3 s\n", anims[i].name, g);
+            all = all && g >= 6;
+        }
+        check("with the link dead, bongo cat, Mario and the logo screens break up", all);
+        bool quiet = true;
+        for (int k = 0; k < 60; k++) {
+            fake_now += 50;
+            future();
+            quiet = quiet && !u_glitch_clock.armed;
+        }
+        check("and with it alive they never do", quiet);
     }
 
     check("the driver's one-past-the-end byte was never touched", fake_oled[OLED_MATRIX_SIZE] == 0);

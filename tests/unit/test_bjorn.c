@@ -86,6 +86,7 @@ static bool     prev_valid;
 static int      free_redraws, paid_redraws;   // identical frame, nothing written / something written
 static int      blinks;
 static int      two_goats, goat_ticks;   // his goat drawing and the wandering goat at once
+static int      glitch_frames, glitch_live;    // burst frames, and those with the link alive
 static bool     blinking;
 static uint32_t last_blink_at;
 static uint32_t first_blink_at;   // since the last arm_first(), so "how soon" is measurable
@@ -95,7 +96,14 @@ static void tick(void) {
     fake_now += 50;
     fake_dirty = 0;
     u_slave_bjorn_task();
+    const uint8_t left_was = u_glitch_clock.left;
     u_slave_bjorn_render();
+    // A burst frame is one where the glitch counted down: he also breathes while the link
+    // is dead, so the picture alone cannot tell.
+    if (u_glitch_clock.left != left_was && u_glitch_clock.armed) {
+        glitch_frames++;
+        if (!stale_hard) glitch_live++;
+    }
 
     // The invariant: if the composed frame did not change, the commit must have
     // written nothing. This catches Bug A whatever pose he happens to be in, instead
@@ -377,6 +385,22 @@ int main(void) {
     }
     check("the goat came out in the long idles", goat_ticks > 2000);
     check("and never with Bjorn's own goat on screen", two_goats == 0);
+
+    // A dead link: his frame breaks up in bursts, the first at once.
+    {
+        run(2000, 40, true);
+        const int before = glitch_frames;
+        stale_soft = stale_hard = true;
+        run(100, 0, false);
+        const int early = glitch_frames - before;
+        run(20000, 0, false);
+        const int during = glitch_frames - before;
+        stale_soft = stale_hard = false;
+        run(5000, 0, false);
+        printf("  (%d burst frames in 20 s of a dead link)\n", during);
+        check("with the link dead his frame breaks up, at once", early > 0 && during >= 60 && during <= 200);
+        check("and never with the link alive", glitch_live == 0);
+    }
 
     check("an unchanged frame was seen many times", free_redraws > 500);
     check("and never cost a single block", paid_redraws == 0);

@@ -8,6 +8,7 @@
 #include "oled.h"
 #include "oled_canvas.h"
 #include "oled_draw.h"
+#include "split_sync.h"
 #include "art/bongo_art.h"
 
 #ifdef OLED_ENABLE
@@ -46,6 +47,7 @@ void u_slave_bongo_render(void) {
     memset(u_canvas, 0, OLED_MATRIX_SIZE);
     u_blit(art, U_BONGO_W, U_BONGO_PAGES, 0, U_BONGO_Y);
     u_slave_wpm_corner(wpm);
+    u_glitch_frame(u_sync_hard_stale());
     u_canvas_commit();
 }
 

@@ -32,3 +32,26 @@ void    u_text(int16_t x, int16_t y, const char *s, uint8_t k, bool on);
 void u_text_bar(int16_t x, int16_t y, const char *s);
 // `v` right-aligned in three places, the way WPM is printed: four bytes with the end.
 void u_num3(char *b, uint8_t v);
+
+// --- glitch bursts, a lost link's signal (docs/layout.md, "Glitch bursts") -------------
+// While the link is lost: bursts of 3 to 7 frames, one a render, every 0.7 to 1.5 s at
+// random, the first at once. Procedural: nothing stored. Between bursts the frame is the
+// clean one, and costs nothing to redraw.
+typedef struct {
+    uint32_t seed;
+    uint32_t next_at;     // when the next burst starts
+    uint8_t  left;        // frames of the current burst still to come
+    bool     armed;
+} u_glitch_t;
+
+// Once a render: whether this frame is a burst frame. False, and disarmed, without an alarm.
+bool u_glitch_due(u_glitch_t *g, bool alarm);
+
+// Break the canvas up: a few row bands shifted 2-18 px with wrap, sometimes 1-4 rows
+// inverted, 40 random pixels, now and then 1-3 rows cleared.
+void u_glitch(u_glitch_t *g);
+
+// The half's one glitch: the master's over its pages, the other half's over whichever
+// animation it shows. Called by each renderer just before it commits.
+extern u_glitch_t u_glitch_clock;
+void              u_glitch_frame(bool lost);
