@@ -12,8 +12,8 @@
 #define U_IDLE_SETTLE_MS      8000     // Bjorn settles; the goat's tail and ear may move
 #define U_IDLE_ACTORS_MS     20000     // Bjorn's drawings and the goat may begin
 #define U_IDLE_DOZE_MS       75000     // Bjorn dozes and the goat curls up
-#define U_IDLE_LAST_START_MS 110000    // nothing new starts
-#define U_IDLE_FREEZE_MS     119500    // nothing moves: the panel goes off on a still frame
+#define U_IDLE_LAST_START_MS 90000     // nothing new starts
+#define U_IDLE_FREEZE_MS     100000    // nothing moves: the rain covers the scene (U_RAIN_AFTER_MS)
 
 // Once a render step, before any actor: opens the step. A key starts a new idle period,
 // which stirs the stream with how long the last one lasted, so no two periods are alike

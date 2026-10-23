@@ -27,6 +27,25 @@ bool            u_sync_hard_stale(void) { return fake_stale; }
 #include "oled_slave_mario.c"
 #include "oled_slave_logo.c"
 
+// The dispatcher, with its neighbours stood in for: which animation crossed the link, and
+// none of the rest drawn here.
+#include "oled_settings.h"
+#include "oled_map.h"
+static uint8_t  fake_world = U_ANIM_BONGO;
+static bool     is_keyboard_master(void) { return false; }
+uint8_t         u_setting_get(enum u_setting which) { (void)which; return U_ANIM_BONGO; }
+void            u_setting_set(enum u_setting which, uint8_t v) { (void)which; (void)v; }
+void            u_settings_follow(uint8_t anim, uint8_t view) { (void)anim; (void)view; }
+u_split_state_t u_sync_state(void) { return (u_split_state_t){.world = fake_world}; }
+bool            u_sync_fresh(void) { return true; }
+bool            u_map_here(uint8_t layer, bool left) { (void)layer; (void)left; return false; }
+void            u_map_render(uint8_t layer, bool left, bool mac, bool shaped) { (void)layer; (void)left; (void)mac; (void)shaped; }
+void            u_slave_bjorn_render(void) {}
+void            u_slave_bjorn_task(void) {}
+void            u_slave_spaceship_render(void) {}
+#include "oled_slave_select.c"
+#include "art/matrix_art.h"
+
 // How many of `n` renders were glitch burst frames, with the link dead.
 static int glitches(void (*render)(void), int n) {
     int g = 0;
@@ -276,6 +295,26 @@ int main(void) {
             quiet = quiet && !u_glitch_clock.armed;
         }
         check("and with it alive they never do", quiet);
+    }
+
+    // --- the screensaver on this half -------------------------------------------------
+    {
+        bool before = true, after = true;
+        static const uint8_t anims[] = {U_ANIM_BONGO, U_ANIM_MARIO, U_ANIM_KYRIA, U_ANIM_MONITOR_FUTURE};
+        for (unsigned i = 0; i < sizeof anims; i++) {
+            fake_world   = anims[i];
+            fake_idle_ms = U_RAIN_AFTER_MS - 50;
+            fake_now += 50;
+            oled_render_slave();
+            before = before && memcmp(fake_oled, u_matrix[0], OLED_MATRIX_SIZE) != 0;
+            fake_idle_ms = U_RAIN_AFTER_MS + 7 * 50;
+            fake_now += 50;
+            oled_render_slave();
+            after = after && memcmp(fake_oled, u_matrix[7], OLED_MATRIX_SIZE) == 0;
+        }
+        check("this half's animations run until 100 s", before);
+        check("then the rain takes over every one, in step with the idle clock", after);
+        fake_idle_ms = 0;
     }
 
     check("the driver's one-past-the-end byte was never touched", fake_oled[OLED_MATRIX_SIZE] == 0);

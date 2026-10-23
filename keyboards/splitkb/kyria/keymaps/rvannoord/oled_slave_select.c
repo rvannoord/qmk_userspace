@@ -19,6 +19,7 @@
 #include "split_sync.h"
 #include "oled_map.h"
 #include "oled_canvas.h"
+#include "oled_draw.h"
 
 #ifdef OLED_ENABLE
 
@@ -63,6 +64,14 @@ static bool map_here(void) {
 }
 
 void oled_render_slave(void) {
+    // The screensaver, over every animation and map, until the panels switch off.
+    const uint32_t idle = last_input_activity_elapsed();
+    if (u_rain_on(idle)) {
+        u_rain_draw(idle);
+        u_glitch_frame(u_sync_hard_stale());
+        u_canvas_commit();
+        return;
+    }
     if (map_here()) {
         const u_split_state_t s = u_sync_state();
         u_map_render(s.layers & 0x0F, is_keyboard_left(), s.flags & U_FLAG_IS_MAC, s.view & U_VIEW_MAP_SHAPED);

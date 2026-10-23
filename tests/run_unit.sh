@@ -26,7 +26,7 @@ cc "${cc_flags[@]}" -o "$out/panel" \
    "$here/unit/test_panel.c" "$keymap/art/panel_font.c" "$keymap/art/panel_glyphs.c" "$keymap/art/panel_layer_icons.c" "$keymap/art/drashna_icons.c" \
    "$keymap/art/kitty_art.c" "$keymap/art/monitor_art.c" "$keymap/art/status_frame.c" \
    "$keymap/oled_canvas.c" "$keymap/oled_draw.c" "$keymap/split_health.c" "$keymap/oled_map.c" "$keymap/oled_layer_page.c" \
-   "$keymap/oled_pages.c" "$keymap/oled_event_log.c"
+   "$keymap/oled_pages.c" "$keymap/oled_event_log.c" "$keymap/oled_screensaver.c" "$keymap/art/matrix_art.c"
 
 cc "${cc_flags[@]}" -DOLED_SLAVE_ANIMATION_BJORN -o "$out/bjorn" \
    "$here/unit/test_bjorn.c" "$keymap/art/bjorn_art.c" "$keymap/art/bjorn_poses.c" "$keymap/oled_canvas.c" \
@@ -49,7 +49,7 @@ cc "${cc_flags[@]}" -DOLED_SLAVE_WORLD -o "$out/goat" \
 # Bongo cat and the Mario scene, from their own files.
 cc "${cc_flags[@]}" -o "$out/scenes" \
    "$here/unit/test_scenes.c" "$keymap/art/bongo_art.c" "$keymap/art/mario_art.c" "$keymap/art/panel_font.c" \
-   "$keymap/art/monitor_art.c" \
+   "$keymap/art/monitor_art.c" "$keymap/oled_screensaver.c" "$keymap/art/matrix_art.c" \
    "$keymap/art/drashna_icons.c" "$keymap/oled_canvas.c" "$keymap/oled_draw.c"
 
 # The bootloader screen, from oled.c itself.

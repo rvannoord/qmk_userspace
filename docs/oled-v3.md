@@ -32,8 +32,8 @@ QMK line numbers refer to `7a1bbf37c5`.
 | 5. Status sheet, layer map page, Typing, Event log | **built 2026-10-22** in `636ba56`; all 18 of the mock's frames match byte for byte. Not flashed yet: the checkpoint waits for the next flash, with D16 |
 | 6. Bongo cat and the Mario scene on the slave | **built 2026-10-22** in `42f140a`, not flashed yet; D13 decided (4 s) |
 | 7. Encoder feedback | **built 2026-10-23** in `915f3b2`, not flashed yet; D11 decided (the same box, centred, 2 px rim) |
-| 8. Glitch bursts on link loss | **built 2026-10-23**, not flashed |
-| 9. Screensaver | open |
+| 8. Glitch bursts on link loss | **built 2026-10-23** in `1a87127`, not flashed: it replaces the alarm band, over every page and animation |
+| 9. Screensaver | **built 2026-10-23**, not flashed: the rain from 100 s on both halves, panels off at 180 s (D10) |
 
 ## Decisions
 
@@ -82,6 +82,8 @@ Open, with a default, to answer before the stage that needs it:
 - D10. **Screensaver timing (stage 9).** The mock started at 60 s on both halves. Bjorn settles at
   8 s and dozes at 75 s, and v2's director owns the slave's idle time. Default: the master rains
   from 60 s, the slave keeps Bjorn's idle show and rains from 100 s, and both go dark at 120 s.
+  **Decided 2026-10-23: both halves rain from 100 s, and the panels go dark at 180 s**
+  (`OLED_TIMEOUT` 180000), so the rain has 80 s.
 - D11. **Encoder feedback off the bands (stage 7).** Default: on any page it shows as the same box,
   centred. **Decided 2026-10-23, the default**, from renders of the box over the Status sheet, the
   Layer map, Typing and the Event log.
@@ -745,6 +747,19 @@ Kyria and Monitor screens, bongo cat, the Mario scene. Plug it back: both clean 
 The matrix rain, frame per render tick (50 ms on the split), on the timing D10 settles. The panel
 still sleeps at `OLED_TIMEOUT` from the input clock, and nothing about drawing frames may re-arm it.
 `u_oled_should_sleep()` already reads the input clock, not dirtiness, so this holds.
+
+**As built, 2026-10-23.** `oled_screensaver.c` draws drashna's rain into the canvas from
+`U_RAIN_AFTER_MS` (100 s, in `oled.h`), a frame a render, the frame taken from the shared idle
+clock so both halves fall in step. It comes first in `oled_render_master()` and in
+`oled_render_slave()`, so it covers every page, map and animation; a lost link's glitch still runs
+over it. `OLED_TIMEOUT` is 180000, and the idle show's last start and its stillness moved to 90 and
+100 s, where the rain covers it. Tested on both halves, the other half through its real dispatcher:
+not a frame early, every page and animation, a frame every 50 ms round the loop, a key bringing the
+screen back. The rain adds 72 KB of flash; the firmware is 214,492 bytes.
+
+**Checkpoint, on the board:** stop typing on any page and animation. At 100 s both halves rain, in
+step; a key brings both back. At 180 s both go dark. Then a few days of watching the Stats page's
+FAIL, OUT and DROP, per the note below.
 
 **The thing to watch:** this puts a full-panel repaint on both halves' I²C buses at once. That was
 the one thing that changed before the link loss of 2026-10-13. Continuous I²C was shown not to be

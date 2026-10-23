@@ -46,6 +46,8 @@ static int      ee_writes;
 uint32_t        eeconfig_read_user(void) { return fake_ee; }
 void            eeconfig_update_user(uint32_t val) { fake_ee = val; ee_writes++; }
 uint8_t         get_current_wpm(void) { return fake_wpm; }
+static uint32_t fake_idle;      // the idle clock: past U_RAIN_AFTER_MS the screensaver runs
+uint32_t        last_input_activity_elapsed(void) { return fake_idle; }
 static bool     is_keyboard_master(void) { return fake_is_master; }
 
 // The map's questions to QMK. Every key reads as an F-key here; test_map.c draws the maps.
@@ -62,6 +64,7 @@ u_legend_t u_map_short(uint16_t keycode, bool mac) { (void)keycode; (void)mac; r
 #endif
 #include "oled_master_zones.c"
 #include "oled_settings.c"
+#include "art/matrix_art.h"
 
 // A replug, as these two modules see one: RAM forgets what it loaded, EEPROM keeps it.
 static void replug(void) {
@@ -1463,9 +1466,40 @@ int main(int argc, char **argv) {
         frame(at_rest, false);
     }
 
+    // --- the screensaver ----------------------------------------------------
+    // From 100 s of idle the rain takes over every page, a frame a render, off the idle
+    // clock both halves share; a key brings the page back.
+    {
+        bool on_time = true, every_page = true, wraps;
+        static const enum u_master_page pages[] = {U_PAGE_BANDS, U_PAGE_STATUS, U_PAGE_LAYER_MAP, U_PAGE_STATS, U_PAGE_EVENT_LOG};
+        for (uint8_t i = 0; i < sizeof pages / sizeof pages[0]; i++) {
+            show_page(pages[i]);
+            fake_idle = U_RAIN_AFTER_MS - 50;
+            frame(at_rest, false);
+            on_time = on_time && memcmp(fake_oled, u_matrix[0], OLED_MATRIX_SIZE) != 0;
+            fake_idle = U_RAIN_AFTER_MS;
+            frame(at_rest, false);
+            every_page = every_page && memcmp(fake_oled, u_matrix[0], OLED_MATRIX_SIZE) == 0;
+        }
+        check("from 100 s the rain takes over, not a frame sooner", on_time);
+        check("over every page", every_page);
+        bool in_step = true;
+        for (uint32_t k = 0; k < 2 * U_MATRIX_FRAMES; k++) {
+            fake_idle = U_RAIN_AFTER_MS + k * 50;
+            frame(at_rest, false);
+            in_step = in_step && memcmp(fake_oled, u_matrix[k % U_MATRIX_FRAMES], OLED_MATRIX_SIZE) == 0;
+        }
+        wraps = in_step;
+        check("a frame every 50 ms off the idle clock, round and round", wraps);
+        fake_idle = 0;
+        show_page(U_PAGE_BANDS);
+        frame(at_rest, false);
+        check("and a key brings the page back", memcmp(fake_oled, u_matrix[0], OLED_MATRIX_SIZE) != 0 && any_lit(BAND_Y0, BAND_Y1));
+    }
+
     // --- the sleep predicate ------------------------------------------------
-    check("awake at 119,999 ms idle", !u_oled_should_sleep(true, 119999));
-    check("asleep at 120,000 ms idle", u_oled_should_sleep(true, 120000));
+    check("awake at 179,999 ms idle", !u_oled_should_sleep(true, 179999));
+    check("asleep at 180,000 ms idle", u_oled_should_sleep(true, 180000));
     check("and nothing to do when already off", !u_oled_should_sleep(false, 500000));
 
     check("the driver's one-past-the-end byte was never touched",

@@ -1,6 +1,10 @@
 // The director behind oled_slave_director.h.
 
+#include QMK_KEYBOARD_H
 #include "oled_slave_director.h"
+#include "oled.h"
+
+_Static_assert(U_IDLE_FREEZE_MS == U_RAIN_AFTER_MS, "the scene stops where the rain starts");
 
 static bool     claimed;
 static uint32_t rng = 0x2545f491u;

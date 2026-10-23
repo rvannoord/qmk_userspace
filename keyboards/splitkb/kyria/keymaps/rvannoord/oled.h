@@ -105,6 +105,12 @@ void oled_render_slave(void);
 void oled_master_task(void);
 void oled_slave_task(void);
 
+// The screensaver: from this much idle both halves show the matrix rain over whatever they
+// showed, until the panels switch off at OLED_TIMEOUT. The caller commits.
+#define U_RAIN_AFTER_MS 100000
+static inline bool u_rain_on(uint32_t idle_ms) { return idle_ms >= U_RAIN_AFTER_MS; }
+void               u_rain_draw(uint32_t idle_ms);
+
 // QMK's own display timeout follows oled_on(), which any dirty block calls, so a panel
 // that keeps drawing can hold itself awake for ever. This reads the input clock instead,
 // which no amount of drawing can re-arm. Pure, so the tests can pin the boundary.

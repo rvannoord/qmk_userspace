@@ -10,7 +10,7 @@
 #define OLED_DISPLAY_HEIGHT 64
 #define OLED_MATRIX_SIZE    1024
 #define OLED_BLOCK_SIZE     64
-#define OLED_TIMEOUT        120000
+#define OLED_TIMEOUT        180000
 
 typedef struct { uint16_t dummy; } keyrecord_t;
 
@@ -48,6 +48,7 @@ static inline uint32_t timer_elapsed32(uint32_t then) { return fake_now - then; 
 uint32_t eeconfig_read_user(void);
 void     eeconfig_update_user(uint32_t val);
 uint8_t  get_current_wpm(void);
+uint32_t last_input_activity_elapsed(void);
 
 // What the live layer map asks of QMK: where a key is, what it does on a layer, and
 // whether it is down. Each test that draws a map answers the last two itself.

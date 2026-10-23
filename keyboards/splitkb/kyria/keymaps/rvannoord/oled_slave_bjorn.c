@@ -25,7 +25,7 @@
 // WPM tiers: speed_tier.h, shared with the master's kitty.
 
 #define BJORN_SETTLE_MS  8000                              // drop to the resting posture
-#define BJORN_DOZE_MS   75000                              // eyes shut; OLED_TIMEOUT is 120 s
+#define BJORN_DOZE_MS   75000                              // eyes shut; the rain covers him at 100 s
 
 // Ambient is counted in render ticks, not wall clock, so it freezes with the panel
 // and resumes where it stopped instead of jumping to a random phase on wake.

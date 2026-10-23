@@ -17,10 +17,11 @@
 #define OLED_SLAVE_ANIMATION_BJORN
 
 /* OLED panel. Both halves sleep together (keyboard.json syncs it). See docs/layout.md.
-   120 s so the idle states are actually seen. Full brightness, because lit-on-black
+   180 s: Bjorn's idle show until 100 s, then the screensaver's rain for 80 s (decided
+   2026-10-23; it was 120 s before the rain). Full brightness, because lit-on-black
    lights about a quarter of the pixels: 255 here is a lighter load than 128 was while
    the panel ran inverted (2026-10-14 to -15), and OLED wear follows drive current. */
-#define OLED_TIMEOUT 120000
+#define OLED_TIMEOUT 180000
 #define OLED_BRIGHTNESS 255
 
 #ifdef RGB_MATRIX_ENABLE

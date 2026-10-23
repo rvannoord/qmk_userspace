@@ -668,6 +668,15 @@ static void render_bands(void) {
 }
 
 void oled_render_master(void) {
+    // The screensaver, over every page, until the panels switch off.
+    const uint32_t idle = last_input_activity_elapsed();
+    if (u_rain_on(idle)) {
+        u_rain_draw(idle);
+        u_glitch_frame(u_sync_link_down());
+        u_canvas_commit();
+        return;
+    }
+
     // A held layer's map, when its keys are under this panel. It replaces whatever page is
     // up. It needs the other half for the rest of the map, so not while the link is down.
     const uint8_t layer = panel.layers & 0x0F;
