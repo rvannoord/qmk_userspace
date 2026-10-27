@@ -1,4 +1,4 @@
-// The state the master gathers for the slave half: finger slots, the OS swap, the
+// The state the master gathers for the slave half: finger slots, the host flag, the
 // layer nibbles and the misfire counter. All of it runs before anything crosses the
 // split link, which is the point — the link is where test coverage stops.
 
@@ -43,7 +43,7 @@ TEST_F(SplitState, SlotsDoNotMoveWithTheOs) {
     record(driver);
     begin();
 
-    press(a, 0);                               // left pinky: GUI on Windows, Ctrl on a Mac
+    press(a, 0);                               // left pinky: GUI, drawn as Win or Cmd
     at(300);
     const u_split_state_t win = u_sync_build();
     EXPECT_EQ(win.fingers, U_FIN_L_PINKY);

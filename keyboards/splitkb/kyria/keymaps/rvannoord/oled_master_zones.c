@@ -462,9 +462,9 @@ static void render_os_logo(void) {
 
 // --- mod row ----------------------------------------------------------------
 // A cell is a finger. Not a modifier — the slot never moves, only the glyph follows the
-// OS, which is why this used to light the wrong cell on the Mac where Ctrl and GUI swap.
-// Ctrl's caret is the same drawing in both sets and simply changes cell, so the swap is
-// visible as a hop.
+// OS: the pinky is the four panes on Windows and Cmd on the Mac. While the Mac swapped
+// Ctrl and GUI (until 2026-10-27) the caret hopped cells too, and keying cells by the
+// modifier bit is what used to light the wrong one there.
 //
 // **The order follows the half the panel is on.** Outer to inner is pinky, ring, middle,
 // index, and on the left half that runs left to right across the keys — so cell 0 is at
@@ -492,7 +492,7 @@ static void render_os_logo(void) {
 
 static void render_mods(void) {
     static const uint8_t win[4] = {U_GLYPH_WINDOW, U_GLYPH_OPTION, U_GLYPH_CARET, U_GLYPH_SHIFT};
-    static const uint8_t mac[4] = {U_GLYPH_CARET,  U_GLYPH_OPTION, U_GLYPH_CMD,    U_GLYPH_SHIFT};
+    static const uint8_t mac[4] = {U_GLYPH_CMD,    U_GLYPH_OPTION, U_GLYPH_CARET, U_GLYPH_SHIFT};
     const uint8_t *set   = (panel.flags & U_FLAG_IS_MAC) ? mac : win;
     const uint8_t  cells = U_FIN_CELLS(panel.fingers);
 

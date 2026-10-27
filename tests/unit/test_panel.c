@@ -543,7 +543,7 @@ int main(int argc, char **argv) {
     frame(on_nav, false);
 
     // Cells are fingers, outer to inner, and they do not move with the OS: this frame
-    // is on the Mac, where Ctrl and GUI swap, holding left index and right ring.
+    // is on the Mac, holding left index and right ring.
     check("a held finger fills its cell", cell_filled(1) && cell_filled(3));
     check("and the fill has rounded corners", cell_chamfered(1) && cell_chamfered(3));
     check("an idle finger is drawn but not filled", !cell_filled(0) && !cell_filled(2));

@@ -21,7 +21,7 @@ A second argument picks another QMK tree. QMK only finds tests inside its own `t
 
 | Folder | What |
 |--------|------|
-| `scenarios/` | `scenario.hpp` (keys, clock, report recorder), `test_home_row_mods.cpp` (scenarios 1–9 and the crossover boundaries, both trees), `test_host_os.cpp` (scenario 10, new only), `test_split_state.cpp`, and `test_map_legend.cpp`: every key a live layer map draws has a legend on both hosts, from Miryoku's layer macros expanded with `custom_config.h` and RGB Matrix on, since the scenario build's `keymaps[]` is the framework's own; and D15's Mac legends and the mods following the host. It also draws the Layer map page from every layer through the real `oled_layer_page.c`: every key has a one-cell legend, the held layer key shows its base legend, no page outshines the alarm, and `U_LAYER_PAGES=<file>` writes the stage 5 mock's twelve Layer map frames for a byte compare |
+| `scenarios/` | `scenario.hpp` (keys, clock, report recorder), `test_home_row_mods.cpp` (scenarios 1–9 and the crossover boundaries, both trees), `test_host_os.cpp` (scenario 10, new only), `test_split_state.cpp`, and `test_map_legend.cpp`: every key a live layer map draws has a legend on both hosts, from Miryoku's layer macros expanded with `custom_config.h` and RGB Matrix on, since the scenario build's `keymaps[]` is the framework's own; and D15's Mac legends and the mods following the host. It also draws the Layer map page from every layer through the real `oled_layer_page.c`: every key has a one-cell legend, the held layer key shows its base legend, no page outshines the alarm, and `U_LAYER_PAGES=<file>` writes the stage 5 mock's twelve Layer map frames for a byte compare. The two Mac frames (Nav, Fun) differ from that mock since 2026-10-27 by design: the pinky's mod is drawn ⌘ and the middle finger's ⌃ |
 | `new/` | `config.h` and `test.mk` matching the firmware, a placeholder `chordal_hold_layout` the test build needs to link, and `oled_stub.c`, which answers the keymap's two calls into the animation selector without the panel |
 | `old/` | `config.h` with the old `BILATERAL_COMBINATIONS*` settings, and `test.mk` |
 
@@ -38,7 +38,7 @@ Colemak-DH home row: A=GUI, R=Alt, S=Ctrl, T=Shift | N=Shift, E=Ctrl, I=Alt, O=G
 7. Shift mid-word: `e`, then T within 100 ms and held past 200 ms, then U → `U`
 8. GUI head start: O, then W at 100 ms → `ow`; O held past 200 ms with W at 150 ms → GUI+W
 9. Thumb layer: Space (Nav) held past 200 ms, a right-hand Nav key pressed within 50 ms of Space → that Nav key, Space not typed
-10. Host OS: call `host_os_toggle()` directly (OS detection runs on USB setup packets and can't be exercised here); then `U_CPY` → Cmd+C, `U_RDO` → Cmd+Shift+Z
+10. Host OS: call `host_os_toggle()` directly (OS detection runs on USB setup packets and can't be exercised here); then `U_CPY` → Cmd+C, `U_RDO` → Cmd+Shift+Z, and the home-row mods stay put (held S is Ctrl, held A is GUI on the Mac too). The thumb keys: herdr → Ctrl+B and Hyper+W → Ctrl+Alt+Shift+GUI+W, on both hosts
 
 Expectations are the new setup's intended behaviour, written as what the host would show: `st`, `U` (Shift+u), `<Ctrl+t>`, `<LEFT>`. They encode the current values (`FLOW_TAP_TERM 160`, crossover 80 ms, 120 ms for GUI), so a deliberate tuning change updates the matching test in the same commit.
 

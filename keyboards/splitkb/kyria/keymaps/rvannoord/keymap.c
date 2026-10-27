@@ -70,10 +70,25 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             if (record->event.pressed) u_mute_note();
             break;
 #endif
+        case U_HERDR:
+            // tap_code16 never passes through mod_config(), so this is Ctrl+B whatever
+            // the host, where a C(KC_B) in the keymap would follow any Ctrl/GUI swap.
+            if (record->event.pressed) tap_code16(C(KC_B));
+            return false;
+        case U_UND:
+        case U_CUT:
+        case U_CPY:
+        case U_PST:
         case U_RDO:
+            // Miryoku's clipboard keys are Ctrl-based (MIRYOKU_CLIPBOARD = WIN). The mods
+            // stay put on the Mac, so these are the keys that turn into Cmd there, redo as
+            // Cmd+Shift+Z. Registered while held, so a held Undo repeats.
             if (host_is_mac()) {
+                const uint16_t mac = keycode == U_RDO ? LSG(KC_Z) : LGUI(QK_MODS_GET_BASIC_KEYCODE(keycode));
                 if (record->event.pressed) {
-                    tap_code16(LSG(KC_Z));
+                    register_code16(mac);
+                } else {
+                    unregister_code16(mac);
                 }
                 return false;
             }

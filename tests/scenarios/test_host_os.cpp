@@ -15,7 +15,7 @@ TEST_F(Scenario, S10_HostOs) {
     KeymapKey sys{BASE, 0, 1, U_SYS};
     KeymapKey copy{BASE, 2, 1, U_CPY};
     KeymapKey redo{BASE, 3, 1, U_RDO};
-    start({sys, copy, redo, s});
+    start({sys, copy, redo, a, s});
     ASSERT_FALSE(host_is_mac());
 
     // Windows: Ctrl-based clipboard keys
@@ -35,21 +35,53 @@ TEST_F(Scenario, S10_HostOs) {
     at(900);
     EXPECT_EQ(typed(), "<GUI+c><Shift+GUI+z>");
 
-    // The swap also reaches the home-row mods: held S is Cmd on the Mac
+    // The home-row mods stay put on the Mac (no Ctrl/GUI swap since 2026-10-27): held S
+    // is Ctrl and held A is GUI, as on Windows
     reports.clear();
     press(s, 1000);
     release(s, 1250);
-    at(1500);
-    EXPECT_TRUE(mods_seen() & MOD_MASK_GUI) << "S held should send GUI on the Mac";
-    EXPECT_FALSE(mods_seen() & MOD_MASK_CTRL) << "S held should not send Ctrl on the Mac";
+    at(1300);
+    EXPECT_TRUE(mods_seen() & MOD_MASK_CTRL) << "S held should send Ctrl on the Mac";
+    EXPECT_FALSE(mods_seen() & MOD_MASK_GUI) << "S held should not send GUI on the Mac";
+    reports.clear();
+    press(a, 1300);
+    release(a, 1550);
+    at(1600);
+    EXPECT_TRUE(mods_seen() & MOD_MASK_GUI) << "A held should send GUI on the Mac";
+    EXPECT_FALSE(mods_seen() & MOD_MASK_CTRL) << "A held should not send Ctrl on the Mac";
 
     // Back to Windows
     host_os_toggle();
     EXPECT_FALSE(host_is_mac());
     reports.clear();
-    tap(copy, 1600);
-    at(1800);
+    tap(copy, 1700);
+    at(1900);
     EXPECT_EQ(typed(), "<Ctrl+c>");
+}
+
+// The two thumb keys of 2026-10-27: herdr's prefix is a real Ctrl+B and Hyper all four
+// mods, the same on both hosts.
+TEST_F(Scenario, S10_ThumbKeys) {
+    TestDriver driver;
+    record(driver);
+    KeymapKey herdr{BASE, 5, 1, U_HERDR};
+    KeymapKey hyper{BASE, 6, 1, KC_HYPR};
+    start({herdr, hyper, w});
+    ASSERT_FALSE(host_is_mac());
+
+    for (int mac = 0; mac < 2; mac++) {
+        const uint32_t t0 = mac * 1000;
+        reports.clear();
+        tap(herdr, t0);
+        at(t0 + 100);
+        press(hyper, t0 + 100);
+        tap(w, t0 + 200);
+        release(hyper, t0 + 300);
+        at(t0 + 400);
+        EXPECT_EQ(typed(), "<Ctrl+b><Ctrl+Alt+Shift+GUI+w>") << (mac ? "on the Mac" : "on Windows");
+        host_os_toggle();                       // to the Mac, then back to Windows
+    }
+    EXPECT_FALSE(host_is_mac());
 }
 
 // What the panel shows, which is more than what the keyboard does. Detection is called
@@ -74,7 +106,7 @@ TEST_F(Scenario, S10_HostKind) {
 
     process_detected_host_os_user(OS_IOS);
     EXPECT_EQ(host_kind(), U_HOST_IOS);
-    EXPECT_TRUE(host_is_mac()) << "iPadOS shortcuts are Cmd-based, so iOS swaps like the Mac";
+    EXPECT_TRUE(host_is_mac()) << "iPadOS shortcuts are Cmd-based, so iOS is a Mac";
     host_os_toggle();
     EXPECT_EQ(host_kind(), U_HOST_WINDOWS);
     host_os_toggle();

@@ -8,11 +8,6 @@ static bool     is_manual = false;            // SYS has overridden detection
 static u_host_t detected  = U_HOST_WINDOWS;
 static bool     reported  = false;            // a Windows answer changes nothing else
 
-static void apply_host_os(void) {
-    keymap_config.swap_lctl_lgui = is_mac;
-    keymap_config.swap_rctl_rgui = is_mac;
-}
-
 bool host_is_mac(void) {
     return is_mac;
 }
@@ -36,7 +31,6 @@ u_host_t host_kind(void) {
 void host_os_toggle(void) {
     is_mac    = !is_mac;
     is_manual = true;
-    apply_host_os();
 }
 
 bool process_detected_host_os_user(os_variant_t os) {
@@ -47,6 +41,5 @@ bool process_detected_host_os_user(os_variant_t os) {
     is_mac    = os == OS_MACOS || os == OS_IOS;
     is_manual = false;
     reported  = true;
-    apply_host_os();
     return true;
 }

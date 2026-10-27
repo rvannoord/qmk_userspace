@@ -37,7 +37,7 @@ static void frame_art(void) {
 // finger: pinky outermost on both sides.
 static void mods(const u_split_state_t *s) {
     static const uint8_t win[4] = {U_ICON12_WIN, U_ICON12_ALT, U_ICON12_CTRL, U_ICON12_SHIFT};
-    static const uint8_t mac[4] = {U_ICON12_CTRL, U_ICON12_ALT, U_ICON12_CMD, U_ICON12_SHIFT};
+    static const uint8_t mac[4] = {U_ICON12_CMD, U_ICON12_ALT, U_ICON12_CTRL, U_ICON12_SHIFT};
     const uint8_t       *set    = (s->flags & U_FLAG_IS_MAC) ? mac : win;
     for (uint8_t i = 0; i < 8; i++) {
         const int16_t    x   = (int16_t)(8 + i * 14 + (i >= 4 ? 4 : 0));

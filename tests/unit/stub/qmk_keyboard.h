@@ -61,6 +61,8 @@ typedef struct {
 #define QK_USER_0 0x7E40
 #define QK_USER_1 0x7E41
 #define QK_USER_2 0x7E42
+#define QK_USER_3 0x7E43
+#define KC_HYPR   0x0F00     // HYPR(KC_NO): Ctrl, Shift, Alt and GUI
 
 #include "kyria_layout.h"
 #include "config.h"          // the keymap's: LAYOUT_miryoku, as the build force-includes it

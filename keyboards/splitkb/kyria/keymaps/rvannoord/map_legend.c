@@ -78,9 +78,8 @@ static const u_legend_entry_t legends[] = {
     {KC_ALGR, T('A', 'G', 'r')},
 };
 
-// Checked first on the Mac: the keys that are something else there (D15), and the mods,
-// which follow the host the way the mod row does: the Ctrl/GUI swap puts Ctrl on the
-// pinky's GUI key and Cmd on the middle finger's Ctrl key.
+// Checked first on the Mac: the keys that are something else there (D15), and GUI, which
+// is Cmd there, as the mod row draws it. The mods stay put on every host, so Ctrl is Ctrl.
 static const u_legend_entry_t mac_legends[] = {
     {KC_PSCR, T('F', '1', '3')},                 // read as F13
     {KC_SCRL, T(I6(SUN), I6(TRI_DOWN))},         // F14, screen brightness down
@@ -88,8 +87,7 @@ static const u_legend_entry_t mac_legends[] = {
     {KC_APP, {{'A', 'p', 'p'}, U_LEG_DIM}},      // does nothing
     {KC_INS, T('H', 'l', 'p')},                  // read as Help
     {KC_ALGR, I12(ALT)},                         // right Option
-    {KC_LGUI, I12(CTRL)},
-    {KC_LCTL, I12(CMD)},
+    {KC_LGUI, I12(CMD)},
 };
 
 static bool find(const u_legend_entry_t *table, uint8_t n, uint16_t keycode, u_legend_t *out) {

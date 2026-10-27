@@ -1,6 +1,6 @@
-// Which host the keyboard is plugged into. On the Mac, Ctrl and GUI swap so Cmd
-// shortcuts use the same fingers as Ctrl shortcuts on Windows; nothing else may
-// hardcode either. Detection sets it, SYS overrides it, the master OLED shows it.
+// Which host the keyboard is plugged into. The mods stay where they are on every host;
+// on the Mac only the clipboard keys change, to Cmd (keymap.c). Nothing else may
+// hardcode Ctrl or Cmd. Detection sets it, SYS overrides it, the master OLED shows it.
 #pragma once
 #include <stdbool.h>
 #include <stdint.h>

@@ -6,18 +6,18 @@ The source of truth for my layout. A change goes here first, then into the firmw
 
 - Miryoku, 36 keys. The Kyria's other keys are unused (`XXX`) except the ones under Extra keys.
 - Base: Colemak-DH, done in the firmware. The OS stays on a QWERTY-family layout.
-- Thumb arc: five positions per half, counted from the outside edge. Position 1 is a rotary encoder on both halves (left volume, right screen brightness; push-click unassigned). `MIRYOKU_MAPPING = EXTENDED_THUMBS` puts the thumb keys on 3–5, leaving position 2 free.
+- Thumb arc: five positions per half, counted from the outside edge. Position 1 is a rotary encoder on both halves (left volume, right screen brightness; push-click unassigned). `MIRYOKU_MAPPING = EXTENDED_THUMBS` puts the thumb keys on 3–5. Position 2 holds Hyper on the left and the herdr key on the right (since 2026-10-27, see *The terminal round*).
 
   ```
-  position:   1     2     3      4      5
-  left:       ⟳     ·     Esc    Space  Tab
-  right:      ⟳     ·     Del    Bksp   Enter
+  position:   1     2      3      4      5
+  left:       ⟳     Hyper  Esc    Space  Tab
+  right:      ⟳     herdr  Del    Bksp   Enter
   ```
 - Other Miryoku options are at their defaults: Extra layer QWERTY, Tap layer Colemak-DH, Nav with arrows on the right home row, layers not flipped. Clipboard is `WIN` (see Hosts).
-- OS layout: undecided, see Open experiments. Today: US-International on regular keyboards.
-- Mostly English. Swedish (å ä ö) is wanted later, not a priority.
+- OS layout: plain U.S. on the Mac, decided 2026-10-27 (it was US International – PC, whose dead keys broke vim and the symbol layer). The work PC is still to be checked.
+- Mostly English. Swedish (å ä ö) is wanted later, not a priority. On plain U.S. they are ⌥a = å and ⌥u, then a or o = ä or ö.
 - Goal: keyboard first, less mouse, vim-style.
-- Hosts: Windows at work, Apple Silicon Mac at home. OS detection swaps Ctrl and Cmd on the Mac, so shortcuts use the same fingers on both. QMK also tells Linux and iOS apart (since 2026-10-21 the panel shows which): Linux behaves like Windows, and iOS like the Mac, swap included, because iPadOS shortcuts are Cmd-based. Android hosts report themselves as Linux, and nothing here tries to tell them apart. Side effect: on the Mac, Ctrl moves to the pinky, which you feel in the terminal and nvim. The alternative (mods stay put, only the clipboard keys adapt) stays open as a later switch.
+- Hosts: Windows at work, Apple Silicon Mac at home. The mods stay where they are on every host: Ctrl on the middle finger, GUI (Win, Cmd) on the pinky. Only the clipboard keys follow the host: Ctrl-based on Windows and Linux, Cmd on the Mac, with redo as Cmd+Shift+Z. Until 2026-10-27 OS detection swapped Ctrl and Cmd on the Mac instead; why that went is under *The terminal round*. QMK also tells Linux and iOS apart (since 2026-10-21 the panel shows which): Linux behaves like Windows, and iOS like the Mac, because iPadOS shortcuts are Cmd-based. Android hosts report themselves as Linux, and nothing here tries to tell them apart.
 
 ## Extra keys
 
@@ -26,10 +26,12 @@ The source of truth for my layout. A change goes here first, then into the firmw
 | SYS (`U_SYS`) | left half, outer pinky column, top row | flips between the Mac and the detected non-Mac host (Windows, or Linux on a Linux machine) by hand when detection guesses wrong; the left OLED shows the result. Held two seconds, the stats page. Held while plugging in, it enters the bootloader (Bootmagic) |
 | ANIM (`U_ANIM`) | right half, outer pinky column, top row, mirroring SYS | cycles the other half's animation: Bjorn, spaceship, Kyria logo, three Monitor ERP screens (the horizontal logo, the stacked logo, "Monitor your future"), bongo cat, and Mario with Yoshi and Bullet Bill. Persisted on both halves, so it follows the cable. See *Switching the slave's animation* |
 | PAGE (`U_PAGE`) | left half, outer pinky column, middle row, under SYS (decided 2026-10-22: free on every layer, and the pinky reaches it while a thumb holds a layer) | cycles the master's pages, on release like SYS and ANIM. While a layer map is showing it switches the map between the big grid and the Kyria-shaped one instead. Persisted on both halves, so it follows the cable. See *The drashna round* under OLED; build order in `docs/oled-v3.md` |
+| Hyper (`KC_HYPR`) | left thumb arc, position 2, just outside Esc. Position 5 in Miryoku's default thumb mapping, where 2 is taken (decided 2026-10-27) | holds Ctrl, Alt, Shift and GUI together, on every host. For AeroSpace on the Mac and GlazeWM on Windows, so their bindings stay off Alt, which herdr and the shell use. A plain modifier, not a tap-hold key: no timing. See *The terminal round* |
+| herdr (`U_HERDR`) | right thumb arc, position 2, just outside Del. Position 5 in the default thumb mapping (decided 2026-10-27) | taps Ctrl+B, herdr's prefix, on every host, so the most-used terminal chord is one thumb tap. Sent from code with `tap_code16`, which never passes through QMK's Ctrl/GUI swap, so it would stay Ctrl+B even if a swap came back. See *The terminal round* |
 
 ## Home-row mods
 
-GUI, Alt, Ctrl, Shift from the outside in, mirrored on both hands (on the Mac, Ctrl and Cmd swap).
+GUI, Alt, Ctrl, Shift from the outside in, mirrored on both hands, the same on every host: on the Mac the pinky is Cmd and the ring finger Option (no Ctrl/Cmd swap since 2026-10-27).
 
 Current plan, chosen to match the old bilateral-combinations patch as closely as stock QMK allows:
 
@@ -275,9 +277,11 @@ so a same-hand and a cross-hand hold are now drawn identically, and only the mis
 a bad one. `U_FIN_LEFT`/`U_FIN_RIGHT` stay on the wire; nothing on screen reads them.
 
 **Mod slots are fingers, not modifiers.** Outer to inner: pinky, ring, middle, index. On Windows
-those keys give GUI, Alt, Ctrl, Shift; on macOS the Ctrl/GUI swap means the same fingers give
-Ctrl, Option, Cmd, Shift — the order on a MacBook's bottom row. Only the glyph changes with the
-OS. `get_mods()` returns post-swap bits (`mod_config()` runs at keycode-to-action translation,
+those keys give GUI, Alt, Ctrl, Shift; on macOS, since the swap went on 2026-10-27, Cmd, Option,
+Ctrl, Shift. Only the glyph changes with the OS: the pinky's ⊞ becomes ⌘. Until then the Ctrl/GUI
+swap made the Mac's fingers Ctrl, Option, Cmd, Shift, the order on a MacBook's bottom row, and the
+rest of this paragraph is about that swap. The code it describes stays, because it is still the
+right way to read a held key if a swap ever comes back. `get_mods()` returns post-swap bits (`mod_config()` runs at keycode-to-action translation,
 `quantum/keymap_common.c:162`), which is why the display used to light the wrong slot on the
 Mac. Fixed: the slot comes from the key's *declared* mod, so it never moves, and liveness is
 checked against the bit the key actually registered — recorded when it was pressed, because
@@ -1128,14 +1132,111 @@ few extra glyphs each one carries. All —.
 - the two 240x320 colour pictures in `painter/graphics/`, which are TFT art
 - display_menu, which is code rather than art, and waits under *Open experiments*
 
+## The terminal round, decided 2026-10-27
+
+Roel works terminal-first now: herdr with an agent session per pane, LazyVim and lazygit,
+on the Mac at home and Windows at work, with the Kyria used more and more. A workflow review on
+2026-10-27 ranked three keyboard problems highest: the OS layout's dead keys, Ctrl being on a
+different finger per OS, and herdr's prefix being a pinky chord. Five decisions, all made on the
+day.
+
+**1. Ctrl on the middle finger on every host; the Mac's Ctrl/GUI swap is gone.** Terminal and vim
+chords are now the main shortcuts, and with the swap each was learned twice: pinky on the Mac,
+middle finger on Windows. Three arrangements were weighed, and none can make everything the same,
+because Windows uses Ctrl for both terminal chords and app shortcuts, while the Mac splits them
+between Ctrl and Cmd. Whatever the firmware does, one of the two jobs lands on a different finger
+on one host. The options only choose which:
+
+| | Terminal Ctrl | App shortcuts (Cmd/Ctrl+S, F, W, T…) |
+|---|---|---|
+| The swap (until 2026-10-27) | Mac pinky, Windows middle | middle on both |
+| **Mods stay put (chosen)** | **middle on both** | Mac pinky, Windows middle |
+| Ctrl on the pinky everywhere | pinky on both | Mac middle, Windows pinky |
+
+The last row was Roel's own proposal: swap on every host, so the Mac stays exactly as it was and
+only Windows changes. It is the mirror of the chosen one and just as cheap to build. Roel chose
+the middle finger. The case for it: Ctrl is now the most-used chord key and the middle finger is
+the stronger one, Windows at work stays as it was, and it is Miryoku's own arrangement.
+Cost: Cmd+Tab, W, T, S, F and Space move to the pinky on the Mac. The clipboard keys are single
+keys and still send Cmd there (`keymap.c`), with redo as Cmd+Shift+Z. `tap_hold.c`'s 120 ms head
+start stays on the pinky keys, which now send GUI on every host, as Miryoku intends. The mod row
+and the maps show ⌘ on the pinky on the Mac.
+
+**2. herdr's prefix on its own thumb key, right arc position 2.** `ctrl+b` in herdr's
+`config.toml` was hold-O-tap-B. Now it is one tap just outside Del. Del is used less than Esc,
+so a stray prefix is less likely on that side. The key sends Ctrl+B with `tap_code16`, which
+bypasses QMK's `mod_config()`. A `C(KC_B)` placed in the keymap would not: it goes through
+`mod_config()` (`quantum/keymap_common.c`) and turned into Cmd+B while the swap existed.
+
+**3. Hyper on the left arc's position 2, Ctrl+Alt+Shift+GUI on every host.** It's for a window
+manager, AeroSpace on the Mac and GlazeWM on Windows, whose default Alt bindings collide with
+herdr's `prefix+alt+1..9` and with Alt in the shell. Held by the left thumb, it leaves the right
+hand free: focus can go on `hyper+n/e/i/o`, the same keys as the Nav arrows, and the right thumb
+can still hold Num for `hyper+1..9`.
+- **Swap-proof.** QMK's `mod_config()` only swaps when exactly one of Ctrl and GUI is set, so
+  Hyper would have survived the swap too.
+- **The cost is on Windows.** Ctrl+Alt+Shift+Win is Microsoft's Office key. Alone it opens the
+  Office app; with W, X, P, O, T, N, D or L it opens Word, Excel and the rest, LinkedIn included.
+  A registry value under `HKCU\Software\Classes\ms-officeapp` stops the bare key. The letter
+  shortcuts lose only if GlazeWM catches them first, which is untested.
+- **The fallback.** Meh (Ctrl+Alt+Shift) on Windows only, one `host_is_mac()` branch. See Open
+  experiments.
+
+**4. Vim movement: `hjkl` where Colemak-DH puts them, in vim-style tools; the Nav arrows
+everywhere else.** No firmware change.
+- **Where they are.** They're not scattered: all four sit under the right index finger, `j l` on
+  the top row and `k h` on the bottom, with down (`j`) above up (`k`).
+- **Why the letters in vim.** Much of vim-style navigation is built on the letters themselves,
+  and arrows don't stand in for them. LazyVim's Ctrl+h/j/k/l moves between windows, while
+  Ctrl+arrows resizes them. Also Shift+H/L for buffers, `gj`, `Ctrl+w h`, and j/k in less, man
+  pages and Vimium.
+- **Chordal Hold.** A letter combo is a mod and a letter on opposite hands, which is what it
+  wants.
+- **Where the arrows win.** The Nav arrows (hold Space, then N E I O, in hjkl order) cover the
+  shell's line editing, a TUI's prompt box and GUI apps, where `hjkl` mean nothing. Learn the word
+  and line motions (`w b e 0 $ gg G`) as the OS-aware navigation row below already leans.
+
+**5. OS layout: plain U.S. on the Mac.** It was US International – PC, whose dead keys
+(`' " ` ~ ^`) turn vim's `"a` into ä and `'a` into á and break the symbol layer.
+- **Why U.S.** It's built in, and it is what Miryoku assumes. Swedish and Dutch letters are
+  Option combinations: ⌥a = å; ⌥u, then a, o or e = ä, ö, ë. Hold AltGr (X or .) on the hand
+  opposite the letter, for Chordal Hold. Swedish – Pro is already enabled on the Mac for long
+  Swedish texts; symbols move while it is active.
+- **EurKEY, the alternative.** The same AltGr letters on every OS, but it is a download (a
+  Homebrew cask and a reboot), and on the work PC an installer that may need admin rights.
+- **Who switches.** Roel does it himself. The work PC is still to be checked: if it is on
+  US-International, it has the same problem.
+
+### What the Halcyon needs for this
+
+The Halcyon Kyria Wireless runs ZMK. Its firmware does not exist yet, so this is the list for
+when it does:
+
+- **No OS detection.** Over Bluetooth there are no USB setup packets to fingerprint, and no ZMK
+  equivalent of QMK's OS detection turned up. The host is chosen by hand there, which is one more
+  reason the mods no longer change per host.
+- **Mods.** Fixed, the same on every host: GUI, Alt, Ctrl, Shift from the outside in on both home
+  rows. Nothing to port from the swap.
+- **Clipboard keys.** The one thing that differs per host: Ctrl-based on Windows, Cmd on the Mac,
+  redo as Cmd+Shift+Z there. Either a small Mac layer over the five clipboard keys, toggled by the
+  SYS key, or one layer per Bluetooth profile, so each machine's profile carries its own.
+- **Hyper.** All four mods while held, on the left thumb arc's position 2. In ZMK that is a `&kp`
+  with nested modifier functions, something like `LC(LA(LS(LGUI)))`; check the syntax against
+  ZMK's docs when the board arrives.
+- **herdr.** `&kp LC(B)` on the right thumb arc's position 2.
+- **Check the arc.** The Halcyon's thumb arc numbers its positions the same way, outside in, with
+  the encoders where the rev3 has them.
+- Nothing for the hjkl and OS layout decisions.
+
 ## Open experiments
 
 | Idea | Why | Status |
 |------|-----|--------|
 | Encoder push-clicks | Position 1 clicks are unassigned. Candidates: mute (left), play/pause (right) | later |
-| OS layout: plain US instead of US-International | US-Intl's dead keys (`' " ` ~ ^`) clash with vim (`"a` gives ä, `'a` gives á) and with the symbol layer | to decide |
-| å ä ö | Swedish later. Options: EurKEY (US base, letters on AltGr), or switching the OS layout when writing Swedish | later |
-| Vim on Colemak-DH | `hjkl` are scattered on Colemak-DH. Miryoku's Nav layer has arrows on the right home row | later |
+| OS layout: plain US instead of US-International | US-Intl's dead keys (`' " ` ~ ^`) clash with vim (`"a` gives ä, `'a` gives á) and with the symbol layer | **decided 2026-10-27: plain U.S. on the Mac**, EurKEY passed over (*The terminal round*). The work PC still to check |
+| å ä ö | Swedish later. Options: EurKEY (US base, letters on AltGr), or switching the OS layout when writing Swedish | on the Mac, since 2026-10-27: ⌥a = å and ⌥u then a/o = ä/ö on plain U.S., Swedish – Pro for long texts. Windows later |
+| Vim on Colemak-DH | `hjkl` are scattered on Colemak-DH. Miryoku's Nav layer has arrows on the right home row | **decided 2026-10-27: `hjkl` where they fall in vim-style tools, Nav arrows everywhere else**, no firmware change (*The terminal round*) |
+| Hyper on Windows | Ctrl+Alt+Shift+Win is Microsoft's Office key: alone it opens the Office app, with W X P O T N D L it opens Word, Excel, … LinkedIn. A registry value stops the bare key; the letters lose only if GlazeWM catches them first. Fallback: Meh (Ctrl+Alt+Shift) on Windows only, one `host_is_mac()` branch | when GlazeWM goes on the work PC |
 | OS-aware navigation | Word jump is Ctrl+Arrow on Windows but Option+Arrow on macOS; line start/end is Home/End vs Cmd+Arrow. OS detection could drive these too, but what works depends on the app (a Mac text field wants Cmd+Arrow, a terminal and nvim want Home), so a blanket translation would break the terminal. **Leaning nvim-style instead (2026-10-22):** learn vim's motions (`0`, `$`, `w`, `b`, `gg`, `G`), which behave the same on every host, and leave Home, End and the word jumps untranslated | later, nvim-style |
 | Brightness on Scroll Lock and Pause, on the Mac | The Mac reads them as F14 and F15, its own brightness down and up. Not Miryoku's doing, and it is wanted: keep it. Only the live layer map has to show it (`docs/oled-v3.md`, D15) | keep, decided 2026-10-22 |
 | Print Screen on the Mac | The Mac reads it as F13, and nothing on Roel's Mac is bound to F13 (checked in its shortcut table), so it does nothing there. On the Mac it could send Cmd+Shift+5, the screenshot toolbar, which is the closest match to Windows 11's Print Screen opening the Snipping Tool. Only the Mac setting would change | later |

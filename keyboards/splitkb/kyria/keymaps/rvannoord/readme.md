@@ -4,7 +4,7 @@ There is no `keymaps[]` in this folder. The layers are Miryoku's: `rules.mk` set
 `USER_NAME := manna-harbour_miryoku`, which pulls in `users/manna-harbour_miryoku/`, and its
 `manna-harbour_miryoku.c` defines the keymap through the `LAYOUT_miryoku` wrapper in `config.h`
 here. The wrapper is where Miryoku's 36 keys meet the Kyria's 50: the other fourteen are `XXX`
-except for the two system keys. Everything else in this folder is what Miryoku does not have.
+except for the system keys, Hyper and the herdr key. Everything else in this folder is what Miryoku does not have.
 The design and every tuning decision are in `docs/layout.md`; this file is the map.
 
 ## Files
@@ -13,7 +13,7 @@ The design and every tuning decision are in `docs/layout.md`; this file is the m
 |------|-------|
 | `rules.mk` | Miryoku's options (set here, never on the command line), `CONVERT_TO = liatris`, and the `SRC` list |
 | `config.h` | the `LAYOUT_miryoku` wrapper in two variants, one per Miryoku thumb mapping; the custom keycodes; the split transaction id |
-| `keymap.c` | the hooks: `housekeeping_task_user` (sync, link health, OLED tasks, sleep), `process_record_user` (SYS, ANIM, PAGE, Mac redo), the encoders. QMK compiles it on its own, so it is never in `SRC` |
+| `keymap.c` | the hooks: `housekeeping_task_user` (sync, link health, OLED tasks, sleep), `process_record_user` (SYS, ANIM, PAGE, herdr, the clipboard keys on the Mac), the encoders. QMK compiles it on its own, so it is never in `SRC` |
 | `host_os.c` / `.h` | `host_is_mac()`, the one switch for everything OS-specific |
 | `tap_hold.c` | the Chordal Hold and Flow Tap callbacks for the home-row mods |
 | `split_state.c` / `.h` | the 8-byte state the master gathers for the other half: modifiers in finger order, layers, locks, Caps Word, host OS, misfires, the chosen animation, the stored page |
@@ -53,19 +53,25 @@ aliases under the same prefix, because QMK already uses the short names (`OS_TOG
 | SYS (`U_SYS`) | left half, outer column, top row | flips between the Mac and the detected non-Mac host (Windows, or Linux on a Linux machine; an iPad flips iOS and Windows); held two seconds, the stats page; held while plugging in, the bootloader (Bootmagic) |
 | ANIM (`U_ANIM`) | right half, outer column, top row | cycles the other half's animation: Bjorn, spaceship, Kyria logo, and three Monitor ERP screens. Saved on both halves, so it follows the cable |
 | PAGE (`U_PAGE`) | left half, outer column, middle row, under SYS | cycles the master half's pages: the bands, the bands with the small kitty, with the striped kitty, with the QMK logo, with the Monitor ERP logo, Stats. Dots in the status bar show where you landed. Saved on both halves, so it follows the cable |
+| Hyper (`KC_HYPR`) | left thumb arc, position 2, just outside Esc | Ctrl, Alt, Shift and GUI held together, on every host: the window manager's modifier (AeroSpace on the Mac, GlazeWM on Windows), so its bindings stay off Alt |
+| herdr (`U_HERDR`) | right thumb arc, position 2, just outside Del | taps Ctrl+B, herdr's prefix, on every host |
 
 Thumb arc, five positions per half from the outside in: position 1 is the encoder (left:
 volume, right: screen brightness; its click is unassigned), positions 3 to 5 carry Miryoku's
-thumb keys. Position 2, the upper thumb keys and the rest of the outer columns are free.
+thumb keys, and position 2 holds Hyper (left) and herdr (right). With Miryoku's default thumb
+mapping, where 2 is a Miryoku key, those two move to position 5. The upper thumb keys and the
+rest of the outer columns are free.
 
 ## Host OS
 
 QMK's OS detection sets `host_is_mac()` on plug-in (`OS_DETECTION_SINGLE_REPORT`, because Apple
 Silicon Macs re-trigger detection minutes later); SYS flips it when detection guesses wrong; the
 master OLED shows the host's logo (Windows, Apple, or Tux for Linux, which behaves like Windows;
-iOS behaves like the Mac). On the Mac, Ctrl and GUI swap, so Cmd shortcuts use the same fingers as
-Ctrl shortcuts on Windows; redo is special-cased to Cmd+Shift+Z. Nothing hardcodes Ctrl or Cmd for
-one OS: anything OS-specific reads `host_is_mac()`.
+iOS behaves like the Mac). The mods stay where they are on every host: Ctrl on the middle finger,
+GUI on the pinky, which is Cmd on the Mac. Only the five clipboard keys follow the host, Ctrl-based
+on Windows and Linux and Cmd on the Mac, with redo as Cmd+Shift+Z; until 2026-10-27 the Mac swapped
+Ctrl and GUI instead (`docs/layout.md`, *The terminal round*). Nothing hardcodes Ctrl or Cmd for one
+OS: anything OS-specific reads `host_is_mac()`.
 
 ## The OLEDs, as the hardware actually works
 

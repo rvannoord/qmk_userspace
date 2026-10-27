@@ -24,7 +24,7 @@ Miryoku options in use (everything else is Miryoku's default):
 | Option | Value | Effect |
 |--------|-------|--------|
 | `MIRYOKU_MAPPING` | `EXTENDED_THUMBS` | thumb keys on arc positions 3–5 (Esc, Space, Tab on the left), see `docs/layout.md` |
-| `MIRYOKU_CLIPBOARD` | `WIN` | Ctrl-based clipboard keys, turned into Cmd on the Mac by the Ctrl/GUI swap |
+| `MIRYOKU_CLIPBOARD` | `WIN` | Ctrl-based clipboard keys, sent as Cmd on the Mac by `keymap.c` |
 
 The other options (`MIRYOKU_ALPHAS`, `_EXTRA`, `_TAP`, `_NAV`, `_LAYERS`) and their values are listed in Miryoku's `readme.org` and `miryoku_babel/miryoku_layer_selection.h`. A change to any of them is a layout change: log it in `docs/layout.md`.
 
@@ -65,22 +65,24 @@ The keyboard plugs into Windows at work and an Apple Silicon Mac at home. One sw
 
 - QMK OS detection sets it on plug-in. `OS_DETECTION_SINGLE_REPORT` is on because Apple Silicon Macs re-trigger detection minutes later.
 - The SYS key (`U_SYS`) flips it by hand when detection guesses wrong.
-- On the Mac it swaps Ctrl and GUI, so Cmd shortcuts use the same fingers as Ctrl shortcuts on Windows. Redo is special-cased to Cmd+Shift+Z.
+- The mods stay where they are on every host: Ctrl on the middle finger, GUI (Cmd on the Mac) on the pinky. On the Mac only the five clipboard keys change, to Cmd, in `keymap.c`; redo is Cmd+Shift+Z. Until 2026-10-27 the Mac swapped Ctrl and GUI instead; `docs/layout.md`, *The terminal round*, says why that went.
 - The master OLED shows the host's logo: Windows, Apple, or Tux on Linux (Linux behaves like Windows). iOS is a Mac, swap included, shown as the Apple logo with a small "i" in front.
 
-Never hardcode Ctrl or Cmd for one OS: anything OS-specific reads `host_is_mac()`. A possible later switch (keep the mods in place, adapt only the clipboard keys) should only need changes in `host_os.c`.
+Never hardcode Ctrl or Cmd for one OS: anything OS-specific reads `host_is_mac()`. The OLED's Mac glyphs (`render_mods` in `oled_master_zones.c`, `mods()` in `oled_pages.c`, `mac_legends` in `map_legend.c`) follow the same rule, and a change to what the mods send changes them too.
 
 ## Keys outside Miryoku
 
 Miryoku uses 36 of the Kyria's 50 keys. The rest are `XXX` in the `LAYOUT_miryoku` wrapper in the keymap's `config.h`, which has two variants (Miryoku's default and `EXTENDED_THUMBS`). A key placed there exists on every layer. Change both variants.
 
-Thumb arc, five positions per half, numbered from the outside edge toward the middle: in `LAYOUT()` the left thumb row is listed 1→5 and the right one 5→1. **Position 1 on both halves is a rotary encoder** (left: volume, right: screen brightness, in `encoder_update_user`). Its push-click is the key at that matrix position and is unassigned. Positions 3–5 carry Miryoku's thumb keys. Free keys: position 2 on each half, the two upper thumb keys per half, and the outer column. Custom keycodes are `QK_USER_*` aliases defined in that `config.h`, with a `U_` prefix: QMK already uses short names like `OS_TOGG`.
+Thumb arc, five positions per half, numbered from the outside edge toward the middle: in `LAYOUT()` the left thumb row is listed 1→5 and the right one 5→1. **Position 1 on both halves is a rotary encoder** (left: volume, right: screen brightness, in `encoder_update_user`). Its push-click is the key at that matrix position and is unassigned. Positions 3–5 carry Miryoku's thumb keys, and position 2 holds Hyper (left) and herdr (right); in the default variant, where position 2 is a Miryoku key, those two sit on position 5. Free keys: the two upper thumb keys per half and the rest of the outer column. Custom keycodes are `QK_USER_*` aliases defined in that `config.h`, with a `U_` prefix: QMK already uses short names like `OS_TOGG`.
 
 | Key | Position | Keycode |
 |-----|----------|---------|
 | SYS | left half, outer column, top row (also Bootmagic) | `U_SYS` = `QK_USER_0`, toggles host OS |
 | ANIM | right half, outer column, top row | `U_ANIM` = `QK_USER_1`, cycles the slave's animation |
 | PAGE | left half, outer column, middle row | `U_PAGE` = `QK_USER_2`, cycles the master's page |
+| Hyper | left thumb arc, position 2 | `KC_HYPR`, Ctrl+Alt+Shift+GUI while held, for the window manager |
+| herdr | right thumb arc, position 2 | `U_HERDR` = `QK_USER_3`, taps Ctrl+B (herdr's prefix) with `tap_code16` |
 
 ## Rules
 
@@ -92,7 +94,7 @@ Thumb arc, five positions per half, numbered from the outside edge toward the mi
 - Files shared with tests (`tap_hold.c`, `host_os.c`) include `quantum.h`, not `QMK_KEYBOARD_H`.
 - Home-row mods use stock QMK Chordal Hold and Flow Tap, tuned through the callbacks in `tap_hold.c`. Layer-tap thumb keys are exempt from both. Change one value per flash and log it in `docs/layout.md`.
 - Read `docs/layout.md` before suggesting a layout change. A change that sticks gets written there before it goes into the firmware.
-- Symbols depend on the OS keyboard layout (see `docs/layout.md`). Miryoku assumes plain US. US-International turns `' " ` ~ ^` into dead keys, which breaks both the symbol layer and vim.
+- Symbols depend on the OS keyboard layout (see `docs/layout.md`). Miryoku assumes plain US. US-International turns `' " ` ~ ^` into dead keys, which breaks both the symbol layer and vim. The Mac is on plain U.S. since 2026-10-27; the work PC is still to be checked.
 - LF line endings everywhere (`.gitattributes`). A `rules.mk` with CRLF breaks make.
 - Commits use my personal identity, `rvannoord <rvannoord@icloud.com>`, and are SSH-signed through 1Password. Check `git config user.email` before committing: the work PC's global identity is my Monitor one and must never end up in this repo.
 - Never attribute anything to Claude: no `Co-Authored-By: Claude` trailer, no "Generated with Claude Code", and no mention of Claude or AI in commit messages, tags, PR or release text, or the content of files that get pushed. Everything here is published as my own work, whatever the default attribution setting says. The only exceptions are `CLAUDE.md` and `.claude/`.

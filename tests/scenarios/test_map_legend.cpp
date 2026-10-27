@@ -110,14 +110,14 @@ TEST(MapLegend, TheMacSaysWhatTheKeyIsThere) {
     EXPECT_TRUE(same(u_map_legend(KC_ENT, true), cells('E', 'n', 't')));
 }
 
-// The mods follow the host as the mod row does (oled_master_zones.c, render_mods: the pinky
-// shows the four panes on Windows and the caret on the Mac, the middle finger the caret on
-// Windows and Cmd on the Mac), because the Ctrl/GUI swap is what the key does there.
+// The mods follow the host as the mod row does (oled_master_zones.c, render_mods): the
+// pinky's GUI is the four panes on Windows and Cmd on the Mac, and Ctrl is the caret on
+// both, because the mods stay put on every host since 2026-10-27.
 TEST(MapLegend, TheModsFollowTheHost) {
     EXPECT_TRUE(same(u_map_legend(KC_LGUI, false), cells(U_ICON12_WIN, 0, 0, U_LEG_ICON12)));
-    EXPECT_TRUE(same(u_map_legend(KC_LGUI, true), cells(U_ICON12_CTRL, 0, 0, U_LEG_ICON12)));
+    EXPECT_TRUE(same(u_map_legend(KC_LGUI, true), cells(U_ICON12_CMD, 0, 0, U_LEG_ICON12)));
     EXPECT_TRUE(same(u_map_legend(KC_LCTL, false), cells(U_ICON12_CTRL, 0, 0, U_LEG_ICON12)));
-    EXPECT_TRUE(same(u_map_legend(KC_LCTL, true), cells(U_ICON12_CMD, 0, 0, U_LEG_ICON12)));
+    EXPECT_TRUE(same(u_map_legend(KC_LCTL, true), cells(U_ICON12_CTRL, 0, 0, U_LEG_ICON12)));
     EXPECT_TRUE(same(u_map_legend(KC_LALT, true), cells(U_ICON12_ALT, 0, 0, U_LEG_ICON12)));
     EXPECT_TRUE(same(u_map_legend(KC_LSFT, true), cells(U_ICON12_SHIFT, 0, 0, U_LEG_ICON12)));
 }
@@ -169,7 +169,8 @@ TEST(MapShort, OneCellEach) {
     EXPECT_TRUE(same(u_map_short(MS_WHLU, false), cells(U_LEG_ICON6(U_ICON6_ARROW_UP))));
     EXPECT_TRUE(same(u_map_short(KC_LEFT, false), cells(U_LEG_ICON6(U_ICON6_ARROW_LEFT))));
     EXPECT_TRUE(same(u_map_short(KC_LCBR, false), cells('{')));
-    EXPECT_TRUE(same(u_map_short(KC_LCTL, true), cells(U_ICON12_CMD, 0, 0, U_LEG_ICON12)));
+    EXPECT_TRUE(same(u_map_short(KC_LGUI, true), cells(U_ICON12_CMD, 0, 0, U_LEG_ICON12)));
+    EXPECT_TRUE(same(u_map_short(KC_LCTL, true), cells(U_ICON12_CTRL, 0, 0, U_LEG_ICON12)));
     EXPECT_TRUE(same(u_map_short(KC_ALGR, false), cells(U_ICON12_ALT, 0, 0, U_LEG_ICON12)));
     EXPECT_TRUE(same(u_map_short(KC_NO, false), cells(0)));
     EXPECT_TRUE(u_map_short(KC_F24, false).flags & U_LEG_UNKNOWN);
