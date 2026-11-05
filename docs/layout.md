@@ -14,8 +14,8 @@ The source of truth for my layout. A change goes here first, then into the firmw
   right:      ⟳     herdr  Del    Bksp   Enter
   ```
 - Other Miryoku options are at their defaults: Extra layer QWERTY, Tap layer Colemak-DH, Nav with arrows on the right home row, layers not flipped. Clipboard is `WIN` (see Hosts).
-- OS layout: plain U.S. on the Mac, decided 2026-10-27 (it was US International – PC, whose dead keys broke vim and the symbol layer). The work PC is still to be checked.
-- Mostly English. Swedish (å ä ö) is wanted later, not a priority. On plain U.S. they are ⌥a = å and ⌥u, then a or o = ä or ö.
+- OS layout: plain U.S. on the Mac, decided 2026-10-27 and confirmed 2026-10-28 (it was US International – PC, whose dead keys broke vim and the symbol layer). EurKEY on the Windows work PC, decided 2026-10-28. Roel switches both himself.
+- Mostly English. Swedish (å ä ö) is wanted later, not a priority. On the Mac's plain U.S. they are ⌥a = å and ⌥u, then a or o = ä or ö; on Windows, EurKEY's AltGr letters. Either way the modifier is the Kyria's AltGr (hold X or .), the one on the hand opposite the letter.
 - Goal: keyboard first, less mouse, vim-style.
 - Hosts: Windows at work, Apple Silicon Mac at home. The mods stay where they are on every host: Ctrl on the middle finger, GUI (Win, Cmd) on the pinky. Only the clipboard keys follow the host: Ctrl-based on Windows and Linux, Cmd on the Mac, with redo as Cmd+Shift+Z. Until 2026-10-27 OS detection swapped Ctrl and Cmd on the Mac instead; why that went is under *The terminal round*. QMK also tells Linux and iOS apart (since 2026-10-21 the panel shows which): Linux behaves like Windows, and iOS like the Mac, because iPadOS shortcuts are Cmd-based. Android hosts report themselves as Linux, and nothing here tries to tell them apart.
 
@@ -1134,7 +1134,7 @@ few extra glyphs each one carries. All —.
 
 ## The terminal round, decided 2026-10-27
 
-Roel works terminal-first now: herdr with an agent session per pane, LazyVim and lazygit,
+Roel works terminal-first now: herdr with a session per pane, LazyVim and lazygit,
 on the Mac at home and Windows at work, with the Kyria used more and more. A workflow review on
 2026-10-27 ranked three keyboard problems highest: the OS layout's dead keys, Ctrl being on a
 different finger per OS, and herdr's prefix being a pinky chord. Five decisions, all made on the
@@ -1196,16 +1196,18 @@ everywhere else.** No firmware change.
   shell's line editing, a TUI's prompt box and GUI apps, where `hjkl` mean nothing. Learn the word
   and line motions (`w b e 0 $ gg G`) as the OS-aware navigation row below already leans.
 
-**5. OS layout: plain U.S. on the Mac.** It was US International – PC, whose dead keys
+**5. OS layout: plain U.S. on the Mac, EurKEY on Windows.** The Mac was on US International – PC, whose dead keys
 (`' " ` ~ ^`) turn vim's `"a` into ä and `'a` into á and break the symbol layer.
 - **Why U.S.** It's built in, and it is what Miryoku assumes. Swedish and Dutch letters are
   Option combinations: ⌥a = å; ⌥u, then a, o or e = ä, ö, ë. Hold AltGr (X or .) on the hand
   opposite the letter, for Chordal Hold. Swedish – Pro is already enabled on the Mac for long
   Swedish texts; symbols move while it is active.
-- **EurKEY, the alternative.** The same AltGr letters on every OS, but it is a download (a
-  Homebrew cask and a reboot), and on the work PC an installer that may need admin rights.
-- **Who switches.** Roel does it himself. The work PC is still to be checked: if it is on
-  US-International, it has the same problem.
+- **EurKEY on Windows, decided 2026-10-28.** Windows has no built-in US layout with å, ä and ö
+  but without dead keys: US-International has the letters and the dead keys, plain US has
+  neither. EurKEY is US with European letters on AltGr and no dead keys. It is an installer,
+  which may need admin rights on the work PC. On the Mac it would be a download (a Homebrew cask
+  and a reboot) for what plain U.S. already gives with ⌥, so the Mac stays on U.S.
+- **Who switches.** Roel does both himself.
 
 ### What the Halcyon needs for this
 
@@ -1233,10 +1235,10 @@ when it does:
 | Idea | Why | Status |
 |------|-----|--------|
 | Encoder push-clicks | Position 1 clicks are unassigned. Candidates: mute (left), play/pause (right) | later |
-| OS layout: plain US instead of US-International | US-Intl's dead keys (`' " ` ~ ^`) clash with vim (`"a` gives ä, `'a` gives á) and with the symbol layer | **decided 2026-10-27: plain U.S. on the Mac**, EurKEY passed over (*The terminal round*). The work PC still to check |
-| å ä ö | Swedish later. Options: EurKEY (US base, letters on AltGr), or switching the OS layout when writing Swedish | on the Mac, since 2026-10-27: ⌥a = å and ⌥u then a/o = ä/ö on plain U.S., Swedish – Pro for long texts. Windows later |
+| OS layout: plain US instead of US-International | US-Intl's dead keys (`' " ` ~ ^`) clash with vim (`"a` gives ä, `'a` gives á) and with the symbol layer | **decided: plain U.S. on the Mac (2026-10-27, confirmed 2026-10-28), EurKEY on the Windows work PC (2026-10-28)**, because Windows has no built-in US layout with å ä ö but without dead keys (*The terminal round*) |
+| å ä ö | Swedish later. Options: EurKEY (US base, letters on AltGr), or switching the OS layout when writing Swedish | since 2026-10-28: on the Mac ⌥a = å and ⌥u then a/o = ä/ö on plain U.S., Swedish – Pro for long texts; on Windows EurKEY's AltGr letters. The Kyria's AltGr is X or ., the one on the hand opposite the letter |
 | Vim on Colemak-DH | `hjkl` are scattered on Colemak-DH. Miryoku's Nav layer has arrows on the right home row | **decided 2026-10-27: `hjkl` where they fall in vim-style tools, Nav arrows everywhere else**, no firmware change (*The terminal round*) |
-| Hyper on Windows | Ctrl+Alt+Shift+Win is Microsoft's Office key: alone it opens the Office app, with W X P O T N D L it opens Word, Excel, … LinkedIn. A registry value stops the bare key; the letters lose only if GlazeWM catches them first. Fallback: Meh (Ctrl+Alt+Shift) on Windows only, one `host_is_mac()` branch | when GlazeWM goes on the work PC |
+| Hyper on Windows | Ctrl+Alt+Shift+Win is Microsoft's Office key: alone it opens the Office app, with W X P O T N D L it opens Word, Excel, … LinkedIn. A registry value stops the bare key; the letters lose only if GlazeWM catches them first. Fallback: Meh (Ctrl+Alt+Shift) on Windows only, one `host_is_mac()` branch, but with EurKEY on Windows, Ctrl+Alt is AltGr, so an unbound Meh+letter types EurKEY's AltGr+Shift character | when GlazeWM goes on the work PC |
 | OS-aware navigation | Word jump is Ctrl+Arrow on Windows but Option+Arrow on macOS; line start/end is Home/End vs Cmd+Arrow. OS detection could drive these too, but what works depends on the app (a Mac text field wants Cmd+Arrow, a terminal and nvim want Home), so a blanket translation would break the terminal. **Leaning nvim-style instead (2026-10-22):** learn vim's motions (`0`, `$`, `w`, `b`, `gg`, `G`), which behave the same on every host, and leave Home, End and the word jumps untranslated | later, nvim-style |
 | Brightness on Scroll Lock and Pause, on the Mac | The Mac reads them as F14 and F15, its own brightness down and up. Not Miryoku's doing, and it is wanted: keep it. Only the live layer map has to show it (`docs/oled-v3.md`, D15) | keep, decided 2026-10-22 |
 | Print Screen on the Mac | The Mac reads it as F13, and nothing on Roel's Mac is bound to F13 (checked in its shortcut table), so it does nothing there. On the Mac it could send Cmd+Shift+5, the screenshot toolbar, which is the closest match to Windows 11's Print Screen opening the Snipping Tool. Only the Mac setting would change | later |
