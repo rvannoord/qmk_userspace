@@ -18,6 +18,7 @@ each machine. The last step of that migration, archiving `rvannoord/miryoku_qmk`
 - From Git Bash, run WSL commands as `wsl.exe -d Ubuntu --exec bash -lc '...'` with `MSYS_NO_PATHCONV=1`. Without `--exec`, the default shell expands `$VARS` before bash sees them.
 - The userspace repo lives at `C:\src\personal\qmk_userspace`, with `user.overlay_dir` pointing to `/mnt/c/src/personal/qmk_userspace`. The scenario tests run in the same WSL setup.
 - Flashing: the Liatris shows up as an `RPI-RP2` drive in Windows. WSL doesn't auto-mount it, so `qmk flash` inside WSL can't find it. Copy the `.uf2` to the drive from Explorer (or `sudo mount -t drvfs E: /mnt/e` and `cp`).
+- picotool 2.3.1 is in `~/.local/bin` (2026-11-05). Reading the Kyria in BOOTSEL needs Zadig's WinUSB driver on "RP2 Boot (Interface 1)", which isn't installed yet, so a read-back on this PC is still open.
 - Podman is installed, but its machine also runs the Monitor Postgres container for work. If a QMK container is needed, never reset or restart the podman machine.
 
 ## Environment (Mac, checked and set up 2026-10-09)

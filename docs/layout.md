@@ -1179,8 +1179,10 @@ can still hold Num for `hyper+1..9`.
   Office app; with W, X, P, O, T, N, D or L it opens Word, Excel and the rest, LinkedIn included.
   A registry value under `HKCU\Software\Classes\ms-officeapp` stops the bare key. The letter
   shortcuts lose only if GlazeWM catches them first, which is untested.
-- **The fallback.** Meh (Ctrl+Alt+Shift) on Windows only, one `host_is_mac()` branch. See Open
-  experiments.
+- **The plan (2026-11-05): turn the Office keys off on the work PC,** so Hyper stays the same on
+  every host. It isn't confirmed there yet; see Open experiments.
+- **The fallback, only if that fails.** Meh (Ctrl+Alt+Shift) on Windows only, one `host_is_mac()`
+  branch. See Open experiments.
 
 **4. Vim movement: `hjkl` where Colemak-DH puts them, in vim-style tools; the Nav arrows
 everywhere else.** No firmware change.
@@ -1238,7 +1240,7 @@ when it does:
 | OS layout: plain US instead of US-International | US-Intl's dead keys (`' " ` ~ ^`) clash with vim (`"a` gives ä, `'a` gives á) and with the symbol layer | **decided: plain U.S. on the Mac (2026-10-27, confirmed 2026-10-28), EurKEY on the Windows work PC (2026-10-28)**, because Windows has no built-in US layout with å ä ö but without dead keys (*The terminal round*) |
 | å ä ö | Swedish later. Options: EurKEY (US base, letters on AltGr), or switching the OS layout when writing Swedish | since 2026-10-28: on the Mac ⌥a = å and ⌥u then a/o = ä/ö on plain U.S., Swedish – Pro for long texts; on Windows EurKEY's AltGr letters. The Kyria's AltGr is X or ., the one on the hand opposite the letter |
 | Vim on Colemak-DH | `hjkl` are scattered on Colemak-DH. Miryoku's Nav layer has arrows on the right home row | **decided 2026-10-27: `hjkl` where they fall in vim-style tools, Nav arrows everywhere else**, no firmware change (*The terminal round*) |
-| Hyper on Windows | Ctrl+Alt+Shift+Win is Microsoft's Office key: alone it opens the Office app, with W X P O T N D L it opens Word, Excel, … LinkedIn. A registry value stops the bare key; the letters lose only if GlazeWM catches them first. Fallback: Meh (Ctrl+Alt+Shift) on Windows only, one `host_is_mac()` branch, but with EurKEY on Windows, Ctrl+Alt is AltGr, so an unbound Meh+letter types EurKEY's AltGr+Shift character | when GlazeWM goes on the work PC |
+| Hyper on Windows | Ctrl+Alt+Shift+Win is Microsoft's Office key: alone it opens the Office app, with W X P O T N D L (plus Y on some builds) it opens Word, Excel, … LinkedIn. Plan: turn those keys off on the work PC, so Hyper stays Ctrl+Alt+Shift+Win on every host. A per-user registry value (`HKCU\Software\Classes\ms-officeapp\Shell\Open\Command`, default value `rundll32`) stops the bare key. For the letters, test whether GlazeWM catches them first; for any it doesn't, a short logon task claims the combinations, restarts Explorer and releases them. Fallback if that fails: Meh (Ctrl+Alt+Shift) on Windows only, one `host_is_mac()` branch, but with EurKEY on Windows, Ctrl+Alt is AltGr, so an unbound Meh+letter types EurKEY's AltGr+Shift character | **plan since 2026-11-05, not decided:** mark it decided once it's confirmed on the work PC |
 | OS-aware navigation | Word jump is Ctrl+Arrow on Windows but Option+Arrow on macOS; line start/end is Home/End vs Cmd+Arrow. OS detection could drive these too, but what works depends on the app (a Mac text field wants Cmd+Arrow, a terminal and nvim want Home), so a blanket translation would break the terminal. **Leaning nvim-style instead (2026-10-22):** learn vim's motions (`0`, `$`, `w`, `b`, `gg`, `G`), which behave the same on every host, and leave Home, End and the word jumps untranslated | later, nvim-style |
 | Brightness on Scroll Lock and Pause, on the Mac | The Mac reads them as F14 and F15, its own brightness down and up. Not Miryoku's doing, and it is wanted: keep it. Only the live layer map has to show it (`docs/oled-v3.md`, D15) | keep, decided 2026-10-22 |
 | Print Screen on the Mac | The Mac reads it as F13, and nothing on Roel's Mac is bound to F13 (checked in its shortcut table), so it does nothing there. On the Mac it could send Cmd+Shift+5, the screenshot toolbar, which is the closest match to Windows 11's Print Screen opening the Snipping Tool. Only the Mac setting would change | later |
