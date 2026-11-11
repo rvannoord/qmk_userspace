@@ -82,7 +82,7 @@ Thumb arc, five positions per half, numbered from the outside edge toward the mi
 | ANIM | right half, outer column, top row | `U_ANIM` = `QK_USER_1`, cycles the slave's animation |
 | PAGE | left half, outer column, middle row | `U_PAGE` = `QK_USER_2`, cycles the master's page |
 | Hyper | left thumb arc, position 2 | `KC_HYPR`, Ctrl+Alt+Shift+GUI while held, for the window manager |
-| herdr | right thumb arc, position 2 | `U_HERDR` = `QK_USER_3`, taps Ctrl+B (herdr's prefix) with `tap_code16` |
+| herdr | right thumb arc, position 2 | `U_HERDR` = `QK_USER_3`, taps Ctrl+B (herdr's prefix) with `tap_code16` on release; held, each key tapped meanwhile sends Ctrl+B, then Alt+that key (`keymap.c`, layout.md *The terminal round* 2a) |
 
 ## Rules
 

@@ -40,9 +40,43 @@ void housekeeping_task_user(void) {
 #endif
 }
 
+// The herdr key (docs/layout.md, The terminal round, 2a): tapped alone, herdr's prefix;
+// held, every key tapped meanwhile is the prefix, then Alt+that key.
+static bool herdr_held;
+static bool herdr_used;
+
+// The key a press types, or KC_NO for modifiers, layer holds and custom keys.
+static uint16_t herdr_typed_key(uint16_t keycode, const keyrecord_t *record) {
+    if (IS_QK_MOD_TAP(keycode)) return record->tap.count ? QK_MOD_TAP_GET_TAP_KEYCODE(keycode) : KC_NO;
+    if (IS_QK_LAYER_TAP(keycode)) return record->tap.count ? QK_LAYER_TAP_GET_TAP_KEYCODE(keycode) : KC_NO;
+    return IS_BASIC_KEYCODE(keycode) ? keycode : KC_NO;
+}
+
+// tap_code16 never passes through mod_config(), so this is Ctrl+B whatever the host,
+// where a C(KC_B) in the keymap would follow any Ctrl/GUI swap.
+static void herdr_prefix(void) {
+    tap_code16(C(KC_B));
+}
+
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
     u_sync_note_record(keycode, record);
     if (record->event.pressed && keycode != U_SYS) u_stats_note_key();   // closes the page
+
+    if (herdr_held && record->event.pressed) {
+        const uint16_t key = herdr_typed_key(keycode, record);
+        if (key != KC_NO) {
+            // Two separate taps: Ctrl+Alt is AltGr on EurKEY. Held mods (Shift from a
+            // home-row key) stay off the prefix and go with the key. Left Alt, because
+            // Ghostty keeps the right Option for letters.
+            const uint8_t mods = get_mods();
+            herdr_used         = true;
+            clear_mods();
+            herdr_prefix();
+            set_mods(mods);
+            tap_code16(A(key));
+            return false;
+        }
+    }
 
     switch (keycode) {
         case U_SYS:
@@ -71,9 +105,14 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             break;
 #endif
         case U_HERDR:
-            // tap_code16 never passes through mod_config(), so this is Ctrl+B whatever
-            // the host, where a C(KC_B) in the keymap would follow any Ctrl/GUI swap.
-            if (record->event.pressed) tap_code16(C(KC_B));
+            // The prefix goes out on release, once it is clear no key was tapped.
+            if (record->event.pressed) {
+                herdr_held = true;
+                herdr_used = false;
+            } else {
+                herdr_held = false;
+                if (!herdr_used) herdr_prefix();
+            }
             return false;
         case U_UND:
         case U_CUT:

@@ -7,8 +7,8 @@ less and less, vim-style: the layout keeps the hands on the home row.
 
 Two things make this more than a keymap. The host-OS switch: `Win` or `Mac` is detected on
 plug-in, the mods stay where they are on both, and the clipboard keys send Ctrl or Cmd to match.
-Two thumb keys serve the terminal: one taps herdr's Ctrl+B prefix, and one holds Hyper for a
-window manager. And the OLEDs: the
+Two thumb keys serve the terminal: one taps herdr's Ctrl+B prefix (held, it adds Alt to the next
+key, for herdr's Alt bindings), and one holds Hyper for a window manager. And the OLEDs: the
 master half shows the layer as a picture with the held modifiers under it; the other half shows
 Bjorn, a Tamagotchi Viking who reacts to typing speed and idles in the weather, or a spaceship,
 or a logo, cycled from a key.

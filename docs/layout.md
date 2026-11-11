@@ -27,7 +27,7 @@ The source of truth for my layout. A change goes here first, then into the firmw
 | ANIM (`U_ANIM`) | right half, outer pinky column, top row, mirroring SYS | cycles the other half's animation: Bjorn, spaceship, Kyria logo, three Monitor ERP screens (the horizontal logo, the stacked logo, "Monitor your future"), bongo cat, and Mario with Yoshi and Bullet Bill. Persisted on both halves, so it follows the cable. See *Switching the slave's animation* |
 | PAGE (`U_PAGE`) | left half, outer pinky column, middle row, under SYS (decided 2026-10-22: free on every layer, and the pinky reaches it while a thumb holds a layer) | cycles the master's pages, on release like SYS and ANIM. While a layer map is showing it switches the map between the big grid and the Kyria-shaped one instead. Persisted on both halves, so it follows the cable. See *The drashna round* under OLED; build order in `docs/oled-v3.md` |
 | Hyper (`KC_HYPR`) | left thumb arc, position 2, just outside Esc. Position 5 in Miryoku's default thumb mapping, where 2 is taken (decided 2026-10-27) | holds Ctrl, Alt, Shift and GUI together, on every host. For AeroSpace on the Mac and GlazeWM on Windows, so their bindings stay off Alt, which herdr and the shell use. A plain modifier, not a tap-hold key: no timing. See *The terminal round* |
-| herdr (`U_HERDR`) | right thumb arc, position 2, just outside Del. Position 5 in the default thumb mapping (decided 2026-10-27) | taps Ctrl+B, herdr's prefix, on every host, so the most-used terminal chord is one thumb tap. Sent from code with `tap_code16`, which never passes through QMK's Ctrl/GUI swap, so it would stay Ctrl+B even if a swap came back. See *The terminal round* |
+| herdr (`U_HERDR`) | right thumb arc, position 2, just outside Del. Position 5 in the default thumb mapping (decided 2026-10-27) | taps Ctrl+B, herdr's prefix, on every host, so the most-used terminal chord is one thumb tap. Sent from code with `tap_code16`, which never passes through QMK's Ctrl/GUI swap, so it would stay Ctrl+B even if a swap came back. Held (since 2026-11-11), every key tapped meanwhile sends Ctrl+B, then Alt+that key: herdr key + G is herdr's `prefix+alt+g`. See *The terminal round* |
 
 ## Home-row mods
 
@@ -1168,6 +1168,28 @@ so a stray prefix is less likely on that side. The key sends Ctrl+B with `tap_co
 bypasses QMK's `mod_config()`. A `C(KC_B)` placed in the keymap would not: it goes through
 `mod_config()` (`quantum/keymap_common.c`) and turned into Cmd+B while the swap existed.
 
+**2a. The herdr key holds too, decided 2026-11-11.** herdr's own keys are bound as
+`prefix+alt+<letter>` (lazygit G, cheatsheet H, yazi Y, git status D, reviewr R, Flock F, next
+and previous agent N and P), which was herdr key, then hold Alt, then the letter, with the Alt
+on the hand opposite the letter for Chordal Hold. Now: hold the herdr key and tap the letter.
+- **What it sends.** Tapped alone, Ctrl+B as before. Held, every key tapped meanwhile sends
+  Ctrl+B, then Alt+that key, so several in a row work without letting go, and the release sends
+  nothing more. "A key that types" is any of `KC_A`…`KC_EXSEL`, including a mod-tap or layer-tap
+  key that settles as a tap. Modifiers, layer holds and the custom keys pass through untouched.
+- **Left Alt, and never together with Ctrl.** Ghostty treats the right Option as the letters key,
+  so the Alt is the left one. Ctrl+B and Alt+key are two separate taps: Ctrl+Alt is AltGr on
+  EurKEY. Mods already held (Shift from a home-row key) stay off the Ctrl+B and go with the
+  Alt+key.
+- **Why not a layer.** It was the work PC's idea: hold a free key for a herdr layer. Miryoku's
+  layer list (`miryoku_layer_list.h`) can't be extended from `custom_config.h`, a new layer would
+  need live-map legends, and it would take a free key. This is code in `process_record_user` on
+  the key that already exists, with no tapping term: hold it as long as you like.
+- **Cost.** The prefix now goes out when the key is released, not when it is pressed. A roll, the
+  next key pressed before the thumb has let go, now becomes `prefix+alt+<key>`. If that happens
+  in practice, the fix is to count a key as held only when it is released while the herdr key is
+  still down, as QMK's permissive hold does. Watch for it first.
+- **Not reachable:** `prefix+alt+1..9` (focus an agent by number). Num is on the same thumb.
+
 **3. Hyper on the left arc's position 2, Ctrl+Alt+Shift+GUI on every host.** It's for a window
 manager, AeroSpace on the Mac and GlazeWM on Windows, whose default Alt bindings collide with
 herdr's `prefix+alt+1..9` and with Alt in the shell. Held by the left thumb, it leaves the right
@@ -1227,7 +1249,10 @@ when it does:
 - **Hyper.** All four mods while held, on the left thumb arc's position 2. In ZMK that is a `&kp`
   with nested modifier functions, something like `LC(LA(LS(LGUI)))`; check the syntax against
   ZMK's docs when the board arrives.
-- **herdr.** `&kp LC(B)` on the right thumb arc's position 2.
+- **herdr.** `&kp LC(B)` on the right thumb arc's position 2, plus the hold of 2a: a hold-tap
+  whose tap is `&kp LC(B)` and whose hold is a layer of macros, each `&kp LC(B)` then `&kp LA(x)`.
+  ZMK puts a tapping term on that hold, which the QMK version has none of; check its hold-tap
+  flavours (`balanced` is the permissive one) when the board arrives.
 - **Check the arc.** The Halcyon's thumb arc numbers its positions the same way, outside in, with
   the encoders where the rev3 has them.
 - Nothing for the hjkl and OS layout decisions.

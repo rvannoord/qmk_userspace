@@ -84,6 +84,50 @@ TEST_F(Scenario, S10_ThumbKeys) {
     EXPECT_FALSE(host_is_mac());
 }
 
+// The herdr key held (2026-11-11): every key tapped meanwhile is the prefix, then Alt+key,
+// with a basic key, a mod-tap on either hand and the Alt key itself; held Shift goes with
+// the key and stays off the prefix. Tapped alone it is still the prefix, now on release.
+TEST_F(Scenario, S11_HerdrHeld) {
+    TestDriver driver;
+    record(driver);
+    KeymapKey herdr{BASE, 5, 3, U_HERDR};
+    start({herdr, w, n, r, t, u});
+
+    press(herdr, 0);
+    at(150);
+    EXPECT_EQ(typed(), "") << "nothing until the herdr key is let go or a key is tapped";
+    release(herdr, 150);
+    at(200);
+    EXPECT_EQ(typed(), "<Ctrl+b>");
+
+    reports.clear();
+    press(herdr, 1000);
+    tap(w, 1100);
+    tap(n, 1300);
+    tap(r, 1500);
+    release(herdr, 1700);
+    at(1800);
+    EXPECT_EQ(typed(), "<Ctrl+b><Alt+w><Ctrl+b><Alt+n><Ctrl+b><Alt+r>") << "and no prefix on release";
+
+    reports.clear();
+    press(herdr, 3000);
+    press(t, 3100);                          // Shift, held past the tapping term
+    tap(u, 3400);
+    release(t, 3500);
+    release(herdr, 3600);
+    at(3700);
+    EXPECT_EQ(typed(), "<Ctrl+b><Alt+Shift+u>");
+
+    // The known cost: a roll, the next key down before the thumb lets go, counts as held.
+    reports.clear();
+    press(herdr, 5000);
+    press(w, 5040);
+    release(herdr, 5060);
+    release(w, 5090);
+    at(5200);
+    EXPECT_EQ(typed(), "<Ctrl+b><Alt+w>");
+}
+
 // What the panel shows, which is more than what the keyboard does. Detection is called
 // by hand here, as QMK calls it once the USB setup packets have been counted.
 TEST_F(Scenario, S10_HostKind) {

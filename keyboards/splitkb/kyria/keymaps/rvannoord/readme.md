@@ -54,7 +54,7 @@ aliases under the same prefix, because QMK already uses the short names (`OS_TOG
 | ANIM (`U_ANIM`) | right half, outer column, top row | cycles the other half's animation: Bjorn, spaceship, Kyria logo, and three Monitor ERP screens. Saved on both halves, so it follows the cable |
 | PAGE (`U_PAGE`) | left half, outer column, middle row, under SYS | cycles the master half's pages: the bands, the bands with the small kitty, with the striped kitty, with the QMK logo, with the Monitor ERP logo, Stats. Dots in the status bar show where you landed. Saved on both halves, so it follows the cable |
 | Hyper (`KC_HYPR`) | left thumb arc, position 2, just outside Esc | Ctrl, Alt, Shift and GUI held together, on every host: the window manager's modifier (AeroSpace on the Mac, GlazeWM on Windows), so its bindings stay off Alt |
-| herdr (`U_HERDR`) | right thumb arc, position 2, just outside Del | taps Ctrl+B, herdr's prefix, on every host |
+| herdr (`U_HERDR`) | right thumb arc, position 2, just outside Del | taps Ctrl+B, herdr's prefix, on every host, when released. Held, every key tapped meanwhile sends Ctrl+B, then Alt+that key: hold it and tap G for herdr's `prefix+alt+g` |
 
 Thumb arc, five positions per half from the outside in: position 1 is the encoder (left:
 volume, right: screen brightness; its click is unassigned), positions 3 to 5 carry Miryoku's
