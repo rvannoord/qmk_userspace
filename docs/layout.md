@@ -1279,6 +1279,7 @@ when it does:
 
 | Date | Change | Why | Verdict after a week |
 |------|--------|-----|----------------------|
+| 2026-11-11 | Flashed `3457440` to both halves: the herdr key holds. Held, every key tapped sends Ctrl+B, then Alt+that key; tapped alone it is Ctrl+B, now on release | herdr's Alt bindings as one chord, with no Alt finger (*The terminal round*, 2a) | Open. The `herdr-hold` rows in `docs/flash-checklist.md`, rolls above all |
 | 2026-10-27 | Flashed `7bb32bb` to both halves: Ctrl on the middle finger on every host (the Mac's Ctrl/GUI swap gone, the clipboard keys sending Cmd there), Hyper on the left arc's position 2, the herdr key on the right's | *The terminal round*: terminal chords learned once, herdr's prefix one tap, Hyper for a window manager | Open. The `terminal` rows in `docs/flash-checklist.md`; and whether Cmd on the pinky settles on the Mac |
 | 2026-10-23 | Flashed `053db26` to both halves: the matrix rain on both halves from 100 s of idle, and `OLED_TIMEOUT` 180 s instead of 120 | The last step of `docs/oled-v3.md`, timing decided on the day (D10) | Open. Watch FAIL, OUT and DROP for a few days: the rain repaints both panels in full |
 | 2026-10-23 | Flashed `1a87127` to both halves: the Status sheet, Layer map, Typing and Event log pages; bongo cat and the Mario scene; the encoder box and Mute; the goat and the idle-show director; and a lost link shown as glitch bursts in place of the alarm band | Six commits had stacked up unflashed, the goat the first to change the other half | Open |
