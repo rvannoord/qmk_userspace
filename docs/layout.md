@@ -14,8 +14,8 @@ The source of truth for my layout. A change goes here first, then into the firmw
   right:      ⟳     herdr  Del    Bksp   Enter
   ```
 - Other Miryoku options are at their defaults: Extra layer QWERTY, Tap layer Colemak-DH, Nav with arrows on the right home row, layers not flipped. Clipboard is `WIN` (see Hosts).
-- OS layout: plain U.S. on the Mac, decided 2026-10-27 and confirmed 2026-10-28 (it was US International – PC, whose dead keys broke vim and the symbol layer). EurKEY on the Windows work PC, decided 2026-10-28. Roel switches both himself.
-- Mostly English. Swedish (å ä ö) is wanted later, not a priority. On the Mac's plain U.S. they are ⌥a = å and ⌥u, then a or o = ä or ö; on Windows, EurKEY's AltGr letters. Either way the modifier is the Kyria's AltGr (hold X or .), the one on the hand opposite the letter.
+- OS layout: EurKEY wherever the Kyria is. On the Windows work PC it is the only layout (decided 2026-10-28, installed 2026-11-13). On the Mac it is EurKEY while the Kyria is connected and plain U.S. without it (decided 2026-11-13, not built yet; plain U.S. on the Mac was decided 2026-10-27, after US International – PC, whose dead keys broke vim and the symbol layer). See *The terminal round*, 5.
+- Mostly English. Swedish (å ä ö): on EurKEY å = AltGr+W, ä = AltGr+A, ö = AltGr+O, with Shift for capitals (read from Windows' own layout tables, 2026-11-13; check the Mac version's keys when it's installed). On the Mac's plain U.S., without the Kyria, ⌥a = å and ⌥u, then a or o = ä or ö. The modifier is the Kyria's AltGr (hold X or .), the one on the hand opposite the letter: hold . for W and A, hold X for O.
 - Goal: keyboard first, less mouse, vim-style.
 - Hosts: Windows at work, Apple Silicon Mac at home. The mods stay where they are on every host: Ctrl on the middle finger, GUI (Win, Cmd) on the pinky. Only the clipboard keys follow the host: Ctrl-based on Windows and Linux, Cmd on the Mac, with redo as Cmd+Shift+Z. Until 2026-10-27 OS detection swapped Ctrl and Cmd on the Mac instead; why that went is under *The terminal round*. QMK also tells Linux and iOS apart (since 2026-10-21 the panel shows which): Linux behaves like Windows, and iOS like the Mac, because iPadOS shortcuts are Cmd-based. Android hosts report themselves as Linux, and nothing here tries to tell them apart.
 
@@ -1231,7 +1231,19 @@ everywhere else.** No firmware change.
   neither. EurKEY is US with European letters on AltGr and no dead keys. It is an installer,
   which may need admin rights on the work PC. On the Mac it would be a download (a Homebrew cask
   and a reboot) for what plain U.S. already gives with ⌥, so the Mac stays on U.S.
-- **Who switches.** Roel does both himself.
+- **Installed on the work PC, 2026-11-13.** EurKEY 1.2 needed admin rights there and is now the
+  only layout, for English, Swedish and Dutch. Read from Windows' own layout tables: å is
+  AltGr+W, ä AltGr+A, ö AltGr+O, and `' " ` ~ ^` type straight away.
+- **EurKEY on the Mac too, while the Kyria is connected, decided 2026-11-13.** Plain U.S. puts
+  the letters on other keys than EurKEY: ⌥A is å on the Mac, but AltGr+A is ä on EurKEY, so one
+  chord gave a different letter at home and at work. With the Kyria connected the Mac switches
+  to EurKEY; with the built-in keyboard alone it stays on plain U.S. Not built yet. On the Mac:
+  install EurKEY for macOS and read its ⌥ keys; then pick what switches the input source when
+  the Kyria (its USB vendor and product ID) connects and disconnects, such as Hammerspoon's USB
+  watcher or a Karabiner-Elements device condition (heavier: it grabs the keyboard, which can
+  get in the way of the firmware's own timing). Its config goes in the dotfiles repo.
+- **Who switches.** Nobody on Windows: EurKEY is the only layout there. On the Mac, the switch
+  above once it's built; until then Roel does it himself.
 
 ### What the Halcyon needs for this
 
@@ -1263,7 +1275,7 @@ when it does:
 |------|-----|--------|
 | Encoder push-clicks | Position 1 clicks are unassigned. Candidates: mute (left), play/pause (right) | later |
 | OS layout: plain US instead of US-International | US-Intl's dead keys (`' " ` ~ ^`) clash with vim (`"a` gives ä, `'a` gives á) and with the symbol layer | **decided: plain U.S. on the Mac (2026-10-27, confirmed 2026-10-28), EurKEY on the Windows work PC (2026-10-28)**, because Windows has no built-in US layout with å ä ö but without dead keys (*The terminal round*) |
-| å ä ö | Swedish later. Options: EurKEY (US base, letters on AltGr), or switching the OS layout when writing Swedish | since 2026-10-28: on the Mac ⌥a = å and ⌥u then a/o = ä/ö on plain U.S., Swedish – Pro for long texts; on Windows EurKEY's AltGr letters. The Kyria's AltGr is X or ., the one on the hand opposite the letter |
+| å ä ö | Swedish later. Options: EurKEY (US base, letters on AltGr), or switching the OS layout when writing Swedish | **decided 2026-11-13: EurKEY wherever the Kyria is**, so å = AltGr+W, ä = AltGr+A, ö = AltGr+O on both machines (the work PC since 2026-11-13; the Mac while the Kyria is connected, not built yet). On the Mac's plain U.S. without the Kyria: ⌥a = å and ⌥u then a/o = ä/ö, Swedish – Pro for long texts. The Kyria's AltGr is X or ., the one on the hand opposite the letter |
 | Vim on Colemak-DH | `hjkl` are scattered on Colemak-DH. Miryoku's Nav layer has arrows on the right home row | **decided 2026-10-27: `hjkl` where they fall in vim-style tools, Nav arrows everywhere else**, no firmware change (*The terminal round*) |
 | Hyper on Windows | Ctrl+Alt+Shift+Win is Microsoft's Office key: alone it opens the Office app, with W X P O T N D L (plus Y on some builds) it opens Word, Excel, … LinkedIn. Plan: turn those keys off on the work PC, so Hyper stays Ctrl+Alt+Shift+Win on every host. A per-user registry value (`HKCU\Software\Classes\ms-officeapp\Shell\Open\Command`, default value `rundll32`) stops the bare key. For the letters, test whether GlazeWM catches them first; for any it doesn't, a short logon task claims the combinations, restarts Explorer and releases them. Fallback if that fails: Meh (Ctrl+Alt+Shift) on Windows only, one `host_is_mac()` branch, but with EurKEY on Windows, Ctrl+Alt is AltGr, so an unbound Meh+letter types EurKEY's AltGr+Shift character | **plan since 2026-11-05, not decided:** mark it decided once it's confirmed on the work PC |
 | OS-aware navigation | Word jump is Ctrl+Arrow on Windows but Option+Arrow on macOS; line start/end is Home/End vs Cmd+Arrow. OS detection could drive these too, but what works depends on the app (a Mac text field wants Cmd+Arrow, a terminal and nvim want Home), so a blanket translation would break the terminal. **Leaning nvim-style instead (2026-10-22):** learn vim's motions (`0`, `$`, `w`, `b`, `gg`, `G`), which behave the same on every host, and leave Home, End and the word jumps untranslated | later, nvim-style |
